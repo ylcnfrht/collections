@@ -1,4 +1,4 @@
-/** Asserts fn throws an exception with the given name (checked via Error.name). */
+/** Asserts fn throws an exception of the named class or a subclass of it. */
 export function expectThrows(fn: () => unknown, name: string): void {
   let err: unknown;
   let threw = false;
@@ -9,6 +9,8 @@ export function expectThrows(fn: () => unknown, name: string): void {
     threw = true;
   }
   if (!threw) throw new Error(`expected ${name} but nothing was thrown`);
+  // a subclass also satisfies the expectation, as a catch of the superclass would
+  for (let p = err as object | null; p; p = Object.getPrototypeOf(p)) if (p.constructor?.name === name) return;
   expect((err as Error)?.name).toBe(name);
 }
 

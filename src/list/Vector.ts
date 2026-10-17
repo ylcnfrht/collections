@@ -32,6 +32,33 @@ export class Vector<E> extends ArrayList<E> {
     this.capacityIncrement = capacityIncrement;
   }
 
+  // Positional access reports ArrayIndexOutOfBoundsException (an IndexOutOfBoundsException), as the reference does.
+
+  override get(index: number): E {
+    if ((index >>> 0) !== index || index >= this.es.length) aioobe(index, this.es.length);
+    return this.es[index];
+  }
+
+  override set(index: number, e: E): E {
+    if ((index >>> 0) !== index || index >= this.es.length) aioobe(index, this.es.length);
+    return super.set(index, e);
+  }
+
+  override removeAt(index: number): E {
+    if ((index >>> 0) !== index || index >= this.es.length) aioobe(index, this.es.length);
+    return super.removeAt(index);
+  }
+
+  protected override addAtIndex(index: number, e: E): void {
+    if ((index >>> 0) !== index || index > this.es.length) aioobe(index, this.es.length);
+    super.addAtIndex(index, e);
+  }
+
+  protected override addAllAt(index: number, c: Collection<E>): boolean {
+    if ((index >>> 0) !== index || index > this.es.length) aioobe(index, this.es.length);
+    return super.addAllAt(index, c);
+  }
+
   static override of<E>(...xs: E[]): Vector<E> {
     return super.of(...xs) as Vector<E>;
   }

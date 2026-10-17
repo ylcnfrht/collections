@@ -6,6 +6,7 @@ import {
   IllegalArgumentException,
   IllegalStateException,
   IndexOutOfBoundsException,
+  ArrayIndexOutOfBoundsException,
   NoSuchElementException,
   NullPointerException,
   UnsupportedOperationException,
@@ -121,6 +122,12 @@ function nullQuery(): never {
   throw new NullPointerException();
 }
 
+// the reference backs 1- and 2-element List.of lists with a class that throws IndexOutOfBoundsException,
+// and every other size with an array, whose get throws ArrayIndexOutOfBoundsException
+function listOf<E>(es: E[]): ImmutableList<E> {
+  return new ImmutableList(es, true, true, es.length !== 1 && es.length !== 2);
+}
+
 function outOfBounds(index: number, length: number): never {
   throw new IndexOutOfBoundsException(`Index ${index} out of bounds for length ${length}`);
 }
@@ -137,11 +144,15 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
   /** @internal true for List.of/copyOf lists: null queries throw NullPointerException, and List.copyOf may return it as-is */
   readonly nullHostile: boolean;
 
-  constructor(es: readonly E[], nullFree: boolean, nullHostile = false) {
+  /** @internal get() throws ArrayIndexOutOfBoundsException, as the reference does for List.of of 0 or 3+ elements */
+  readonly arrayIndexErrors: boolean;
+
+  constructor(es: readonly E[], nullFree: boolean, nullHostile = false, arrayIndexErrors = false) {
     super();
     this.es = Object.freeze(es);
     this.nullFree = nullFree;
     this.nullHostile = nullHostile;
+    this.arrayIndexErrors = arrayIndexErrors;
   }
 
   get [RANDOM_ACCESS](): true {
@@ -158,7 +169,10 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
 
   get(index: number): E {
     const a = this.es;
-    if ((index >>> 0) !== index || index >= a.length) outOfBounds(index, a.length);
+    if ((index >>> 0) !== index || index >= a.length) {
+      if (this.arrayIndexErrors) throw new ArrayIndexOutOfBoundsException(`Index ${index} out of bounds for length ${a.length}`);
+      outOfBounds(index, a.length);
+    }
     return a[index];
   }
 
@@ -493,6 +507,32 @@ class ValuesView<K, V> extends ImmutableCollectionBase<V> {
   }
 }
 
+// Map views are read-only collections built on an iterator whose remove() is unsupported, so in the reference
+// the removal methods throw only when they would actually remove something; otherwise they report no change.
+for (const View of [EntrySetView, KeySetView, ValuesView]) {
+  const p = View.prototype as unknown as Collection<unknown>;
+  p.remove = function (this: Collection<unknown>, o: unknown): boolean {
+    for (const e of this.toArray()) if (equals(o, e)) uoe();
+    return false;
+  };
+  p.removeIf = function (this: Collection<unknown>, filter: (e: unknown) => boolean): boolean {
+    requireNonNull(filter);
+    for (const e of this.toArray()) if (filter(e)) uoe();
+    return false;
+  };
+  p.removeAll = function (this: Collection<unknown>, c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    return this.removeIf((e) => c.contains(e));
+  };
+  p.retainAll = function (this: Collection<unknown>, c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    return this.removeIf((e) => !c.contains(e));
+  };
+  p.clear = function (this: Collection<unknown>): void {
+    if (!this.isEmpty()) uoe();
+  };
+}
+
 /** @internal Builds a map from immutable entries; a repeated key throws IllegalArgumentException. */
 export function buildMap<K, V>(entries: MapEntry<K, V>[], nullFree: boolean, nullHostile = false): ImmutableMap<K, V> {
   const plain = new globalThis.Map<unknown, V>();
@@ -736,11 +776,11 @@ export type Map<K, V> = MapType<K, V>;
 export const List = {
   of<E>(...elements: E[]): ListType<E> {
     // the rest array is fresh, so it can be frozen in place
-    return new ImmutableList(rejectNulls(elements), true, true);
+    return listOf(rejectNulls(elements));
   },
   copyOf<E>(c: Collection<E>): ListType<E> {
     if (c instanceof ImmutableList && c.nullHostile) return c;
-    return new ImmutableList(rejectNulls(requireNonNull(c).toArray()), true, true);
+    return listOf(rejectNulls(requireNonNull(c).toArray()));
   },
   /**
    * @experimental preview. Unmodifiable random-access list of `size` elements, each computed by

@@ -388,11 +388,35 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
     ['entrySet', (m) => m.entrySet()],
   ];
   describe.each(views)('%s view is read-only', (_n, view) => {
-    it.each(collectionMutators)('%s', (_m, call) => {
+    // as in the reference, view removals throw only when something would be removed; adds always throw
+    const removes = (c: { size(): number }) => c.size() > 0;
+    const changing: Call[] = [
+      ['add', (c) => c.add(9)],
+      ['addAll empty', (c) => c.addAll(new ArrayList())],
+      ['remove present', (c) => c.remove([...c][0])],
+      ['removeIf all', (c) => c.removeIf(() => true)],
+      ['retainAll none', (c) => c.retainAll(new ArrayList())],
+      ['removeAll present', (c) => c.removeAll(ArrayList.of([...c][0]))],
+      ['clear', (c) => c.clear()],
+    ];
+    const noOps: Call[] = [
+      ['remove absent', (c) => c.remove(42)],
+      ['removeIf none', (c) => c.removeIf(() => false)],
+      ['retainAll all', (c) => c.retainAll(ArrayList.of(...c))],
+      ['removeAll none', (c) => c.removeAll(new ArrayList())],
+    ];
+    it.each(changing)('%s throws UnsupportedOperationException', (_m, call) => {
       const m = Map.of('a', 1, 'b', 2);
+      expect(removes(view(m))).toBe(true);
       expectThrows(() => call(view(m)), UOE);
       expect(m.size()).toBe(2);
     });
+    it.each(noOps)('%s returns false', (_m, call) => {
+      const m = Map.of('a', 1, 'b', 2);
+      expect(call(view(m))).toBe(false);
+      expect(m.size()).toBe(2);
+    });
+    it('clear on an empty view is a no-op', () => expect(() => view(Map.of()).clear()).not.toThrow());
     it('iterator.remove', () => {
       const it = view(Map.of('a', 1)).iterator();
       it.next();
