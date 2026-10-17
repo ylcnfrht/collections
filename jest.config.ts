@@ -1,19 +1,16 @@
 import type { Config } from '@jest/types';
 
 const config: Config.InitialOptions = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
+  roots: ['<rootDir>/tests'],
+  testMatch: ['**/*.test.ts'],
   transform: {
-    '^.+\\.tsx?$': 'ts-jest', // TypeScript dosyalarını ts-jest ile işleyin
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
   },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
-  testMatch: [
-    '**/tests/**/*.test.ts', // `tests` klasöründeki `.test.ts` dosyalarını bulur
-    '**/tests/**/*.test.js', // `tests` klasöründeki `.test.js` dosyalarını bulur
-  ],
-  transformIgnorePatterns: [
-    '/node_modules/', // `node_modules` klasörünü göz ardı eder
-  ],
+  collectCoverageFrom: ['src/**/*.ts', '!src/index.ts', '!src/interfaces/**'],
+  coverageThreshold: {
+    global: { statements: 95, lines: 95, functions: 95, branches: 90 },
+  },
 };
 
 export default config;
