@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  differential:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # reference runtime for the differential tests (Temurin 23 build, fetched directly)
+      - run: |
+          curl -sSL https://api.adoptium.net/v3/binary/latest/23/ga/linux/x64/jdk/hotspot/normal/eclipse -o jdk.tgz
+          mkdir -p "$RUNNER_TEMP/jdk" && tar xzf jdk.tgz -C "$RUNNER_TEMP/jdk" --strip-components=1
+          echo "$RUNNER_TEMP/jdk/bin" >> "$GITHUB_PATH"
+      - run: npm ci
+      - run: npm run test:diff

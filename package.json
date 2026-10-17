@@ -1,18 +1,57 @@
 {
   "name": "ts-collections-framework",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "description": "Collections framework for TypeScript: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue and more, with value equality, fail-fast iterators and live views.",
+  "keywords": [
+    "collections",
+    "data-structures",
+    "arraylist",
+    "linkedlist",
+    "hashmap",
+    "treemap",
+    "treeset",
+    "priorityqueue",
+    "deque",
+    "stream",
+    "collectors",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "baims <tech@baims.com>",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "jest",
     "test:cov": "jest --coverage",
-    "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts"
+    "test:diff": "ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --count 20000 --batch 5000",
+    "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
-  "keywords": [],
-  "author": "baims <tech@baims.com>",
-  "license": "MIT",
-  "description": "Collections framework for TypeScript: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue and more, with value equality, fail-fast iterators and live views.",
   "devDependencies": {
     "@datastructures-js/priority-queue": "6.4.0",
     "@types/jest": "^29.5.14",
@@ -22,7 +61,7 @@
     "tinybench": "6.2.0",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
+    "tsup": "8.5.1",
     "typescript": "^5.8.3"
-  },
-  "types": "dist/index.d.ts"
+  }
 }

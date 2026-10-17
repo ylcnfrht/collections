@@ -1,149 +1,130 @@
-# TS Collections Framework
+# ts-collections-framework
 
-A TypeScript implementation of a robust and extensible collections framework, inspired by common data structure libraries. This project aims to provide a set of highly performant and easy-to-use data structures like Lists, Queues, and more, all written in TypeScript with strong type safety.
+The classic collections framework API — `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`,
+`Stream`, `Collectors` and the rest — for TypeScript and JS, with the same semantics: value
+equality through `equals()`/`hashCode()`, fail-fast iterators, live views, navigable sorted collections
+and lazy streams.
 
-## Table of Contents
+```ts
+import { ArrayList, HashMap, TreeMap, Collectors, Comparator } from 'ts-collections-framework';
 
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
+const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
 
-## Features
+const byLength = words.stream()
+  .distinct()
+  .collect(Collectors.groupingBy((w) => w.length, () => new TreeMap(), Collectors.toList()));
+console.log(byLength.toString()); // {3=[fig], 4=[pear], 5=[apple]}
 
-- **TypeScript Native:** Built from the ground up with TypeScript for excellent type safety and developer experience.
-- **Common Data Structures:** Provides implementations for fundamental data structures like `ArrayList`, `LinkedList`, and `Queue`.
-- **Extensible Architecture:** Designed with abstract classes and interfaces, allowing for easy extension and creation of new collection types.
-- **Iterator Support:** Comprehensive iterator support for traversing collections.
-- **Serialization & Cloning:** Interfaces for making collections serializable and cloneable.
-- **Custom Comparators:** Support for custom comparison logic through `IComparator`.
+const counts = new HashMap<string, number>();
+for (const w of words) counts.merge(w, 1, (a, b) => a + b);
+console.log(counts.get('apple')); // 2
 
-## Installation
+words.sort(Comparator.comparing((w: string) => w.length));
+```
 
-To install the TS Collections Framework, you can use npm or yarn:
+- Zero dependencies, ESM + CommonJS, full type definitions, Node 18+ and browsers.
+- Every collection is iterable (`for..of`, spread, `Array.from`); maps iterate as `[key, value]` pairs, so `new globalThis.Map(myHashMap)` works.
 
-```bash
+## Install
+
+```sh
 npm install ts-collections-framework
-# or
-yarn add ts-collections-framework
 ```
 
-Usage
------
+## What's included
 
-Here are some basic examples of how to use the collections:
+| Kind | Classes |
+|---|---|
+| Lists | `ArrayList`, `LinkedList`, `Vector`, `Stack`, immutable `List.of` / `List.copyOf` |
+| Queues | `ArrayDeque`, `PriorityQueue`, `LinkedList` (also a `Deque`) |
+| Sets | `HashSet`, `LinkedHashSet`, `TreeSet`, immutable `Set.of` |
+| Maps | `HashMap`, `LinkedHashMap` (insertion/access order, LRU via `LinkedHashMap.lru(n)`), `TreeMap`, `IdentityHashMap`, immutable `Map.of` |
+| Streams | `Stream`, `IntStream`, `LongStream`, `DoubleStream`, `Collectors`, `Gatherers`, `StreamSupport` |
+| Utilities | `Collections` (sort, binarySearch, shuffle, unmodifiable/checked/synchronized wrappers, …), `Objects`, `Comparator`, `Optional*`, `Spliterators`, summary statistics |
+| Skeletons | `AbstractCollection`, `AbstractList`, `AbstractSequentialList`, `AbstractQueue`, `AbstractSet`, `AbstractMap` for your own implementations |
 
-### ArrayList
+Interfaces: `Collection`, `SequencedCollection`, `List`, `Queue`, `Deque`, `Set`, `SequencedSet`, `SortedSet`,
+`NavigableSet`, `Map`, `SequencedMap`, `SortedMap`, `NavigableMap`, `Iterator`, `ListIterator`, `Spliterator`, …
 
-TypeScript
+## Semantics
 
-```bash
-import { ArrayList } from 'ts-collections-framework/implementations/ArrayList';
+- **Equality** — `contains`, `indexOf`, map lookups and so on use `equals()`/`hashCode()` when an element defines
+  them, `Date`s compare by time, everything else uses SameValueZero (like JS `Map`/`Set`: `NaN` equals `NaN`,
+  `0` equals `-0`). Hash codes follow the classic formulas (`31 * h + …`, string hash, etc.).
+- **Ordering** — natural ordering uses `compareTo()` when defined, otherwise numbers, strings, bigints,
+  booleans and `Date`s; anything else throws `ClassCastException`.
+- **Fail-fast** — structurally modifying a collection while iterating it (including `for..of`) throws
+  `ConcurrentModificationException`.
+- **Live views** — `subList`, `reversed()`, `keySet`/`values`/`entrySet`, `headMap`/`tailMap`/`subMap`,
+  `descendingMap`… write through to the backing collection.
+- **Exceptions** — `IndexOutOfBoundsException`, `NoSuchElementException`, `NullPointerException`,
+  `IllegalArgumentException`, `IllegalStateException`, `UnsupportedOperationException`,
+  `ConcurrentModificationException`, `ClassCastException`, … all extend `RuntimeException` (an `Error`) and
+  carry a stable `name`.
+- **Absent values are `null`** — `get`, `poll`, `peek`, `firstKey`-style navigation return `null` when there is
+  nothing. Where a collection rejects nulls, `undefined` is rejected too.
 
-const myList = new ArrayList<string>();
-myList.add('Hello');
-myList.add('World');
-myList.add('!');
+### Adapting to TypeScript
 
-console.log(myList.size()); // Output: 3
-console.log(myList.get(0)); // Output: Hello
+A few names and shapes differ because TypeScript can't express them otherwise:
 
-myList.remove('World');
-console.log(myList.toArray()); // Output: ['Hello', '!']
-```
+| Classic API | Here | Why |
+|---|---|---|
+| `list.remove(int index)` | `list.removeAt(index)` | `remove(index)` and `remove(element)` can't be told apart on a `List<number>` |
+| `Comparator` object with default methods | a function `(a, b) => number`; helpers on `Comparator` (`Comparator.comparing`, `Comparator.reversed(c)`, `Comparator.thenComparing(c1, c2)`, …) | lambdas are plain functions |
+| Functional interfaces (`Predicate`, `Function`, `Supplier`, …) | plain functions | same |
+| `Set`, `Map`, `Iterator` interface names | same names | they shadow the JS globals when imported — alias them if you need both (`import { Map as JMap } …`) or use `globalThis.Map` |
+| `new TreeMap(sortedMap)` vs `new TreeMap(map)` | a sorted source always keeps its comparator | overloads can't be chosen at run time |
+| `Gatherer.ofSequential(a, b)` | resolved by the functions' arity | both overloads take two functions; use `Integrator.ofGreedy` or the 3-argument form if ambiguous |
 
-### LinkedList
+### Streams
 
-TypeScript
+Streams are lazy, single-use and short-circuiting, with a push-based engine. Differences:
 
-```bash
-import { LinkedList } from 'ts-collections-framework/implementations/LinkedList';
+- `parallel()` / `parallelStream()` only set the flag — evaluation is sequential (results are identical).
+- `LongStream` uses JS numbers (exact up to `Number.MAX_SAFE_INTEGER`), not `bigint`.
+- `IntStream` does not coerce values to 32-bit integers and `sum()` doesn't wrap on overflow.
+- Spliterator sizes are numbers; an unknown size is `Infinity`.
+- `DoubleStream.distinct()`/`sorted()` distinguish `-0.0` from `0.0`, like the reference; elsewhere `-0` equals `0`.
+- JS extras: `Stream.from(iterable)`, `Stream.ofArray(array)`, and streams are iterable.
 
-const myLinkedList = new LinkedList<number>();
-myLinkedList.add(10);
-myLinkedList.add(20);
-myLinkedList.add(30);
+### Iteration speed
 
-console.log(myLinkedList.get(1)); // Output: 20
+`for..of` over a collection is fail-fast, which costs a little per element. When you need maximum speed,
+use `forEach` (on `ArrayList` it is faster than a native array's `forEach`) or a stream.
 
-myLinkedList.removeAt(0);
-console.log(myLinkedList.toArray()); // Output: [20, 30]
+## Compatibility evidence
 
-```
+- Every interface is checked against the reference API documentation; each documented behaviour has tests
+  (over 9,000, ~99% coverage), including a black-box conformance suite written from the documentation alone.
+- `npm run test:diff` runs thousands of random operation sequences on a real reference runtime (if one is
+  installed) and on this library, and compares every result.
 
-### Queue
+## Performance
 
-TypeScript
+Measured with `npm run bench` against native `Array`/`Map`/`Set`, Node's Iterator helpers and popular
+libraries (js-sdsl, mnemonist, @datastructures-js). Highlights (ratios, higher is better for us; numbers vary by machine):
 
-```bash
-import { Queue } from 'ts-collections-framework/implementations/Queue';
+| | vs |
+|---|---|
+| `HashMap` get/put on integer keys | 4–10× native `Map` |
+| `LinkedHashMap.lru(n)` cache | 2× mnemonist `LRUMap` |
+| `stream().filter().map()` sums | ~9× native array chains, ~10× Iterator helpers |
+| `PriorityQueue` heap sort / churn | fastest of js-sdsl, mnemonist, @datastructures-js |
+| `TreeMap` navigation | 1.8–2.9× js-sdsl `OrderedMap` |
 
-const myQueue = new Queue<string>();
-myQueue.offer('First');
-myQueue.offer('Second');
+Run `npm run bench [name]` to reproduce on your machine.
 
-console.log(myQueue.peek()); // Output: First
-console.log(myQueue.poll()); // Output: First
-console.log(myQueue.poll()); // Output: Second
-console.log(myQueue.isEmpty()); // Output: true
-```
+## Scripts
 
-Project Structure
------------------
+| Command | |
+|---|---|
+| `npm test` | unit, contract and conformance tests |
+| `npm run typecheck` | type-check sources and tests |
+| `npm run build` | ESM + CJS + type definitions into `dist/` |
+| `npm run bench [filter]` | benchmarks |
+| `npm run test:diff` | differential tests against a reference runtime |
 
-The project is organized into several key directories:
+## License
 
-```
-ts-collections-framework/src
-├── abstracts/             # Abstract base classes for collections, lists, etc.
-│   ├── AbstractCollection.ts
-│   ├── AbstractList.ts
-│   └── AbstractSequentialList.ts
-├── exceptions/            # Custom exception classes for collection operations.
-│   └── exceptions.ts
-├── implementations/       # Concrete implementations of data structures.
-│   ├── ArrayList.ts
-│   ├── LinkedList.ts
-│   ├── Node.ts            # Helper class for linked list implementations.
-│   └── Queue.ts
-├── interfaces/            # TypeScript interfaces defining collection contracts and behaviors.
-│   ├── ICloneable.ts
-│   ├── ICollection.ts
-│   ├── IComparator.ts
-│   ├── IIterable.ts
-│   ├── IIterator.ts
-│   ├── Ilist.ts
-│   ├── IListIterator.ts
-│   ├── IQueue.ts
-│   ├── IRandomAccess.ts
-│   ├── ISerializable.ts
-│   ├── ISequencedCollection.ts
-│   ├── ISpliterator.ts
-│   ├── IUnaryOperator.ts
-│   └── Override.ts
-└── utils/                 # Utility classes and helper functions.
-    ├── Iterator.ts
-    └── Itr.ts
-```
-
--   **`abstracts/`**: Contains abstract classes that provide common functionality and serve as a base for concrete collection implementations. This promotes code reusability and a consistent API.
-
--   **`exceptions/`**: Defines custom exceptions that might be thrown during collection operations (e.g., `IndexOutOfBoundsException`).
-
--   **`implementations/`**: Houses the actual data structure implementations, such as `ArrayList`, `LinkedList`, and `Queue`.
-
--   **`interfaces/`**: This directory is crucial, defining the contracts for various collection types, iterators, comparators, and other essential behaviors.
-
--   **`utils/`**: Provides utility classes or helper functions that support the core collection functionalities, such as iterators.
-
-Contributing
-------------
-
-Contributions are welcome! If you have any ideas, bug reports, or feature requests, please open an issue or submit a pull request.
-
-License
--------
-
-This project is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+MIT
