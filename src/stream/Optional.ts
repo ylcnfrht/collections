@@ -74,12 +74,12 @@ export class Optional<T> {
   }
 
   ifPresent(action: (value: T) => void): void {
-    if (this.present) action(this.value);
+    if (this.present) requireNonNull(action)(this.value);
   }
 
   ifPresentOrElse(action: (value: T) => void, emptyAction: () => void): void {
-    if (this.present) action(this.value);
-    else emptyAction();
+    if (this.present) requireNonNull(action)(this.value);
+    else requireNonNull(emptyAction)();
   }
 
   filter(predicate: (value: T) => boolean): Optional<T> {
@@ -112,14 +112,14 @@ export class Optional<T> {
   }
 
   orElseGet(supplier: () => T): T {
-    return this.present ? this.value : supplier();
+    return this.present ? this.value : requireNonNull(supplier)();
   }
 
   /** Without an argument throws NoSuchElementException; otherwise throws the supplied error. */
   orElseThrow(exceptionSupplier?: () => unknown): T {
     if (this.present) return this.value;
     if (arguments.length === 0) throw new NoSuchElementException(NO_VALUE);
-    throw requireNonNull(exceptionSupplier)();
+    throw requireNonNull(requireNonNull(exceptionSupplier)());
   }
 
   equals(o: unknown): boolean {
@@ -160,12 +160,12 @@ abstract class NumberOptional {
   }
 
   ifPresent(action: (value: number) => void): void {
-    if (this.present) action(this.value);
+    if (this.present) requireNonNull(action)(this.value);
   }
 
   ifPresentOrElse(action: (value: number) => void, emptyAction: () => void): void {
-    if (this.present) action(this.value);
-    else emptyAction();
+    if (this.present) requireNonNull(action)(this.value);
+    else requireNonNull(emptyAction)();
   }
 
   orElse(other: number): number {
@@ -173,13 +173,13 @@ abstract class NumberOptional {
   }
 
   orElseGet(supplier: () => number): number {
-    return this.present ? this.value : supplier();
+    return this.present ? this.value : requireNonNull(supplier)();
   }
 
   orElseThrow(exceptionSupplier?: () => unknown): number {
     if (this.present) return this.value;
     if (arguments.length === 0) throw new NoSuchElementException(NO_VALUE);
-    throw requireNonNull(exceptionSupplier)();
+    throw requireNonNull(requireNonNull(exceptionSupplier)());
   }
 
   equals(o: unknown): boolean {

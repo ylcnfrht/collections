@@ -2,7 +2,7 @@
 // Each factory mirrors the reference implementation: same containers, same combiners, same characteristics.
 import { AbstractMap, SimpleImmutableEntry } from '../abstract/AbstractMap';
 import { AbstractSet } from '../abstract/AbstractSet';
-import { IllegalStateException } from '../exceptions';
+import { IllegalStateException, NullPointerException } from '../exceptions';
 import { buildSet, List as ImmutableList, Map as ImmutableMap, Set as ImmutableSet } from '../immutable/ImmutableCollections';
 import type { Collection } from '../interfaces/Collection';
 import type { Iterator } from '../interfaces/Iterator';
@@ -32,9 +32,26 @@ type Chars = Set<CollectorCharacteristics>;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Hidden = any;
 
+const CHAR_ORDER: readonly CollectorCharacteristics[] = ['CONCURRENT', 'UNORDERED', 'IDENTITY_FINISH'];
+const charRank = (c: CollectorCharacteristics): number => {
+  const i = CHAR_ORDER.indexOf(c);
+  return i < 0 ? CHAR_ORDER.length : i;
+};
+
 function chars(...cs: CollectorCharacteristics[]): Chars {
-  // unmodifiable; contains(null) is false like the reference's unmodifiable EnumSet
-  return buildSet(cs, false, true);
+  // unmodifiable and deduplicated, in enum order like an EnumSet; contains(null) is false
+  return buildSet(cs.length > 1 ? cs.slice().sort((a, b) => charRank(a) - charRank(b)) : cs, false, true);
+}
+
+const throwNpe = (): never => {
+  throw new NullPointerException();
+};
+/**
+ * f, or a function throwing NullPointerException when f is null/undefined: the reference does not check these
+ * arguments when the collector is created, only fails where it calls them.
+ */
+function lazy<F>(f: F): NonNullable<F> {
+  return (f ?? throwNpe) as NonNullable<F>;
 }
 
 const CH_CONCURRENT_ID = chars('CONCURRENT', 'UNORDERED', 'IDENTITY_FINISH');
@@ -208,8 +225,7 @@ class Partition<T> extends AbstractMap<boolean, T> {
 // ---- the collectors
 
 function toCollection<T, C extends Collection<T>>(collectionFactory: () => C): CollectorType<T, C, C> {
-  requireNonNull(collectionFactory);
-  return makeId(collectionFactory, (c, t) => {
+  return makeId(lazy(collectionFactory), (c, t) => {
     c.add(t);
   }, addAllCombiner, CH_ID);
 }
@@ -241,14 +257,19 @@ function toUnmodifiableSet<T>(): CollectorType<T, Set<T>, Set<T>> {
 /** Elements are appended with String(); null gives "null". */
 function joining(): CollectorType<string | null, Hidden, string>;
 function joining(delimiter: string): CollectorType<string | null, Hidden, string>;
-/** @throws NullPointerException if delimiter, prefix or suffix is null (eagerly; the reference throws on first use) */
+/** A null/undefined delimiter, prefix or suffix throws NullPointerException when the collector is used, like the reference. */
 function joining(delimiter: string, prefix: string, suffix: string): CollectorType<string | null, Hidden, string>;
-function joining(delimiter = '', prefix = '', suffix = ''): CollectorType<string | null, Hidden, string> {
-  requireNonNull(delimiter, 'The delimiter must not be null');
-  requireNonNull(prefix, 'The prefix must not be null');
-  requireNonNull(suffix, 'The suffix must not be null');
+function joining(d?: string, p?: string, s?: string): CollectorType<string | null, Hidden, string> {
+  // arguments.length, not default parameters: joining(undefined) must fail like joining(null)
+  const n = arguments.length;
+  const delimiter = n === 0 ? '' : d, prefix = n < 3 ? '' : p, suffix = n < 3 ? '' : s;
   return make<string | null, Joiner, string>(
-    () => new Joiner(delimiter, prefix, suffix),
+    () =>
+      new Joiner(
+        requireNonNull(delimiter, 'The delimiter must not be null'),
+        requireNonNull(prefix, 'The prefix must not be null'),
+        requireNonNull(suffix, 'The suffix must not be null')
+      ),
     (j, s) => j.add(typeof s === 'string' ? s : toString(s)),
     (a, b) => a.merge(b),
     (j) => j.toString(),
@@ -257,13 +278,13 @@ function joining(delimiter = '', prefix = '', suffix = ''): CollectorType<string
 }
 
 function mapping<T, U, A, R>(mapper: (t: T) => U, downstream: CollectorType<U, A, R>): CollectorType<T, A, R> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   const acc = requireNonNull(downstream).accumulator();
   return make<T, A, R>(downstream.supplier(), (r, t) => acc(r, mapper(t)), downstream.combiner(), downstream.finisher(), downstream.characteristics());
 }
 
 function filtering<T, A, R>(predicate: (t: T) => boolean, downstream: CollectorType<T, A, R>): CollectorType<T, A, R> {
-  requireNonNull(predicate);
+  predicate = lazy(predicate);
   const acc = requireNonNull(downstream).accumulator();
   return make<T, A, R>(downstream.supplier(), (r, t) => {
     if (predicate(t)) acc(r, t);
@@ -272,7 +293,7 @@ function filtering<T, A, R>(predicate: (t: T) => boolean, downstream: CollectorT
 
 /** Each mapped stream is closed after its elements are consumed; a null/undefined result counts as empty. */
 function flatMapping<T, U, A, R>(mapper: (t: T) => ClosableSource<U> | null | undefined, downstream: CollectorType<U, A, R>): CollectorType<T, A, R> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   const acc = requireNonNull(downstream).accumulator();
   return make<T, A, R>(downstream.supplier(), (r, t) => {
     const result = mapper(t);
@@ -343,7 +364,7 @@ function summingInt<T>(mapper: (t: T) => number): CollectorType<T, Hidden, numbe
 
 /** Plain sum; exact up to Number.MAX_SAFE_INTEGER. */
 function summingLong<T>(mapper: (t: T) => number): CollectorType<T, Hidden, number> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   return make<T, number[], number>(() => [0], (a, t) => {
     a[0] += mapper(t);
   }, (a, b) => {
@@ -354,7 +375,7 @@ function summingLong<T>(mapper: (t: T) => number): CollectorType<T, Hidden, numb
 
 /** Compensated (Kahan) summation, as the reference; an infinite plain sum wins over a NaN compensated one. */
 function summingDouble<T>(mapper: (t: T) => number): CollectorType<T, Hidden, number> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   // [high-order sum, compensation, simple sum]
   return make<T, number[], number>(() => [0, 0, 0], (a, t) => {
     const val = mapper(t);
@@ -375,7 +396,7 @@ function averagingInt<T>(mapper: (t: T) => number): CollectorType<T, Hidden, num
 
 /** 0 when no elements. */
 function averagingLong<T>(mapper: (t: T) => number): CollectorType<T, Hidden, number> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   // [sum, count]
   return make<T, number[], number>(() => [0, 0], (a, t) => {
     a[0] += mapper(t);
@@ -389,7 +410,7 @@ function averagingLong<T>(mapper: (t: T) => number): CollectorType<T, Hidden, nu
 
 /** Compensated summation, as the reference. 0 when no elements. */
 function averagingDouble<T>(mapper: (t: T) => number): CollectorType<T, Hidden, number> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   // [high-order sum, compensation, count, simple sum]
   return make<T, number[], number>(() => [0, 0, 0, 0], (a, t) => {
     const val = mapper(t);
@@ -410,10 +431,10 @@ function reducing<T>(identity: T, op: (a: T, b: T) => T): CollectorType<T, Hidde
 function reducing<T, U>(identity: U, mapper: (t: T) => U, op: (a: U, b: U) => U): CollectorType<T, Hidden, U>;
 function reducing(...args: unknown[]): AnyCollector {
   type F = (a: unknown, b: unknown) => unknown;
-  if (args.length <= 1) return reducingOptional(requireNonNull(args[0]) as F);
+  if (args.length <= 1) return reducingOptional(lazy(args[0]) as F);
   const id = args[0];
-  const mapper = args.length === 2 ? identity : (requireNonNull(args[1]) as (t: unknown) => unknown);
-  const op = requireNonNull(args[args.length - 1]) as F;
+  const mapper = args.length === 2 ? identity : (lazy(args[1]) as (t: unknown) => unknown);
+  const op = lazy(args[args.length - 1]) as F;
   return make<unknown, unknown[], unknown>(() => [id], (a, t) => {
     a[0] = op(a[0], mapper(t));
   }, (a, b) => {
@@ -431,8 +452,8 @@ function groupingImpl<T, K, D, A, M extends Map<K, D>>(
   idChars: Chars,
   noIdChars: Chars
 ): CollectorType<T, Hidden, M> {
-  requireNonNull(classifier);
-  requireNonNull(mapFactory);
+  classifier = lazy(classifier);
+  mapFactory = lazy(mapFactory);
   const dSup = requireNonNull(downstream).supplier();
   const dAcc = downstream.accumulator();
   const newContainer = (): A => dSup();
@@ -487,7 +508,7 @@ function groupingArgs(n: number, a: unknown, b: unknown): [() => Map<unknown, un
 function partitioningBy<T>(predicate: (t: T) => boolean): CollectorType<T, Hidden, Map<boolean, List<T>>>;
 function partitioningBy<T, D, A>(predicate: (t: T) => boolean, downstream: CollectorType<T, A, D>): CollectorType<T, Hidden, Map<boolean, D>>;
 function partitioningBy<T, D, A>(predicate: (t: T) => boolean, ds?: CollectorType<T, A, D>): CollectorType<T, Hidden, Map<boolean, D>> {
-  requireNonNull(predicate);
+  predicate = lazy(predicate);
   const downstream = arguments.length < 2 ? (toList<T>() as unknown as CollectorType<T, A, D>) : ds!;
   const dSup = requireNonNull(downstream).supplier();
   const dAcc = downstream.accumulator();
@@ -522,12 +543,13 @@ function toConcurrentMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: un
 }
 
 function toMapImpl(n: number, keyMapper: (t: unknown) => unknown, valueMapper: (t: unknown) => unknown, merge: unknown, factory: unknown, ch: Chars): AnyCollector {
-  requireNonNull(keyMapper);
-  requireNonNull(valueMapper);
+  keyMapper = lazy(keyMapper);
+  valueMapper = lazy(valueMapper);
   type M = Map<unknown, unknown>;
   if (n <= 2) return makeId<unknown, M>(() => new HashMap(), uniqKeysMapAccumulator(keyMapper, valueMapper), uniqKeysMapMerger(), ch);
-  const mergeFunction = requireNonNull(merge) as (a: unknown, b: unknown) => unknown;
-  const mapFactory = n >= 4 ? (requireNonNull(factory) as () => M) : () => new HashMap();
+  // a null mergeFunction reaches Map.merge, which rejects it on the first element
+  const mergeFunction = merge as (a: unknown, b: unknown) => unknown;
+  const mapFactory = n >= 4 ? (lazy(factory) as () => M) : () => new HashMap();
   return makeId<unknown, M>(mapFactory, (map, element) => {
     map.merge(keyMapper(element), valueMapper(element), mergeFunction);
   }, mapMerger(mergeFunction), ch);
@@ -544,7 +566,7 @@ function toUnmodifiableMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: 
 }
 
 function summarizingInt<T>(mapper: (t: T) => number): CollectorType<T, IntSummaryStatistics, IntSummaryStatistics> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   return makeId<T, IntSummaryStatistics>(() => new IntSummaryStatistics(), (r, t) => r.accept(mapper(t)), (l, r) => {
     l.combine(r);
     return l;
@@ -552,7 +574,7 @@ function summarizingInt<T>(mapper: (t: T) => number): CollectorType<T, IntSummar
 }
 
 function summarizingLong<T>(mapper: (t: T) => number): CollectorType<T, LongSummaryStatistics, LongSummaryStatistics> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   return makeId<T, LongSummaryStatistics>(() => new LongSummaryStatistics(), (r, t) => r.accept(mapper(t)), (l, r) => {
     l.combine(r);
     return l;
@@ -560,7 +582,7 @@ function summarizingLong<T>(mapper: (t: T) => number): CollectorType<T, LongSumm
 }
 
 function summarizingDouble<T>(mapper: (t: T) => number): CollectorType<T, DoubleSummaryStatistics, DoubleSummaryStatistics> {
-  requireNonNull(mapper);
+  mapper = lazy(mapper);
   return makeId<T, DoubleSummaryStatistics>(() => new DoubleSummaryStatistics(), (r, t) => r.accept(mapper(t)), (l, r) => {
     l.combine(r);
     return l;
@@ -575,10 +597,14 @@ function teeing<T, R1, R2, R>(downstream1: CollectorType<T, Hidden, R1>, downstr
   requireNonNull(downstream1, 'downstream1');
   requireNonNull(downstream2, 'downstream2');
   requireNonNull(merger, 'merger');
-  const s1 = downstream1.supplier(), s2 = downstream2.supplier();
-  const a1 = downstream1.accumulator(), a2 = downstream2.accumulator();
-  const c1 = downstream1.combiner(), c2 = downstream2.combiner();
-  const f1 = downstream1.finisher(), f2 = downstream2.finisher();
+  const s1 = requireNonNull(downstream1.supplier(), 'downstream1 supplier');
+  const s2 = requireNonNull(downstream2.supplier(), 'downstream2 supplier');
+  const a1 = requireNonNull(downstream1.accumulator(), 'downstream1 accumulator');
+  const a2 = requireNonNull(downstream2.accumulator(), 'downstream2 accumulator');
+  const c1 = requireNonNull(downstream1.combiner(), 'downstream1 combiner');
+  const c2 = requireNonNull(downstream2.combiner(), 'downstream2 combiner');
+  const f1 = requireNonNull(downstream1.finisher(), 'downstream1 finisher');
+  const f2 = requireNonNull(downstream2.finisher(), 'downstream2 finisher');
   const ch1 = downstream1.characteristics(), ch2 = downstream2.characteristics();
   const ch = ch1.isEmpty() || ch2.isEmpty() ? CH_NOID : chars(...ch1.toArray().filter((c) => c !== 'IDENTITY_FINISH' && ch2.contains(c)));
   type Pair = { left: unknown; right: unknown };

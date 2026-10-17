@@ -831,7 +831,8 @@ describe('unmodifiableMap / SortedMap / NavigableMap', () => {
     base.put(4, '4');
     expect(m.headMap(5).size()).toBe(3);
     expect(unmodifiableNavigableMap(m)).toBe(m);
-    expect(unmodifiableSortedMap(m)).toBe(m);
+    // like the reference, a navigable-map wrapper is wrapped again as a sorted map (pollFirstEntry differs)
+    expect(unmodifiableSortedMap(m)).not.toBe(m);
     expect(base.size()).toBe(5);
   });
 });

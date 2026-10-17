@@ -82,7 +82,8 @@ describe('Integrator', () => {
     expect(g(1, 2, s)).toBe(false);
     expect(calls).toEqual([[1, 2, s]]);
   });
-  test('ofGreedy(null) throws NPE', () => expectThrows(() => Integrator.ofGreedy(nul), NPE));
+  test('ofGreedy(null) returns null like the reference', () => expect(Integrator.ofGreedy(nul)).toBeNull());
+  test('ofGreedy(undefined) returns undefined', () => expect(Integrator.ofGreedy(undefined as any)).toBeUndefined());
   test('ofGreedy result declares three parameters', () => expect(Integrator.ofGreedy(f).length).toBe(3));
 });
 
@@ -583,6 +584,11 @@ describe('Gatherers.windowSliding', () => {
 });
 
 describe('Gatherers.mapConcurrent', () => {
+  test('maxConcurrency < 1 message says "greater than 0", unlike the window gatherers', () => {
+    expect(() => Gatherers.mapConcurrent(0, (x: number) => x)).toThrow("'maxConcurrency' must be greater than 0");
+    expect(() => Gatherers.windowFixed(0)).toThrow("'windowSize' must be greater than zero");
+    expect(() => Gatherers.windowSliding(0)).toThrow("'windowSize' must be greater than zero");
+  });
   test('maps preserving order', () => expect(gather(Gatherers.mapConcurrent(4, (x: number) => x * x), [3, 1, 2])).toEqual([9, 1, 4]));
   test('maxConcurrency 1', () => expect(gather(Gatherers.mapConcurrent(1, (x: number) => -x), [1])).toEqual([-1]));
   test('empty input', () => expect(gather(Gatherers.mapConcurrent(2, (x: number) => x), [])).toEqual([]));
@@ -649,5 +655,57 @@ describe('Gatherers.mapConcurrent', () => {
   test('composes with windowFixed', () => {
     const g = Gatherers.mapConcurrent(2, (x: number) => x * 10).andThen(Gatherers.windowFixed<number>(2));
     expect(arrays(gather(g, [1, 2, 3]))).toEqual([[10, 20], [30]]);
+  });
+});
+
+describe('plain-object gatherers (members other than integrator are optional)', () => {
+  // any: the members are optional in the contract; the cast keeps this independent of how the type spells it
+  const plain = <T, R>(g: { integrator: () => any; initializer?: () => any; finisher?: () => any; combiner?: () => any }) => g as any as Gatherer<T, any, R>;
+  const twice = plain<number, number>({ integrator: () => (_: unknown, e: number, d: Downstream<number>) => d.push(e) && d.push(e) });
+  const inc = map((i: number) => i + 1);
+  const str = map((i: number) => `${i}`);
+
+  test('composes on the right', () => expect(gather(inc.andThen(twice), [1, 2])).toEqual([2, 2, 3, 3]));
+  test('composes in the middle of a chain (left-nested and right-nested)', () => {
+    expect(gather(inc.andThen(twice).andThen(str), [1])).toEqual(['2', '2']);
+    expect(gather(inc.andThen(inc.andThen(twice)), [1])).toEqual([3, 3]);
+    expect(gather(inc.andThen(inc).andThen(inc.andThen(twice)), [0])).toEqual([3, 3]);
+  });
+  test('missing members read as the default sentinels', () => {
+    const c = inc.andThen(twice);
+    expect(c.initializer()).not.toBe(undefined);
+    expect(c.combiner()).toBe(Gatherer.defaultCombiner());
+    expect(c.finisher()).toBe(Gatherer.defaultFinisher());
+    const greedyPlain = plain<number, number>({ integrator: () => Integrator.ofGreedy((_: unknown, e: number, d: Downstream<number>) => d.push(e)) });
+    const g = Gatherer.of(Integrator.ofGreedy<null, number, number>((_, e, d) => d.push(e)));
+    expect(g.andThen(greedyPlain).initializer()).toBe(Gatherer.defaultInitializer());
+    expect(g.andThen(greedyPlain).combiner()).toBe(Gatherer.defaultCombiner());
+  });
+  test('optional initializer, finisher and combiner are used when present', () => {
+    const sum = plain<number, number>({
+      initializer: () => () => ({ v: 0 }),
+      integrator: () => (s: { v: number }, e: number) => ((s.v += e), true),
+      finisher: () => (s: { v: number }, d: Downstream<number>) => void d.push(s.v),
+      combiner: () => (a: { v: number }, b: { v: number }) => ({ v: a.v + b.v }),
+    });
+    const c = inc.andThen(sum);
+    expect(gather(c, [1, 2, 3])).toEqual([9]);
+    expect(c.combiner()).not.toBe(Gatherer.defaultCombiner());
+    expect(gatherSplit(c, [1, 2, 3], 1)).toEqual([9]);
+  });
+  test('a user andThen returning a plain gatherer gets its missing members filled in', () => {
+    const custom = plain<number, number>({
+      integrator: () => (_: unknown, e: number, d: Downstream<number>) => d.push(e),
+    }) as any;
+    custom.andThen = (that: Gatherer<number, any, number>) => plain<number, number>({ integrator: () => (_: unknown, e: number, d: Downstream<number>) => d.push(e * 10) && that.integrator()(null, e, d) });
+    // inc.andThen(custom).andThen(x) re-associates to custom.andThen(x), whose plain result is completed
+    const c = inc.andThen(custom).andThen(map((x: number) => x) as any);
+    expect(c.combiner()).toBe(Gatherer.defaultCombiner());
+    expect(c.finisher()).toBe(Gatherer.defaultFinisher());
+    expect(gather(c, [1])).toEqual([20, 2]);
+  });
+  test('a short-circuiting plain gatherer stops the chain', () => {
+    const first = plain<number, number>({ integrator: () => (_: unknown, e: number, d: Downstream<number>) => (d.push(e), false) });
+    expect(gather(inc.andThen(first), [1, 2, 3])).toEqual([2]);
   });
 });

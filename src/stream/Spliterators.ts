@@ -86,11 +86,17 @@ export interface SourceOptions<T> {
   comparator?: SourceComparator<T> | null;
   /** Never call source.size(): the estimate is Infinity (for sources whose size is costly, like tree range views). */
   unknownSize?: boolean;
+  /** Traversal leaves the estimate alone (only trySplit lowers it), as the reference's iterator and hash spliterators do. */
+  keepEstimate?: boolean;
 }
+
+/** Options of the reference's plain iterator spliterator. @internal */
+export const KEEP_ESTIMATE: SourceOptions<never> = Object.freeze({ keepEstimate: true });
 
 /**
  * Spliterator over an iterator: either a collection's, created at first use (late-binding), or a given one.
- * Splits by copying out growing batches into ArraySpliterators, like the reference.
+ * Splits by copying out growing batches into ArraySpliterators, like the reference. Traversal counts the estimate
+ * down unless opts.keepEstimate.
  * @internal
  */
 export class IteratorSpliterator<T> extends BaseSpliterator<T> {
@@ -129,7 +135,7 @@ export class IteratorSpliterator<T> extends BaseSpliterator<T> {
     requireNonNull(action);
     const it = this.bind();
     if (!it.hasNext()) return false;
-    if (this.est > 0) this.est--;
+    if (this.est > 0 && !this.opts.keepEstimate) this.est--;
     action(it.next());
     this.checkMod();
     return true;
@@ -139,7 +145,7 @@ export class IteratorSpliterator<T> extends BaseSpliterator<T> {
     requireNonNull(action);
     const it = this.bind();
     while (it.hasNext()) action(it.next());
-    if (this.est !== Infinity) this.est = 0;
+    if (this.est !== Infinity && !this.opts.keepEstimate) this.est = 0;
     this.checkMod();
   }
 
@@ -346,6 +352,11 @@ abstract class AbstractSpliteratorImpl<T> extends BaseSpliterator<T> {
   }
 }
 
+/** AbstractSpliterator over numbers; the primitive variants behave the same. */
+abstract class AbstractIntSpliteratorImpl extends AbstractSpliteratorImpl<number> {}
+abstract class AbstractLongSpliteratorImpl extends AbstractSpliteratorImpl<number> {}
+abstract class AbstractDoubleSpliteratorImpl extends AbstractSpliteratorImpl<number> {}
+
 function checkFromToBounds(length: number, origin: number, fence: number): void {
   if (origin > fence) throw new ArrayIndexOutOfBoundsException(`origin(${origin}) > fence(${fence})`);
   if (origin < 0) throw new ArrayIndexOutOfBoundsException(`Array index out of range: ${origin}`);
@@ -396,6 +407,9 @@ export class Spliterators {
 
   /** Base class for spliterators that only implement tryAdvance; see AbstractSpliteratorImpl. */
   static readonly AbstractSpliterator = AbstractSpliteratorImpl;
+  static readonly AbstractIntSpliterator = AbstractIntSpliteratorImpl;
+  static readonly AbstractLongSpliterator = AbstractLongSpliteratorImpl;
+  static readonly AbstractDoubleSpliterator = AbstractDoubleSpliteratorImpl;
 
   /** Empty spliterator: SIZED|SUBSIZED, never splits. */
   static emptySpliterator<T>(): Spliterator<T> {
@@ -434,10 +448,10 @@ export class Spliterators {
     }
     if (arguments.length === 3) {
       const ch = b as number;
-      return new IteratorSpliterator(null, src as Iterator<T>, a, (ch & Spliterator.CONCURRENT) === 0 ? ch | SIZED | SUBSIZED : ch);
+      return new IteratorSpliterator(null, src as Iterator<T>, a, (ch & Spliterator.CONCURRENT) === 0 ? ch | SIZED | SUBSIZED : ch, KEEP_ESTIMATE);
     }
     if (isCollection(src)) {
-      return new IteratorSpliterator(src as Collection<T>, null, -1, (a & Spliterator.CONCURRENT) === 0 ? a | SIZED | SUBSIZED : a);
+      return new IteratorSpliterator(src as Collection<T>, null, -1, (a & Spliterator.CONCURRENT) === 0 ? a | SIZED | SUBSIZED : a, KEEP_ESTIMATE);
     }
     const array = src as ArrayLike<T>;
     return new ArraySpliterator(array, 0, array.length, a | SIZED | SUBSIZED);
@@ -445,7 +459,7 @@ export class Spliterators {
 
   /** Over the iterator, with no size: SIZED and SUBSIZED are cleared, estimateSize() is Infinity. */
   static spliteratorUnknownSize<T>(iterator: Iterator<T>, characteristics: number): Spliterator<T> {
-    return new IteratorSpliterator(null, requireNonNull(iterator), Infinity, characteristics & ~(SIZED | SUBSIZED));
+    return new IteratorSpliterator(null, requireNonNull(iterator), Infinity, characteristics & ~(SIZED | SUBSIZED), KEEP_ESTIMATE);
   }
 
   /** Iterator over the spliterator's remaining elements (remove() unsupported). */
@@ -457,6 +471,9 @@ export class Spliterators {
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export declare namespace Spliterators {
   type AbstractSpliterator<T> = AbstractSpliteratorImpl<T>;
+  type AbstractIntSpliterator = AbstractIntSpliteratorImpl;
+  type AbstractLongSpliterator = AbstractLongSpliteratorImpl;
+  type AbstractDoubleSpliterator = AbstractDoubleSpliteratorImpl;
 }
 
 /**
@@ -464,5 +481,5 @@ export declare namespace Spliterators {
  * spliterator characteristics: (DISTINCT) | SIZED, SIZED dropped once split. @internal
  */
 export function hashSpliterator<T>(source: SpliteratorSource<T>, owner: { modCount: number }, distinct: boolean): Spliterator<T> {
-  return new IteratorSpliterator(source, null, -1, (distinct ? Spliterator.DISTINCT : 0) | SIZED, { modCounter: owner, sizedOnlyUnsplit: true });
+  return new IteratorSpliterator(source, null, -1, (distinct ? Spliterator.DISTINCT : 0) | SIZED, { modCounter: owner, sizedOnlyUnsplit: true, keepEstimate: true });
 }

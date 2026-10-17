@@ -188,16 +188,25 @@ export function frequency(coll: Collection<unknown>, o: unknown): number {
 export function disjoint(c1: Collection<unknown>, c2: Collection<unknown>): boolean {
   requireNonNull(c1);
   requireNonNull(c2);
-  // iterate one side and ask contains() of the side most likely to answer fast: a set, else the larger one
-  let iter = c1;
-  let look = c2;
-  // sizes read through iter/look: Set and Collection are structurally equal, so a negated guard narrows c1/c2 to never
-  const s1 = isSet(c1);
-  const s2 = isSet(c2);
-  if (s1 ? !s2 : !s2 && iter.size() > look.size()) [iter, look] = [c2, c1];
-  if (iter.isEmpty() || look.isEmpty()) return true;
-  const it = iter.iterator();
-  while (it.hasNext()) if (look.contains(it.next())) return false;
+  // the reference algorithm: contains() is asked of a Set when there is one (c1 first), else of the larger side;
+  // the empty shortcut applies only when neither is a Set, so a Set may still see contains(e) and reject e
+  let iterate = c1;
+  let contains = c2;
+  if (isSet(c1)) {
+    iterate = c2;
+    contains = c1;
+  } else if (!isSet(c2)) {
+    // read through iterate/contains: a negated isSet guard narrows c1/c2 to never (Set and Collection are structurally equal)
+    const n1 = iterate.size();
+    const n2 = contains.size();
+    if (n1 === 0 || n2 === 0) return true;
+    if (n1 > n2) {
+      iterate = c2;
+      contains = c1;
+    }
+  }
+  const it = iterate.iterator();
+  while (it.hasNext()) if (contains.contains(it.next())) return false;
   return true;
 }
 
@@ -277,6 +286,7 @@ export function rotate(list: List<unknown>, distance: number): void {
 /** Immutable list of n copies of o (o may be null). @throws IllegalArgumentException when n is negative or not an integer */
 export function nCopies<E>(n: number, o: E): List<E> {
   if (!(Number.isInteger(n) && n >= 0)) throw new IllegalArgumentException(`List length = ${n}`);
+  if (n === 0) return EMPTY_LIST; // SIZED|SUBSIZED spliterator, like the reference
   // shortcut: materializes n slots (O(n) memory); switch to a computed list if huge counts show up
   return new ImmutableList(new Array<E>(n).fill(o), o != null);
 }
@@ -424,7 +434,15 @@ export const EMPTY_SET: Set<never> = Object.assign(buildSet<never>([], false, tr
   spliterator: (): Spliterator<never> => Spliterators.emptySpliterator(),
 });
 /** Shared immutable empty map, same instance as emptyMap(). */
-export const EMPTY_MAP: Map<never, never> = buildMap<never, never>([], true);
+export const EMPTY_MAP: Map<never, never> = withViewSpliterators(buildMap<never, never>([], true), () => Spliterators.emptySpliterator(), () => Spliterators.emptySpliterator(), () => Spliterators.emptySpliterator());
+
+/** Replaces the spliterator of m's (cached) views: the reference's empty and singleton maps report their own. */
+function withViewSpliterators<K, V>(m: Map<K, V>, keys: () => Spliterator<K>, values: () => Spliterator<V>, entries: () => Spliterator<MapEntry<K, V>>): Map<K, V> {
+  Object.assign(m.keySet(), { spliterator: keys });
+  Object.assign(m.values(), { spliterator: values });
+  Object.assign(m.entrySet(), { spliterator: entries });
+  return m;
+}
 
 export function emptyList<E>(): List<E> {
   return EMPTY_LIST;
@@ -447,7 +465,9 @@ export function singleton<E>(o: E): Set<E> {
 }
 
 export function singletonMap<K, V>(key: K, value: V): Map<K, V> {
-  return buildMap([new SimpleImmutableEntry(key, value)], false);
+  const m = buildMap([new SimpleImmutableEntry(key, value)], false);
+  const entry = m.entrySet().iterator().next();
+  return withViewSpliterators(m, () => new SingletonSpliterator(key), () => new SingletonSpliterator(value), () => new SingletonSpliterator(entry));
 }
 
 // ---- unmodifiable views: read-through, every mutator throws UnsupportedOperationException
@@ -489,6 +509,24 @@ class ReadOnlyItr<E> implements ListIterator<E> {
 
 function readOnly<E>(it: Iterator<E>): Iterator<E> {
   return new ReadOnlyItr(it as ListIterator<E>);
+}
+
+/**
+ * The reference's inherited removeFirst/removeLast (and the like) on unmodifiable lists, sorted sets and sequenced
+ * map views: they read the first element before removing, so an empty source throws NoSuchElementException and only
+ * a non-empty one UnsupportedOperationException.
+ */
+function lockNonEmpty(ctor: { prototype: object }, names: readonly string[]): void {
+  for (const n of names) {
+    Object.defineProperty(ctor.prototype, n, {
+      value(this: { isEmpty(): boolean }): never {
+        if (this.isEmpty()) throw new NoSuchElementException();
+        return uoe();
+      },
+      writable: true,
+      configurable: true,
+    });
+  }
 }
 
 class UnmodifiableCollection<E> extends ImmutableCollectionBase<E> {
@@ -630,6 +668,7 @@ class UnmodifiableNavigableSet<E> extends UnmodifiableSequencedSet<E> implements
   declare pollLast: () => E | null;
 }
 lock(UnmodifiableNavigableSet, ['pollFirst', 'pollLast']);
+lockNonEmpty(UnmodifiableNavigableSet, ['removeFirst', 'removeLast']);
 
 function wrapNavSet<E>(s: SortedSet<E>): NavigableSet<E> {
   return new UnmodifiableNavigableSet(s);
@@ -705,6 +744,8 @@ class UnmodifiableList<E> extends ImmutableListBase<E> {
     return this.l.toString();
   }
 }
+
+lockNonEmpty(UnmodifiableList, ['removeFirst', 'removeLast']);
 
 class UnmodifiableEntry<K, V> implements MapEntry<K, V> {
   constructor(private readonly e: MapEntry<K, V>) {}
@@ -807,6 +848,24 @@ class UnmodifiableEntrySet<K, V> extends UnmodifiableSet<MapEntry<K, V>> impleme
 }
 lock(UnmodifiableEntrySet, SEQUENCED_MUTATORS);
 
+// sequencedKeySet()/sequencedValues()/sequencedEntrySet() of an unmodifiable sequenced map (and their reversed views)
+class SequencedKeyView<K> extends UnmodifiableSequencedSet<K> {
+  override reversed(): SequencedSet<K> {
+    return new SequencedKeyView((this.c as SequencedSet<K>).reversed());
+  }
+}
+class SequencedValuesView<V> extends UnmodifiableSequencedCollection<V> {
+  override reversed(): SequencedCollection<V> {
+    return new SequencedValuesView((this.c as SequencedCollection<V>).reversed());
+  }
+}
+class SequencedEntryView<K, V> extends UnmodifiableEntrySet<K, V> {
+  override reversed(): SequencedSet<MapEntry<K, V>> {
+    return new SequencedEntryView((this.c as SequencedSet<MapEntry<K, V>>).reversed());
+  }
+}
+for (const view of [SequencedKeyView, SequencedValuesView, SequencedEntryView]) lockNonEmpty(view, ['removeFirst', 'removeLast']);
+
 class UnmodifiableMap<K, V> extends ImmutableMapBase<K, V> {
   private ks: Set<K> | undefined;
   private vs: Collection<V> | undefined;
@@ -874,13 +933,13 @@ class UnmodifiableSequencedMap<K, V> extends UnmodifiableMap<K, V> implements Se
     return wrapEntry(this.q.lastEntry());
   }
   sequencedKeySet(): SequencedSet<K> {
-    return new UnmodifiableSequencedSet(this.q.sequencedKeySet());
+    return new SequencedKeyView(this.q.sequencedKeySet());
   }
   sequencedValues(): SequencedCollection<V> {
-    return new UnmodifiableSequencedCollection(this.q.sequencedValues());
+    return new SequencedValuesView(this.q.sequencedValues());
   }
   sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
-    return new UnmodifiableEntrySet(this.q.sequencedEntrySet());
+    return new SequencedEntryView(this.q.sequencedEntrySet());
   }
   declare pollFirstEntry: () => MapEntry<K, V> | null;
   declare pollLastEntry: () => MapEntry<K, V> | null;
@@ -891,6 +950,10 @@ lock(UnmodifiableSequencedMap, ['pollFirstEntry', 'pollLastEntry', 'putFirst', '
 
 /** Serves SortedMap and NavigableMap views; methods the backing map lacks fail when called. */
 class UnmodifiableNavigableMap<K, V> extends UnmodifiableSequencedMap<K, V> implements NavigableMap<K, V> {
+  /** Wraps a sub-map view the way this map is wrapped. */
+  protected wrap(m: SortedMap<K, V>): NavigableMap<K, V> {
+    return new UnmodifiableNavigableMap(m);
+  }
   private get n(): NavigableMap<K, V> {
     return this.m as NavigableMap<K, V>;
   }
@@ -928,19 +991,19 @@ class UnmodifiableNavigableMap<K, V> extends UnmodifiableSequencedMap<K, V> impl
     return this.n.higherKey(key);
   }
   headMap(toKey: K, inclusive?: boolean): NavigableMap<K, V> {
-    return wrapNavMap(arguments.length < 2 ? this.n.headMap(toKey) : this.n.headMap(toKey, inclusive as boolean));
+    return this.wrap(arguments.length < 2 ? this.n.headMap(toKey) : this.n.headMap(toKey, inclusive as boolean));
   }
   tailMap(fromKey: K, inclusive?: boolean): NavigableMap<K, V> {
-    return wrapNavMap(arguments.length < 2 ? this.n.tailMap(fromKey) : this.n.tailMap(fromKey, inclusive as boolean));
+    return this.wrap(arguments.length < 2 ? this.n.tailMap(fromKey) : this.n.tailMap(fromKey, inclusive as boolean));
   }
   subMap(fromKey: K, a: K | boolean, b?: K, c?: boolean): NavigableMap<K, V> {
-    return wrapNavMap(arguments.length >= 4 ? this.n.subMap(fromKey, a as boolean, b as K, c as boolean) : this.n.subMap(fromKey, a as K));
+    return this.wrap(arguments.length >= 4 ? this.n.subMap(fromKey, a as boolean, b as K, c as boolean) : this.n.subMap(fromKey, a as K));
   }
   descendingMap(): NavigableMap<K, V> {
-    return wrapNavMap(this.n.descendingMap());
+    return this.wrap(this.n.descendingMap());
   }
   override reversed(): NavigableMap<K, V> {
-    return wrapNavMap(this.n.reversed());
+    return this.wrap(this.n.reversed());
   }
   navigableKeySet(): NavigableSet<K> {
     return wrapNavSet(this.n.navigableKeySet());
@@ -953,8 +1016,23 @@ class UnmodifiableNavigableMap<K, V> extends UnmodifiableSequencedMap<K, V> impl
   }
 }
 
-function wrapNavMap<K, V>(m: SortedMap<K, V>): NavigableMap<K, V> {
-  return new UnmodifiableNavigableMap(m);
+/**
+ * unmodifiableSortedMap() and its sub-map views: pollFirstEntry/pollLastEntry are the reference's SortedMap
+ * defaults, so an empty map answers null; a non-empty one throws UnsupportedOperationException.
+ */
+class UnmodifiableSortedMap<K, V> extends UnmodifiableNavigableMap<K, V> {
+  protected override wrap(m: SortedMap<K, V>): NavigableMap<K, V> {
+    return new UnmodifiableSortedMap(m);
+  }
+}
+for (const n of ['pollFirstEntry', 'pollLastEntry']) {
+  Object.defineProperty(UnmodifiableSortedMap.prototype, n, {
+    value(this: { isEmpty(): boolean }): null {
+      return this.isEmpty() ? null : uoe();
+    },
+    writable: true,
+    configurable: true,
+  });
 }
 
 export function unmodifiableCollection<E>(c: Collection<E>): Collection<E> {
@@ -1006,12 +1084,12 @@ export function unmodifiableSequencedMap<K, V>(m: SequencedMap<K, V>): Sequenced
 
 export function unmodifiableSortedMap<K, V>(m: SortedMap<K, V>): SortedMap<K, V> {
   requireNonNull(m);
-  return m instanceof UnmodifiableNavigableMap ? m : new UnmodifiableNavigableMap(m);
+  return m instanceof UnmodifiableSortedMap ? m : new UnmodifiableSortedMap(m);
 }
 
 export function unmodifiableNavigableMap<K, V>(m: NavigableMap<K, V>): NavigableMap<K, V> {
   requireNonNull(m);
-  return m instanceof UnmodifiableNavigableMap ? m : new UnmodifiableNavigableMap(m);
+  return m.constructor === UnmodifiableNavigableMap ? m : new UnmodifiableNavigableMap(m);
 }
 
 // ---- empty sorted collections: shared unmodifiable views of empty tree collections

@@ -17,12 +17,16 @@ export type Integrator<A, T, R> = ((state: A, element: T, downstream: Downstream
   readonly greedy?: boolean;
 };
 
+/**
+ * Only integrator() is required. A missing member means its default: no state (null), the default
+ * combiner (sequential-only), a finisher that does nothing, and the default composition for andThen.
+ */
 export interface Gatherer<T, A, R> {
-  initializer(): () => A;
+  initializer?(): () => A;
   integrator(): Integrator<A, T, R>;
   /** Merges two states in parallel evaluation; the default combiner marks a gatherer sequential-only. */
-  combiner(): (left: A, right: A) => A;
-  finisher(): (state: A, downstream: Downstream<R>) => void;
+  combiner?(): (left: A, right: A) => A;
+  finisher?(): (state: A, downstream: Downstream<R>) => void;
   /** Composes this gatherer with that, feeding this one's output into that. */
-  andThen<RR>(that: Gatherer<R, any, RR>): Gatherer<T, any, RR>;
+  andThen?<RR>(that: Gatherer<R, any, RR>): Gatherer<T, any, RR>;
 }

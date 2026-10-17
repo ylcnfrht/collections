@@ -417,6 +417,9 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
       expect(m.size()).toBe(2);
     });
     it('clear on an empty view is a no-op', () => expect(() => view(Map.of()).clear()).not.toThrow());
+    it.each(noOps)('one-entry map: %s still throws (fully immutable views)', (_m, call) => {
+      expectThrows(() => call(view(Map.of('a', 1))), UOE);
+    });
     it('iterator.remove', () => {
       const it = view(Map.of('a', 1)).iterator();
       it.next();

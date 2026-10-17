@@ -113,7 +113,7 @@ export class RangeSpliterator extends EngineSpliterator<number> {
 export class IterateSpliterator<T> extends EngineSpliterator<T> {
   private started = false;
   private prev: T | undefined = undefined;
-  constructor(private readonly seed: T, private readonly f: (t: T) => T) {
+  constructor(private readonly seed: T, private readonly f: (t: T) => T, private readonly flags: number) {
     super();
   }
   private next(): T {
@@ -138,16 +138,25 @@ export class IterateSpliterator<T> extends EngineSpliterator<T> {
     return Infinity;
   }
   characteristics(): number {
-    return ORDERED | IMMUTABLE;
+    return this.flags;
   }
 }
+
+/** ORDERED | IMMUTABLE, plus NONNULL for number streams. */
+export const ITERATE_FLAGS = ORDERED | IMMUTABLE;
+export const NUMBER_ITERATE_FLAGS = ORDERED | IMMUTABLE | NONNULL;
 
 /** seed, next(seed), ... while hasNext holds. */
 export class Iterate3Spliterator<T> extends EngineSpliterator<T> {
   private started = false;
   private finished = false;
   private prev: T | undefined = undefined;
-  constructor(private readonly seed: T, private readonly hasNext: (t: T) => boolean, private readonly f: (t: T) => T) {
+  constructor(
+    private readonly seed: T,
+    private readonly hasNext: (t: T) => boolean,
+    private readonly f: (t: T) => T,
+    private readonly flags: number
+  ) {
     super();
   }
   tryAdvance(action: (t: T) => void): boolean {
@@ -176,7 +185,7 @@ export class Iterate3Spliterator<T> extends EngineSpliterator<T> {
     return Infinity;
   }
   characteristics(): number {
-    return ORDERED | IMMUTABLE;
+    return this.flags;
   }
 }
 
@@ -272,6 +281,44 @@ export class IterableSpliterator<T> extends EngineSpliterator<T> {
   }
 }
 
+/** Late-binding: calls the supplier on first use (spliterator() of a supplier-built stream). */
+export class DelegatingSpliterator<T> extends EngineSpliterator<T> {
+  private sp: Spliterator<T> | null = null;
+  constructor(private readonly supplier: () => Spliterator<T>) {
+    super();
+  }
+  private get(): Spliterator<T> {
+    return (this.sp ??= requireNonNull(this.supplier()));
+  }
+  tryAdvance(action: (t: T) => void): boolean {
+    return this.get().tryAdvance(action);
+  }
+  override forEachRemaining(action: (t: T) => void): void {
+    this.get().forEachRemaining(action);
+  }
+  drainTo(sink: Sink<T>, shortCircuit: boolean): void {
+    drain(this.get(), sink, shortCircuit);
+  }
+  override trySplit(): Spliterator<T> | null {
+    return this.get().trySplit();
+  }
+  estimateSize(): number {
+    return this.get().estimateSize();
+  }
+  override getExactSizeIfKnown(): number {
+    return this.get().getExactSizeIfKnown();
+  }
+  characteristics(): number {
+    return this.get().characteristics();
+  }
+  override hasCharacteristics(characteristics: number): boolean {
+    return this.get().hasCharacteristics(characteristics);
+  }
+  override getComparator() {
+    return this.get().getComparator();
+  }
+}
+
 /** Iterator (hasNext/next) over a spliterator; remove() is unsupported. */
 export class SpliteratorIterator<T> implements Iterator<T> {
   private ready = false;
@@ -299,6 +346,19 @@ export class SpliteratorIterator<T> implements Iterator<T> {
     requireNonNull(action);
     if (this.ready) action(this.next());
     this.sp.forEachRemaining(action);
+  }
+}
+
+/** PrimitiveIterator of the number streams: nextInt / nextLong / nextDouble are next(). */
+export class NumberIterator extends SpliteratorIterator<number> {
+  nextInt(): number {
+    return this.next();
+  }
+  nextLong(): number {
+    return this.next();
+  }
+  nextDouble(): number {
+    return this.next();
   }
 }
 

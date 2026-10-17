@@ -3,8 +3,10 @@ import { Collection } from '../interfaces/Collection';
 import { Set } from '../interfaces/Set';
 import { SET_BRAND, isSet } from '../util/guards';
 import { hashCode, requireNonNull } from '../util/Objects';
-import { Spliterator } from '../stream/Spliterator';
-import { IteratorSpliterator } from '../stream/Spliterators';
+import { SourceComparator, Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator, KEEP_ESTIMATE } from '../stream/Spliterators';
+
+const SORTED_SET = Spliterator.DISTINCT | Spliterator.SORTED | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
 import { AbstractCollection } from './AbstractCollection';
 
 /** Skeleton of AbstractSet: value equality with any Set, hashCode = sum of element hashes. */
@@ -43,9 +45,17 @@ export abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
     return this.removeIf((e) => c.contains(e));
   }
 
-  /** Late-binding DISTINCT|SIZED|SUBSIZED spliterator over iterator(). */
+  /**
+   * Late-binding DISTINCT|SIZED|SUBSIZED spliterator over iterator(); for a sorted set (one with comparator, first,
+   * last and headSet) DISTINCT|SORTED|ORDERED|SIZED|SUBSIZED with getComparator() = comparator().
+   * Like the reference, traversal does not lower estimateSize().
+   */
   override spliterator(): Spliterator<E> {
-    return new IteratorSpliterator(this, null, -1, Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED);
+    const s = this as unknown as { comparator?: unknown; first?: unknown; last?: unknown; headSet?: unknown };
+    if (typeof s.comparator === 'function' && typeof s.first === 'function' && typeof s.last === 'function' && typeof s.headSet === 'function') {
+      return new IteratorSpliterator(this, null, -1, SORTED_SET, { keepEstimate: true, comparator: (s.comparator as () => SourceComparator<E> | null).call(this) });
+    }
+    return new IteratorSpliterator(this, null, -1, Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED, KEEP_ESTIMATE);
   }
 
   override hashCode(): number {

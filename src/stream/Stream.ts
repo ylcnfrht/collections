@@ -19,15 +19,35 @@ import type { Spliterator } from './Spliterator';
  */
 export interface BaseStream<T, S extends BaseStream<T, S>> extends Iterable<T> {
   iterator(): Iterator<T>;
+  /**
+   * Reports the pipeline's characteristics (ORDERED, DISTINCT, SORTED, SIZED / SUBSIZED as the stages
+   * keep them); with no stages it is the source spliterator itself.
+   */
   spliterator(): Spliterator<T>;
   isParallel(): boolean;
   sequential(): S;
   parallel(): S;
+  /** Returns this stream itself when it is already unordered. */
   unordered(): S;
   /** Registers a handler run by close(); handlers run in registration order. */
   onClose(closeHandler: () => void): S;
   /** Runs the close handlers. The first exception is rethrown after all ran; later ones are attached via `suppressed`. */
   close(): void;
+  /** close(), so `using s = ...` closes the stream. Present where the runtime has Symbol.dispose. */
+  [Symbol.dispose](): void;
+}
+
+/** Iterator of an IntStream (PrimitiveIterator.OfInt). */
+export interface PrimitiveIteratorOfInt extends Iterator<number> {
+  nextInt(): number;
+}
+/** Iterator of a LongStream (PrimitiveIterator.OfLong). */
+export interface PrimitiveIteratorOfLong extends Iterator<number> {
+  nextLong(): number;
+}
+/** Iterator of a DoubleStream (PrimitiveIterator.OfDouble). */
+export interface PrimitiveIteratorOfDouble extends Iterator<number> {
+  nextDouble(): number;
 }
 
 /** Stream.Builder */
@@ -64,12 +84,14 @@ export interface Stream<T> extends BaseStream<T, Stream<T>> {
   mapMultiToDouble(mapper: (t: T, consumer: (n: number) => void) => void): DoubleStream;
   /** Distinct by equals()/hashCode() (Objects.equals); the first occurrence is kept for ordered streams. */
   distinct(): Stream<T>;
-  /** Stable for ordered streams. No argument (or null) = natural ordering. */
-  sorted(comparator?: Comparator<T> | null): Stream<T>;
+  /** Natural ordering (compareTo / natural comparison); stable for ordered streams. */
+  sorted(): Stream<T>;
+  /** Stable for ordered streams. @throws NullPointerException if comparator is null or undefined */
+  sorted(comparator: Comparator<T>): Stream<T>;
   peek(action: (t: T) => void): Stream<T>;
-  /** @throws IllegalArgumentException if maxSize is negative */
+  /** @throws IllegalArgumentException if maxSize is negative or not an integer */
   limit(maxSize: number): Stream<T>;
-  /** @throws IllegalArgumentException if n is negative */
+  /** @throws IllegalArgumentException if n is negative or not an integer */
   skip(n: number): Stream<T>;
   takeWhile(predicate: (t: T) => boolean): Stream<T>;
   dropWhile(predicate: (t: T) => boolean): Stream<T>;
@@ -79,6 +101,12 @@ export interface Stream<T> extends BaseStream<T, Stream<T>> {
   forEach(action: (t: T) => void): void;
   forEachOrdered(action: (t: T) => void): void;
   toArray(): T[];
+  /**
+   * When the stream size is known exactly, generator(size) is called before the traversal and must return
+   * an array of exactly that length (else IllegalStateException). Otherwise it is called with the element
+   * count afterwards: a shorter array throws IndexOutOfBoundsException, slots past the elements are set to
+   * null. ArrayStoreException (element type checks) is not emulated.
+   */
   toArray<A extends WritableArrayLike<T>>(generator: (length: number) => A): A;
   reduce(identity: T, accumulator: (a: T, b: T) => T): T;
   reduce(accumulator: (a: T, b: T) => T): Optional<T>;
@@ -117,6 +145,7 @@ interface NumberStream<N extends NumberStream<N, O>, O> extends BaseStream<numbe
   toArray(): number[];
   reduce(identity: number, op: (a: number, b: number) => number): number;
   reduce(op: (a: number, b: number) => number): O;
+  /** Only this three-argument form; a one-argument call throws IllegalArgumentException. */
   collect<R>(supplier: () => R, accumulator: (r: R, n: number) => void, combiner: (a: R, b: R) => void): R;
   sum(): number;
   min(): O;
@@ -136,6 +165,7 @@ interface NumberStream<N extends NumberStream<N, O>, O> extends BaseStream<numbe
  * coerced and sum() does not wrap on overflow (documented difference).
  */
 export interface IntStream extends NumberStream<IntStream, OptionalInt> {
+  iterator(): PrimitiveIteratorOfInt;
   mapToLong(mapper: (n: number) => number): LongStream;
   mapToDouble(mapper: (n: number) => number): DoubleStream;
   asLongStream(): LongStream;
@@ -145,6 +175,7 @@ export interface IntStream extends NumberStream<IntStream, OptionalInt> {
 
 /** LongStream. Elements are JS numbers (not bigint); exact up to Number.MAX_SAFE_INTEGER. */
 export interface LongStream extends NumberStream<LongStream, OptionalLong> {
+  iterator(): PrimitiveIteratorOfLong;
   mapToInt(mapper: (n: number) => number): IntStream;
   mapToDouble(mapper: (n: number) => number): DoubleStream;
   asDoubleStream(): DoubleStream;
@@ -153,6 +184,7 @@ export interface LongStream extends NumberStream<LongStream, OptionalLong> {
 
 /** DoubleStream. sum()/average() use compensated (Kahan) summation like the reference. */
 export interface DoubleStream extends NumberStream<DoubleStream, OptionalDouble> {
+  iterator(): PrimitiveIteratorOfDouble;
   mapToInt(mapper: (n: number) => number): IntStream;
   mapToLong(mapper: (n: number) => number): LongStream;
   summaryStatistics(): DoubleSummaryStatistics;

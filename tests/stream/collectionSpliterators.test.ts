@@ -1,4 +1,5 @@
 import {
+  AbstractSet,
   ArrayDeque,
   ArrayList,
   Collections,
@@ -280,7 +281,8 @@ describe.each(TABLE)('$name spliterator', ({ make, chars, comparator }) => {
     expect(s.tryAdvance(() => out.push('extra'))).toBe(false);
     s.forEachRemaining(() => out.push('extra'));
     expect(out.map(key).sort()).toEqual(iterated(c).map(key).sort());
-    if (chars & Z) expect(s.estimateSize()).toBe(0);
+    // indexed spliterators count down to 0; iterator- and hash-backed ones keep their estimate, as in the reference
+    if (chars & Z) expect([0, 5]).toContain(s.estimateSize());
   });
 
   it('rejects a null action', () => {
@@ -341,7 +343,6 @@ describe('fail-fast', () => {
     ['ArrayList.subList', () => ArrayList.of(1, 2, 3, 4).subList(0, 3), (c) => c.add(9)],
     ['Vector', () => Vector.of(1, 2, 3), (c) => c.add(9)],
     ['LinkedList', () => LinkedList.of(1, 2, 3), (c) => c.add(9)],
-    ['ArrayDeque', () => ArrayDeque.of(1, 2, 3), (c) => c.add(9)],
     ['PriorityQueue', () => pq(3), (c) => c.add(9)],
     ['HashSet', () => HashSet.of(1, 2, 3), (c) => c.add(9)],
     ['TreeSet', () => TreeSet.of(1, 2, 3), (c) => c.add(9)],
@@ -366,7 +367,7 @@ describe('fail-fast', () => {
   });
 
   it('a change on the last element is still detected (checked after the loop)', () => {
-    for (const make of [() => ArrayList.of(1), () => LinkedList.of(1), () => ArrayDeque.of(1), () => pq(1), () => HashSet.of(1), () => TreeSet.of(1)]) {
+    for (const make of [() => ArrayList.of(1), () => LinkedList.of(1), () => pq(1), () => HashSet.of(1), () => TreeSet.of(1)]) {
       const c: Collection<number> = make();
       expect(() => c.spliterator().forEachRemaining(() => c.add(5))).toThrow(ConcurrentModificationException);
     }
@@ -475,8 +476,9 @@ describe('implementation details', () => {
     const s = es.spliterator();
     const p = s.trySplit()!;
     p.tryAdvance((e) => expect(() => e.setValue(1)).toThrow());
+    const est = s.estimateSize();
     s.forEachRemaining((e) => expect(() => e.setValue(1)).toThrow());
-    expect(s.estimateSize()).toBe(0);
+    expect(s.estimateSize()).toBe(est);
     expect(s.getExactSizeIfKnown()).toBe(-1);
     expect(s.hasCharacteristics(D)).toBe(true);
     expect(() => s.getComparator()).toThrow(IllegalStateException);
@@ -513,5 +515,220 @@ describe('implementation details', () => {
       expect(s.estimateSize()).toBe(0);
     }
     expect(names(Collections.singletonList(null).spliterator().characteristics())).toBe('DISTINCT|ORDERED|SIZED|IMMUTABLE|SUBSIZED');
+  });
+});
+
+describe('ArrayDeque spliterator under concurrent change (reference parity: slot-based, not modCount-based)', () => {
+  type Deq = ArrayDeque<number>;
+  const deq = (): Deq => {
+    const d = new ArrayDeque<number>(16);
+    d.addAll(ArrayList.of(1, 2, 3, 4, 5));
+    return d;
+  };
+  // [name, mutation, tryAdvance result after advancing once and mutating, forEachRemaining result when the first action mutates]
+  const cases: [string, (d: Deq) => void, (number | null | 'CME')[], (number | null | 'CME')[]][] = [
+    ['addLast', (d) => d.addLast(9), [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]],
+    ['addFirst', (d) => d.addFirst(9), [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]],
+    ['removeFirst', (d) => void d.removeFirst(), [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]],
+    ['pollFirst + addLast', (d) => (d.pollFirst(), d.addLast(9)), [1, 2, 3, 4, 5], [1, 2, 3, 4, 5]],
+    ['removeLast', (d) => void d.removeLast(), [1, 2, 3, 4, 'CME'], [1, 2, 3, 4, null]],
+    ['clear', (d) => d.clear(), [1, 'CME'], [1, null, null, null, null]],
+    ['clear + add', (d) => (d.clear(), d.add(7)), [1, 'CME'], [1, null, null, null, null]],
+    ['remove(4) (tail side shifts)', (d) => void d.remove(4), [1, 2, 3, 5, 'CME'], [1, 2, 3, 5, null]],
+  ];
+
+  it.each(cases)('%s between tryAdvance calls', (_, mutate, expected) => {
+    const d = deq();
+    const s = d.spliterator();
+    const out: (number | null | 'CME')[] = [];
+    s.tryAdvance((x) => out.push(x));
+    mutate(d);
+    expect(s.estimateSize()).toBe(4);
+    try {
+      while (s.tryAdvance((x) => out.push(x)));
+    } catch (e) {
+      expect(e).toBeInstanceOf(ConcurrentModificationException);
+      out.push('CME');
+    }
+    expect(out).toEqual(expected);
+  });
+
+  it.each(cases)('%s inside the first forEachRemaining action', (_, mutate, _ta, expected) => {
+    const d = deq();
+    const out: (number | null)[] = [];
+    let first = true;
+    d.spliterator().forEachRemaining((x) => {
+      out.push(x);
+      if (first) mutate(d);
+      first = false;
+    });
+    expect(out).toEqual(expected);
+  });
+
+  it('an element added after traversal started is not seen, and no ConcurrentModificationException', () => {
+    const d = ArrayDeque.of(1, 2, 3);
+    const s = d.spliterator();
+    const out: number[] = [];
+    s.tryAdvance((x) => out.push(x));
+    d.add(4);
+    s.forEachRemaining((x) => out.push(x));
+    expect(out).toEqual([1, 2, 3]);
+  });
+
+  it('forEachRemaining throws when an end of its range was vacated before it started', () => {
+    const d = deq();
+    const s = d.spliterator();
+    s.tryAdvance(() => undefined);
+    d.removeLast();
+    expect(() => s.forEachRemaining(() => undefined)).toThrow(ConcurrentModificationException);
+    const d2 = deq();
+    const s2 = d2.spliterator();
+    s2.tryAdvance(() => undefined);
+    d2.clear();
+    expect(() => s2.forEachRemaining(() => undefined)).toThrow(ConcurrentModificationException);
+  });
+
+  it('a resize during traversal throws ConcurrentModificationException', () => {
+    const d = ArrayDeque.of(1, 2, 3);
+    const s = d.spliterator();
+    s.tryAdvance(() => undefined);
+    for (let i = 0; i < 20; i++) d.addLast(100 + i);
+    expect(() => s.tryAdvance(() => undefined)).toThrow(ConcurrentModificationException);
+    const d2 = ArrayDeque.of(1, 2, 3);
+    expect(() =>
+      d2.spliterator().forEachRemaining(() => {
+        for (let i = 0; i < 20; i++) d2.addLast(100 + i);
+      })
+    ).toThrow(ConcurrentModificationException);
+  });
+
+  it('a split-off piece reads the same slots', () => {
+    const d = deq();
+    const s = d.spliterator();
+    const p = s.trySplit()!;
+    d.addLast(9);
+    const out: number[] = [];
+    p.forEachRemaining((x) => out.push(x));
+    s.forEachRemaining((x) => out.push(x));
+    expect(out).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe('AbstractSet.spliterator()', () => {
+  class Sorted extends AbstractSet<number> {
+    constructor(private readonly t: TreeSet<number>, private readonly cmp: ((a: number, b: number) => number) | null) {
+      super();
+    }
+    iterator() {
+      return this.t.iterator();
+    }
+    size() {
+      return this.t.size();
+    }
+    comparator() {
+      return this.cmp;
+    }
+    first() {
+      return this.t.first();
+    }
+    last() {
+      return this.t.last();
+    }
+    headSet(x: number) {
+      return this.t.headSet(x);
+    }
+  }
+  class Plain extends AbstractSet<number> {
+    iterator() {
+      return ArrayList.of(1, 2).iterator();
+    }
+    size() {
+      return 2;
+    }
+  }
+  const rev = (a: number, b: number) => b - a;
+
+  it('a sorted set reports DISTINCT|SORTED|ORDERED|SIZED|SUBSIZED with its comparator', () => {
+    const t = new TreeSet<number>(rev);
+    t.addAll(ArrayList.of(1, 2, 3));
+    const s = new Sorted(t, rev).spliterator();
+    expect(names(s.characteristics())).toBe('DISTINCT|SORTED|ORDERED|SIZED|SUBSIZED');
+    expect(s.getComparator()).toBe(rev);
+    const out: number[] = [];
+    s.tryAdvance((x) => out.push(x));
+    expect(s.estimateSize()).toBe(3);
+    s.forEachRemaining((x) => out.push(x));
+    expect(out).toEqual([3, 2, 1]);
+  });
+  it('natural ordering reports a null comparator', () => {
+    const s = new Sorted(TreeSet.of(1, 2), null).spliterator();
+    expect(s.hasCharacteristics(S)).toBe(true);
+    expect(s.getComparator()).toBeNull();
+  });
+  it('a plain set reports DISTINCT|SIZED|SUBSIZED and keeps its estimate', () => {
+    const s = new Plain().spliterator();
+    expect(names(s.characteristics())).toBe('DISTINCT|SIZED|SUBSIZED');
+    expect(() => s.getComparator()).toThrow(IllegalStateException);
+    s.tryAdvance(() => undefined);
+    expect(s.estimateSize()).toBe(2);
+  });
+});
+
+describe('hash spliterators keep their estimate during traversal (reference parity)', () => {
+  it.each([
+    ['HashSet', () => HashSet.of(0, 1, 2, 3, 4)],
+    ['HashMap.entrySet', () => hm(5).entrySet()],
+    ['IdentityHashMap.keySet', () => ihm(5).keySet()],
+    ['unmodifiableMap(HashMap).keySet', () => Collections.unmodifiableMap(hm(5)).keySet()],
+  ] as [string, () => Collection<unknown>][])('%s', (_n, make) => {
+    const s = make().spliterator();
+    s.tryAdvance(() => undefined);
+    expect(s.estimateSize()).toBe(5);
+    s.forEachRemaining(() => undefined);
+    expect(s.estimateSize()).toBe(5);
+  });
+});
+
+describe('Collections empty / singleton / nCopies spliterators', () => {
+  const nn = Collections.singletonMap('k', 1);
+  const nulls = Collections.singletonMap<string | null, number | null>(null, null);
+  it.each([
+    ['singletonMap.keySet', () => nn.keySet().spliterator(), 'DISTINCT|ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED'],
+    ['singletonMap.values', () => nn.values().spliterator(), 'DISTINCT|ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED'],
+    ['singletonMap.entrySet', () => nn.entrySet().spliterator(), 'DISTINCT|ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED'],
+    ['singletonMap(null, null).keySet', () => nulls.keySet().spliterator(), 'DISTINCT|ORDERED|SIZED|IMMUTABLE|SUBSIZED'],
+    ['singletonMap(null, null).values', () => nulls.values().spliterator(), 'DISTINCT|ORDERED|SIZED|IMMUTABLE|SUBSIZED'],
+    ['singletonMap(null, null).entrySet', () => nulls.entrySet().spliterator(), 'DISTINCT|ORDERED|SIZED|NONNULL|IMMUTABLE|SUBSIZED'],
+    ['emptyMap.keySet', () => Collections.emptyMap().keySet().spliterator(), 'SIZED|SUBSIZED'],
+    ['emptyMap.values', () => Collections.emptyMap().values().spliterator(), 'SIZED|SUBSIZED'],
+    ['emptyMap.entrySet', () => Collections.emptyMap().entrySet().spliterator(), 'SIZED|SUBSIZED'],
+    ['nCopies(0)', () => Collections.nCopies(0, 'x').spliterator(), 'SIZED|SUBSIZED'],
+  ] as [string, () => Spliterator<unknown>, string][])('%s reports %s', (_n, make, expected) => {
+    expect(names(make().characteristics())).toBe(expected);
+  });
+  it('singletonMap view spliterators yield the single key, value and entry once', () => {
+    const one = <T>(s: Spliterator<T>): T[] => {
+      const out: T[] = [];
+      expect(s.estimateSize()).toBe(1);
+      s.forEachRemaining((x) => out.push(x));
+      expect(s.estimateSize()).toBe(0);
+      expect(s.tryAdvance(() => undefined)).toBe(false);
+      return out;
+    };
+    expect(one(nn.keySet().spliterator())).toEqual(['k']);
+    expect(one(nn.values().spliterator())).toEqual([1]);
+    const [e] = one(nn.entrySet().spliterator());
+    expect(e.getKey()).toBe('k');
+    expect(e.getValue()).toBe(1);
+    expect(e).toBe(nn.entrySet().iterator().next());
+    expect(nn.keySet().stream().toArray()).toEqual(['k']);
+  });
+  it('empty views stay empty and keep their identity; nCopies(0) is the shared empty list', () => {
+    const m = Collections.emptyMap();
+    expect(m.keySet()).toBe(m.keySet());
+    expect(m.keySet().size()).toBe(0);
+    expect(Collections.nCopies(0, 1)).toBe(Collections.emptyList());
+    expect(Collections.nCopies(0, 1).size()).toBe(0);
+    expect(names(Collections.nCopies(2, 'x').spliterator().characteristics())).toContain('SIZED');
   });
 });

@@ -1,12 +1,21 @@
 // Engine-level behaviour: a lazy reference model compared against random pipelines, infinite-stream
 // short-circuiting, resource closing, size propagation, the spliterator escape hatch and StreamSupport.
-import { IllegalStateException, NullPointerException } from '../../src/exceptions';
+import {
+  IllegalArgumentException,
+  IllegalStateException,
+  IndexOutOfBoundsException,
+  NullPointerException,
+} from '../../src/exceptions';
 import { ArrayList } from '../../src/list/ArrayList';
+import { HashSet } from '../../src/set/HashSet';
+import { TreeSet } from '../../src/set/TreeSet';
+import type { Collector } from '../../src/stream/Collector';
+import { Comparator } from '../../src/util/Comparator';
 import type { Downstream, Gatherer, Integrator } from '../../src/stream/Gatherer';
 import { streamFactories } from '../../src/stream/hook';
 import { BaseSpliterator, Spliterator } from '../../src/stream/Spliterator';
 import { StreamSupport } from '../../src/stream/StreamSupport';
-import { IntStream, Stream } from '../../src/stream/Streams';
+import { DoubleStream, IntStream, LongStream, Stream } from '../../src/stream/Streams';
 import { rng } from '../helpers';
 
 function arrayList<T>(xs: readonly T[]): ArrayList<T> {
@@ -654,5 +663,461 @@ describe('engine · StreamSupport and the hook', () => {
     const l = arrayList([1, 2, 3]);
     expect(l.stream().filter((x) => x > 1).count()).toBe(2);
     expect(l.parallelStream().isParallel()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------- compliance (reference values checked on the reference runtime)
+
+const chars = (sp: Spliterator<unknown>) => sp.characteristics();
+const C = Spliterator;
+
+describe('engine · pipeline spliterator characteristics', () => {
+  it('map keeps SIZED | SUBSIZED | ORDERED with the exact size', () => {
+    const sp = Stream.of(1, 2).map((x) => x).spliterator();
+    expect(chars(sp)).toBe(0x4050);
+    expect(sp.getExactSizeIfKnown()).toBe(2);
+    expect(sp.estimateSize()).toBe(2);
+  });
+  it('peek keeps the size', () => expect(chars(Stream.of(1, 2).peek(() => {}).spliterator())).toBe(0x4050));
+  it('sorted() adds SORTED with a null comparator', () => {
+    const sp = Stream.of(2, 1).sorted().spliterator();
+    expect(chars(sp)).toBe(0x4054);
+    expect(sp.getComparator()).toBeNull();
+  });
+  it('sorted(comparator) is not SORTED', () => {
+    const sp = Stream.of(1, 2).sorted(Comparator.reverseOrder()).spliterator();
+    expect(chars(sp)).toBe(0x4050);
+    expect(() => sp.getComparator()).toThrow(IllegalStateException);
+  });
+  it('distinct adds DISTINCT and drops SIZED', () => {
+    const sp = Stream.of(1, 2).distinct().spliterator();
+    expect(chars(sp)).toBe(0x11);
+    expect(sp.getExactSizeIfKnown()).toBe(-1);
+    expect(sp.estimateSize()).toBe(2);
+  });
+  it('map drops DISTINCT and SORTED, filter keeps them', () => {
+    expect(chars(Stream.of(1, 2).distinct().map((x) => x).spliterator())).toBe(0x10);
+    expect(chars(Stream.of(1, 2).distinct().filter(() => true).spliterator())).toBe(0x11);
+    expect(chars(Stream.of(1, 2).sorted().filter(() => true).spliterator())).toBe(0x14);
+  });
+  it('filter / flatMap / mapMulti / takeWhile / dropWhile / gather drop SIZED', () => {
+    const t = new TreeSet<number>();
+    t.add(1);
+    t.add(2);
+    expect(chars(Stream.of(1, 2).filter(() => true).spliterator())).toBe(0x10);
+    expect(chars(t.stream().flatMap((x) => Stream.of(x)).spliterator())).toBe(0x10);
+    expect(chars(t.stream().mapMulti(() => {}).spliterator())).toBe(0x10);
+    expect(chars(t.stream().takeWhile(() => true).spliterator())).toBe(0x15);
+    expect(chars(t.stream().dropWhile(() => true).spliterator())).toBe(0x15);
+    expect(chars(t.stream().gather({ integrator: () => (_s: unknown, e: number, d: Downstream<number>) => d.push(e) }).spliterator())).toBe(0x10);
+  });
+  it('limit / skip on a SIZED source stay SIZED with the adjusted size', () => {
+    const cases: [Spliterator<number>, number][] = [
+      [Stream.of(1, 2, 3).limit(2).spliterator(), 2],
+      [Stream.of(1, 2, 3).limit(5).spliterator(), 3],
+      [Stream.of(1, 2, 3).skip(1).spliterator(), 2],
+      [Stream.of(1, 2, 3).skip(5).spliterator(), 0],
+      [Stream.of(1, 2, 3).skip(1).limit(1).spliterator(), 1],
+    ];
+    for (const [sp, n] of cases) {
+      expect(chars(sp)).toBe(0x4050);
+      expect(sp.getExactSizeIfKnown()).toBe(n);
+      expect(sp.estimateSize()).toBe(n);
+    }
+    expect(chars(Stream.of(1, 2, 3).filter(() => true).limit(2).spliterator())).toBe(0x10);
+    expect(Stream.of(1, 2, 3).filter(() => true).limit(2).spliterator().estimateSize()).toBe(3);
+    expect(chars(Stream.iterate(1, (x) => x).limit(2).spliterator())).toBe(0x10);
+  });
+  it('SUBSIZED follows the source: a HashSet stream is SIZED only', () => {
+    const h = new HashSet<number>();
+    h.add(1);
+    const sp = h.stream().map((x) => x).spliterator();
+    expect(chars(sp)).toBe(0x40);
+    expect(sp.getExactSizeIfKnown()).toBe(1);
+  });
+  it('a comparator-sorted source is not reported SORTED', () => {
+    const t = new TreeSet<number>(Comparator.reverseOrder());
+    t.add(1);
+    expect(chars(t.stream().filter(() => true).spliterator())).toBe(0x11);
+  });
+  it('number streams: boxed / asXStream / mapToObj / map / distinct / sorted', () => {
+    expect(chars(IntStream.range(0, 3).boxed().spliterator())).toBe(0x4055);
+    expect(IntStream.range(0, 3).boxed().spliterator().getExactSizeIfKnown()).toBe(3);
+    expect(chars(IntStream.range(0, 3).asLongStream().spliterator())).toBe(0x4055);
+    expect(chars(IntStream.range(0, 3).asDoubleStream().spliterator())).toBe(0x4055);
+    expect(chars(LongStream.range(0, 3).asDoubleStream().spliterator())).toBe(0x4054);
+    expect(chars(IntStream.range(0, 3).mapToObj((x) => x).spliterator())).toBe(0x4050);
+    expect(chars(IntStream.range(0, 3).map((x) => x).spliterator())).toBe(0x4050);
+    expect(chars(IntStream.range(0, 3).distinct().spliterator())).toBe(0x10);
+    expect(chars(IntStream.of(2, 1).sorted().spliterator())).toBe(0x4054);
+    expect(chars(IntStream.range(0, 5).limit(2).spliterator())).toBe(0x4055);
+    expect(chars(DoubleStream.of(1, 2).boxed().spliterator())).toBe(0x4050);
+    expect(chars(IntStream.range(0, 3).flatMap((x) => IntStream.of(x)).spliterator())).toBe(0x10);
+  });
+  it('a stage-less stream hands out the source spliterator', () => expect(chars(Stream.of(1, 2).spliterator())).toBe(0x4450));
+  it('skip after an advance estimates from the source like the reference', () => {
+    const sp = Stream.of(1, 2, 3, 4).skip(1).spliterator();
+    sp.tryAdvance(() => {});
+    expect(sp.estimateSize()).toBe(1);
+  });
+});
+
+describe('engine · unordered()', () => {
+  it('clears ORDERED', () => {
+    expect(chars(Stream.of(1, 2).unordered().spliterator())).toBe(0x4040);
+    expect(chars(IntStream.range(0, 3).unordered().spliterator())).toBe(0x4041);
+  });
+  it('returns this for an already unordered stream', () => {
+    const h = new HashSet<number>();
+    h.add(1);
+    const s = h.stream();
+    expect(s.unordered()).toBe(s);
+    const g = Stream.generate(() => 1);
+    expect(g.unordered()).toBe(g);
+    const u = Stream.of(1).unordered();
+    expect(u.unordered()).toBe(u);
+  });
+  it('an ordered stream gets a new stage', () => {
+    const s = Stream.of(1);
+    expect(s.unordered()).not.toBe(s);
+  });
+});
+
+describe('engine · StreamSupport supplier form', () => {
+  const supplied = () => {
+    const calls = { n: 0 };
+    const sup = () => (calls.n++, new PlainSpliterator([1, 2, 3], C.ORDERED | C.SIZED | C.SUBSIZED));
+    return { calls, sup };
+  };
+  it('characteristics become the head flags', () => {
+    const { sup } = supplied();
+    expect(chars(StreamSupport.stream(sup, C.SIZED | C.ORDERED | C.DISTINCT, false).map((x) => x).spliterator())).toBe(0x4050);
+    expect(chars(StreamSupport.stream(sup, C.DISTINCT, false).filter(() => true).spliterator())).toBe(0x1);
+    const sp = StreamSupport.stream(sup, 0, false).map((x) => x).spliterator();
+    expect(chars(sp)).toBe(0);
+    expect(sp.getExactSizeIfKnown()).toBe(-1);
+  });
+  it('count() skips traversal only when the characteristics say SIZED', () => {
+    const { sup } = supplied();
+    const seen: number[] = [];
+    expect(StreamSupport.stream(sup, C.SIZED, false).peek((x) => seen.push(x)).count()).toBe(3);
+    expect(seen).toEqual([]);
+    expect(StreamSupport.stream(sup, 0, false).peek((x) => seen.push(x)).count()).toBe(3);
+    expect(seen).toEqual([1, 2, 3]);
+  });
+  it('spliterator() / iterator() call the supplier only on first use, once', () => {
+    const { calls, sup } = supplied();
+    const sp = StreamSupport.stream(sup, C.SIZED, false).spliterator();
+    expect(calls.n).toBe(0);
+    expect(sp.estimateSize()).toBe(3);
+    expect(calls.n).toBe(1);
+    const out: number[] = [];
+    sp.forEachRemaining((x) => out.push(x));
+    expect(out).toEqual([1, 2, 3]);
+    expect(calls.n).toBe(1);
+    const it = StreamSupport.stream(sup, 0, false).map((x) => x * 2).iterator();
+    expect(calls.n).toBe(1);
+    expect(it.next()).toBe(2);
+    expect(calls.n).toBe(2);
+  });
+  it('the delegating spliterator forwards every method', () => {
+    const { sup } = supplied();
+    const sp = StreamSupport.stream(sup, 0, false).spliterator();
+    expect(sp.hasCharacteristics(C.ORDERED)).toBe(true);
+    expect(sp.getExactSizeIfKnown()).toBe(3);
+    expect(sp.trySplit()).toBeNull();
+    expect(() => sp.getComparator()).toThrow(IllegalStateException);
+    let v = 0;
+    expect(sp.tryAdvance((x) => (v = x))).toBe(true);
+    expect(v).toBe(1);
+    expect(chars(sp)).toBe(C.ORDERED | C.SIZED | C.SUBSIZED);
+  });
+  it('a supplier-headed stream with stages drains a late-bound source in push mode', () => {
+    const { sup } = supplied();
+    const out: number[] = [];
+    StreamSupport.stream(sup, 0, false).filter((x) => x > 1).spliterator().forEachRemaining((x) => out.push(x));
+    expect(out).toEqual([2, 3]);
+    expect(Stream.of(0).flatMap(() => StreamSupport.stream(sup, 0, false)).toArray()).toEqual([1, 2, 3]);
+  });
+});
+
+describe('engine · toArray(generator) sizes', () => {
+  it('a known size calls the generator first and needs the exact length', () => {
+    const log: string[] = [];
+    const s = Stream.of(1, 2).peek((x) => log.push('p' + x));
+    expect(() => s.toArray((n) => (log.push('gen' + n), new Array<number>(n + 1)))).toThrow(IllegalStateException);
+    expect(log).toEqual(['gen2']);
+    expect(() => Stream.of(1, 2).toArray(() => new Array<number>(1))).toThrow(IllegalStateException);
+    expect(() => Stream.of(2, 1).sorted().toArray(() => new Array<number>(3))).toThrow(IllegalStateException);
+    expect(() => Stream.of(1, 2, 3).limit(2).toArray(() => new Array<number>(3))).toThrow(IllegalStateException);
+    const ok: string[] = [];
+    expect(Stream.of(1, 2).peek((x) => ok.push('p' + x)).toArray((n) => (ok.push('gen' + n), new Array<number>(n)))).toEqual([1, 2]);
+    expect(ok).toEqual(['gen2', 'p1', 'p2']);
+  });
+  it('unknown size: longer arrays are null-padded, shorter ones throw', () => {
+    expect(Stream.of<number | null>(1, 2).filter(() => true).toArray((n) => new Array<number | null>(n + 2))).toEqual([1, 2, null, null]);
+    expect(() => Stream.of(1, 2).filter(() => true).toArray(() => new Array<number>(1))).toThrow(IndexOutOfBoundsException);
+    expect(() => Stream.of(1, 2).filter(() => true).toArray(() => null as unknown as number[])).toThrow(NullPointerException);
+    expect(() => Stream.of(1, 2).toArray(() => null as unknown as number[])).toThrow(NullPointerException);
+  });
+});
+
+describe('engine · collect(collector) call order', () => {
+  function logging(log: string[]): Collector<number, number[], number[]> {
+    return {
+      supplier: () => (log.push('supplier'), () => (log.push('supplier.get'), [])),
+      accumulator: () => (log.push('accumulator'), (l: number[], x: number) => (log.push('acc'), l.push(x))),
+      combiner: () => (log.push('combiner'), (a: number[]) => a),
+      finisher: () => (log.push('finisher'), (a: number[]) => a),
+      characteristics: () => (log.push('characteristics'), { contains: () => false }),
+    } as unknown as Collector<number, number[], number[]>;
+  }
+  it('fresh stream', () => {
+    const log: string[] = [];
+    expect(Stream.of(1).collect(logging(log))).toEqual([1]);
+    expect(log).toEqual(['supplier', 'accumulator', 'combiner', 'characteristics', 'supplier.get', 'acc', 'characteristics', 'finisher']);
+  });
+  it('consumed stream: the functions are fetched before IllegalStateException', () => {
+    const log: string[] = [];
+    const s = Stream.of(1);
+    s.count();
+    expect(() => s.collect(logging(log))).toThrow(IllegalStateException);
+    expect(log).toEqual(['supplier', 'accumulator', 'combiner']);
+  });
+});
+
+describe('engine · argument checks', () => {
+  it('sorted(null) / sorted(undefined) throw NullPointerException; sorted() is natural', () => {
+    expect(() => Stream.of(2, 1).sorted(null as unknown as Comparator<number>)).toThrow(NullPointerException);
+    expect(() => Stream.of(2, 1).sorted(undefined as unknown as Comparator<number>)).toThrow(NullPointerException);
+    expect(Stream.of(2, 1).sorted().toArray()).toEqual([1, 2]);
+  });
+  it('sorted(null) on a used stream throws IllegalStateException first, and links the stream', () => {
+    const s = Stream.of(1);
+    s.count();
+    expect(() => s.sorted(null as unknown as Comparator<number>)).toThrow(IllegalStateException);
+    const t = Stream.of(1);
+    expect(() => t.sorted(null as unknown as Comparator<number>)).toThrow(NullPointerException);
+    expect(() => t.count()).toThrow(IllegalStateException);
+  });
+  it('limit / skip reject non-integers and negatives', () => {
+    for (const bad of [1.5, NaN, Infinity, -1]) {
+      expect(() => Stream.of(1).limit(bad)).toThrow(IllegalArgumentException);
+      expect(() => Stream.of(1).skip(bad)).toThrow(IllegalArgumentException);
+      expect(() => IntStream.of(1).limit(bad)).toThrow(IllegalArgumentException);
+    }
+    expect(Stream.of(1, 2).limit(2 ** 53).toArray()).toEqual([1, 2]);
+  });
+  it('number streams have no collect(Collector)', () => {
+    expect(() => (IntStream.of(1) as any).collect({})).toThrow(IllegalArgumentException);
+    expect(() => (LongStream.of(1) as any).collect({})).toThrow(IllegalArgumentException);
+    expect(() => (DoubleStream.of(1) as any).collect({}, () => {})).toThrow(NullPointerException);
+    expect(IntStream.of(1, 2).collect(() => [] as number[], (a, x) => a.push(x), (a, b) => a.push(...b))).toEqual([1, 2]);
+  });
+});
+
+describe('engine · Symbol.dispose', () => {
+  it('runs close()', () => {
+    let closed = 0;
+    const s = Stream.of(1).onClose(() => closed++);
+    s[Symbol.dispose]();
+    expect(closed).toBe(1);
+    expect(() => s.count()).toThrow(IllegalStateException);
+  });
+  it('is shared by every stream kind', () => {
+    let closed = 0;
+    IntStream.of(1).onClose(() => closed++)[Symbol.dispose]();
+    DoubleStream.of(1).map((x) => x).onClose(() => closed++)[Symbol.dispose]();
+    expect(closed).toBe(2);
+  });
+});
+
+describe('engine · pull-mode flatMap', () => {
+  it('an infinite mapped stream yields through iterator()', () => {
+    const it = Stream.of(1, 100).flatMap((x) => Stream.iterate(x, (i) => i + 1)).iterator();
+    expect([it.next(), it.next(), it.next()]).toEqual([1, 2, 3]);
+  });
+  it('resumes the mapped stream, then moves on and closes each', () => {
+    const closed: number[] = [];
+    const sp = Stream.of(1, 100)
+      .flatMap((x) => Stream.iterate(x, (i) => i + 1).limit(2).onClose(() => closed.push(x)))
+      .spliterator();
+    const out: number[] = [];
+    expect(sp.tryAdvance((x) => out.push(x))).toBe(true);
+    expect(closed).toEqual([]);
+    while (sp.tryAdvance((x) => out.push(x)));
+    expect(out).toEqual([1, 2, 100, 101]);
+    expect(closed).toEqual([1, 100]);
+  });
+  it('nested flatMaps over infinite streams', () => {
+    const it = Stream.of(1)
+      .flatMap((x) => Stream.iterate(x, (i) => i + 1))
+      .flatMap((y) => Stream.generate(() => y * 10))
+      .iterator();
+    expect([it.next(), it.next()]).toEqual([10, 10]);
+  });
+  it('a downstream limit closes the pending mapped stream', () => {
+    let closed = 0;
+    const it = Stream.of(1)
+      .flatMap((x) => Stream.iterate(x, (i) => i + 1).onClose(() => closed++))
+      .limit(2)
+      .iterator();
+    const out: number[] = [];
+    while (it.hasNext()) out.push(it.next());
+    expect(out).toEqual([1, 2]);
+    expect(closed).toBe(1);
+  });
+  it('null mapped streams, filters downstream and non-pipeline inner streams', () => {
+    const custom = { spliterator: () => new PlainSpliterator([7, 8]), close: () => {} } as unknown as Stream<number>;
+    const sp = Stream.of(0, 1, 2)
+      .flatMap((x) => (x === 0 ? null : x === 1 ? custom : Stream.of(5, 6)))
+      .filter((x) => x !== 8)
+      .spliterator();
+    const out: number[] = [];
+    while (sp.tryAdvance((x) => out.push(x)));
+    expect(out).toEqual([7, 5, 6]);
+  });
+  it('a failing mapped stream is closed and the failure suppresses close errors', () => {
+    const boom = new Error('boom');
+    const inner = Stream.generate<number>(() => {
+      throw boom;
+    }).onClose(() => {
+      throw new Error('close');
+    });
+    const it = Stream.of(1).flatMap(() => inner).iterator();
+    let caught: unknown;
+    try {
+      it.next();
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBe(boom);
+    expect((boom as { suppressed?: unknown[] }).suppressed?.length).toBe(1);
+  });
+});
+
+describe('engine · empty / iterate characteristics', () => {
+  it('empty() and empty ranges are SIZED | SUBSIZED only', () => {
+    for (const sp of [
+      Stream.empty().spliterator(),
+      Stream.ofNullable(null).spliterator(),
+      IntStream.empty().spliterator(),
+      LongStream.empty().spliterator(),
+      DoubleStream.empty().spliterator(),
+      IntStream.range(0, 0).spliterator(),
+      IntStream.rangeClosed(1, 0).spliterator(),
+      LongStream.range(5, 1).spliterator(),
+    ])
+      expect(chars(sp)).toBe(0x4040);
+  });
+  it('of() and builders keep the array flags', () => {
+    expect(chars(Stream.of().spliterator())).toBe(0x4450);
+    expect(chars(Stream.builder().build().spliterator())).toBe(0x4450);
+    expect(chars(IntStream.of().spliterator())).toBe(0x4450);
+  });
+  it('number iterate is NONNULL, Stream.iterate is not', () => {
+    expect(chars(IntStream.iterate(1, (x) => x).spliterator())).toBe(0x510);
+    expect(chars(LongStream.iterate(1, () => true, (x) => x).spliterator())).toBe(0x510);
+    expect(chars(DoubleStream.iterate(1, (x) => x).spliterator())).toBe(0x510);
+    expect(chars(Stream.iterate(1, (x) => x).spliterator())).toBe(0x410);
+    expect(chars(Stream.iterate(1, () => true, (x) => x).spliterator())).toBe(0x410);
+  });
+});
+
+describe('engine · primitive iterators', () => {
+  it('nextInt / nextLong / nextDouble', () => {
+    const i = IntStream.of(1, 2).iterator();
+    expect(i.nextInt()).toBe(1);
+    expect(i.next()).toBe(2);
+    expect(i.hasNext()).toBe(false);
+    expect(LongStream.of(3).map((x) => x).iterator().nextLong()).toBe(3);
+    expect(DoubleStream.of(0.5).iterator().nextDouble()).toBe(0.5);
+  });
+});
+
+describe('engine · gatherer defaults', () => {
+  it('only an integrator', () =>
+    expect(Stream.of(1, 2).gather({ integrator: () => (_s: unknown, e: number, d: Downstream<number>) => d.push(e * 10) }).toList().toArray()).toEqual([10, 20]));
+  it('initializer without finisher', () => {
+    const g: Gatherer<number, { n: number }, number> = {
+      initializer: () => () => ({ n: 0 }),
+      integrator: () => (s, e, d) => d.push((s.n += e)),
+    };
+    expect(Stream.of(1, 2, 3).gather(g).toArray()).toEqual([1, 3, 6]);
+  });
+});
+
+describe('engine · pull-mode flatMap after multi-element stages', () => {
+  const pulled = <T>(s: Stream<T>) => {
+    const out: T[] = [];
+    const it = s.iterator();
+    while (it.hasNext()) out.push(it.next());
+    return out;
+  };
+  it('after mapMulti', () =>
+    expect(
+      pulled(
+        Stream.of(9)
+          .mapMulti<number>((x, c) => {
+            c(x);
+            c(x);
+          })
+          .flatMap((x) => Stream.of(x, x))
+      )
+    ).toEqual([9, 9, 9, 9]));
+  it('after sorted (the end flush)', () => expect(pulled(Stream.of(2, 1).sorted().flatMap((x) => Stream.of(x, x)))).toEqual([1, 1, 2, 2]));
+  it('after a gatherer finisher', () => {
+    const g: Gatherer<number, number[], number> = {
+      initializer: () => () => [],
+      integrator: () => (s, e) => (s.push(e), true),
+      finisher: () => (s, d) => s.forEach((x) => d.push(x)),
+    };
+    expect(pulled(Stream.of(1, 2).gather(g).flatMap((x) => Stream.of(x, -x)))).toEqual([1, -1, 2, -2]);
+  });
+  it('a sorted after a flatMap sees every element before sorting', () =>
+    expect(pulled(Stream.of(1, 2).flatMap((x) => Stream.of(x * 10, x)).sorted())).toEqual([1, 2, 10, 20]));
+
+  // random chains of multi-emitting stages: pulling must give what pushing gives
+  const stages: ((s: Stream<number>, r: (n: number) => number) => Stream<number>)[] = [
+    (s, r) => {
+      const k = r(3);
+      return s.flatMap((x) => (k === 0 ? null : Stream.of(...Array.from({ length: k }, (_, i) => x + i))));
+    },
+    (s, r) => {
+      const k = r(3);
+      return s.mapMulti<number>((x, c) => {
+        for (let i = 0; i < k; i++) c(x * 2 + i);
+      });
+    },
+    (s) => s.sorted(),
+    (s) => s.sorted((a, b) => b - a),
+    (s) => s.filter((x) => x % 3 !== 0),
+    (s, r) => s.limit(r(12)),
+    (s) =>
+      s.gather<number>({
+        initializer: () => () => [] as number[],
+        integrator: () => (st: number[], e: number) => (st.push(e), true),
+        finisher: () => (st: number[], d: Downstream<number>) => {
+          for (const x of st) if (!d.push(x)) return;
+        },
+      }),
+    (s) => s.flatMap((x) => IntStream.range(0, x % 3).boxed()),
+  ];
+  it('random chains: pull equals push', () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const build = () => {
+        const r = rng(seed);
+        let s = Stream.of(...Array.from({ length: r(6) }, () => r(20)));
+        const n = 1 + r(4);
+        for (let i = 0; i < n; i++) s = stages[r(stages.length)](s, r);
+        return s;
+      };
+      const push = build().toArray();
+      expect(pulled(build())).toEqual(push);
+      const sp = build().spliterator();
+      const viaTry: number[] = [];
+      while (sp.tryAdvance((x) => viaTry.push(x)));
+      expect(viaTry).toEqual(push);
+    }
   });
 });

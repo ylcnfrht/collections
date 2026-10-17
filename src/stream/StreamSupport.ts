@@ -8,11 +8,12 @@ import type { DoubleStream, IntStream, LongStream, Stream } from './Stream';
 
 type Ctor = typeof RefPipeline | typeof IntPipeline | typeof LongPipeline | typeof DoublePipeline;
 
-// (spliterator, parallel) or (supplier, characteristics, parallel); the supplier is called at the terminal operation
+// (spliterator, parallel) or (supplier, characteristics, parallel). The supplier is called once, when the
+// terminal operation starts or on first use of spliterator() / iterator(); characteristics are the stream's flags.
 function make(ctor: Ctor, src: unknown, a: unknown, b: unknown): any {
   requireNonNull(src);
   return typeof src === 'function'
-    ? makeStream(ctor as any, null, src as () => Spliterator<any>, b === true)
+    ? makeStream(ctor as any, null, src as () => Spliterator<any>, b === true, a as number)
     : makeStream(ctor as any, src as Spliterator<any>, null, a === true);
 }
 

@@ -1,5 +1,6 @@
 // Minimal sequential gatherer evaluator, independent of the stream engine.
-import type { Downstream, Gatherer } from '../../../src/stream/Gatherer';
+import type { Downstream } from '../../../src/stream/Gatherer';
+import type { DefinedGatherer as Gatherer } from '../../../src/stream/Gatherers';
 
 /** Collects pushes into an array; rejects once `limit` elements were accepted (like a downstream limit()). */
 export class Sink<R> implements Downstream<R> {

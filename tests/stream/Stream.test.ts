@@ -17,6 +17,7 @@ import type { Downstream, Gatherer, Integrator } from '../../src/stream/Gatherer
 import { Optional } from '../../src/stream/Optional';
 import { Spliterator } from '../../src/stream/Spliterator';
 import { DoubleStream, IntStream, LongStream, Stream } from '../../src/stream/Streams';
+import { Comparator } from '../../src/util/Comparator';
 import { Point } from '../helpers';
 
 const LINKED = 'stream has already been operated upon or closed';
@@ -389,7 +390,8 @@ describe('Stream · intermediate operations', () => {
     expect(Stream.iterate(0, (x) => (x + 1) % 3).distinct().limit(3).toArray()).toEqual([0, 1, 2]));
 
   it('sorted() uses natural ordering', () => expect(Stream.of('b', 'c', 'a').sorted().toArray()).toEqual(['a', 'b', 'c']));
-  it('sorted(null) uses natural ordering', () => expect(Stream.of(2, 1).sorted(null).toArray()).toEqual([1, 2]));
+  it('sorted(null) throws NullPointerException eagerly', () =>
+    expect(() => Stream.of(2, 1).sorted(null as unknown as Comparator<number>)).toThrow(NullPointerException));
   it('sorted(comparator) is stable', () => {
     const r = Stream.of('bb', 'a', 'cc', 'b', 'aa').sorted((x, y) => x.length - y.length).toArray();
     expect(r).toEqual(['a', 'b', 'bb', 'cc', 'aa']);
@@ -611,8 +613,12 @@ describe('Stream · terminal operations', () => {
     expect(a).toBeInstanceOf(Float64Array);
     expect(Array.from(a)).toEqual([1, 2]);
   });
-  it('toArray(generator) rejects a too-small fixed-size array', () =>
-    expect(() => Stream.of(1, 2).toArray(() => new Int32Array(1))).toThrow(IndexOutOfBoundsException));
+  it('toArray(generator) on an unsized stream rejects a too-small array', () =>
+    expect(() =>
+      Stream.of(1, 2)
+        .filter(() => true)
+        .toArray(() => new Int32Array(1))
+    ).toThrow(IndexOutOfBoundsException));
 
   it('reduce(identity, op) folds left', () => expect(Stream.of('a', 'b', 'c').reduce('>', (x, y) => x + y)).toBe('>abc'));
   it('reduce(identity, op) of empty is the identity', () => expect(Stream.empty<number>().reduce(7, (a, b) => a + b)).toBe(7));
@@ -832,7 +838,7 @@ describe('Stream · terminal operations', () => {
     expect(out).toEqual([-1, -2, -3]);
   });
   it('spliterator() reports the ORDERED flag and an estimate', () => {
-    const sp = Stream.of(1, 2).map((x) => x).spliterator();
+    const sp = Stream.of(1, 2).filter((x) => x > 0).spliterator();
     expect(sp.hasCharacteristics(Spliterator.ORDERED)).toBe(true);
     expect(sp.estimateSize()).toBe(2);
     expect(sp.trySplit()).toBeNull();

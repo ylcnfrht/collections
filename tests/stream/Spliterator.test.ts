@@ -145,7 +145,7 @@ describe('Spliterators.spliterator(collection, characteristics)', () => {
     expect(s.characteristics()).toBe(SIZED_SUB | Spliterator.ORDERED);
     expect(s.estimateSize()).toBe(3);
     expect(all(s)).toEqual([1, 2, 3]);
-    expect(s.estimateSize()).toBe(0);
+    expect(s.estimateSize()).toBe(3);
   });
   it('keeps CONCURRENT sources unsized', () => {
     const s = Spliterators.spliterator(ArrayList.of(1), Spliterator.CONCURRENT);
@@ -164,13 +164,22 @@ describe('Spliterators.spliterator(collection, characteristics)', () => {
     expect(out).toEqual(range(4000));
     expect(s.trySplit()).toBeNull();
   });
-  it('tryAdvance counts the estimate down', () => {
+  it('traversal keeps the initial estimate, like the reference', () => {
     const s = Spliterators.spliterator(ArrayList.of(1, 2), 0);
     expect(s.tryAdvance(() => undefined)).toBe(true);
-    expect(s.estimateSize()).toBe(1);
+    expect(s.estimateSize()).toBe(2);
     expect(s.tryAdvance(() => undefined)).toBe(true);
     expect(s.tryAdvance(() => undefined)).toBe(false);
-    expect(s.estimateSize()).toBe(0);
+    expect(s.estimateSize()).toBe(2);
+    expect(s.trySplit()).toBeNull();
+  });
+  it('trySplit lowers the estimate by the batch taken', () => {
+    const s = Spliterators.spliterator(ArrayList.of(...range(3000)), 0);
+    const p = s.trySplit()!;
+    expect(p.estimateSize()).toBe(1024);
+    expect(s.estimateSize()).toBe(3000 - 1024);
+    s.tryAdvance(() => undefined);
+    expect(s.estimateSize()).toBe(3000 - 1024);
   });
 });
 
@@ -313,5 +322,66 @@ describe('Spliterators.AbstractSpliterator', () => {
   it('does not split an empty source or one estimated at 1', () => {
     expect(new Counter(0, 10, 0).trySplit()).toBeNull();
     expect(new Counter(5, 1, 0).trySplit()).toBeNull();
+  });
+});
+
+describe('iterator-backed spliterators keep their estimate', () => {
+  it('spliterator(iterator, size, chars): tryAdvance and forEachRemaining leave estimateSize() alone', () => {
+    const s = Spliterators.spliterator(ArrayList.of(1, 2, 3).iterator(), 3, 0);
+    s.tryAdvance(() => undefined);
+    expect(s.estimateSize()).toBe(3);
+    s.forEachRemaining(() => undefined);
+    expect(s.estimateSize()).toBe(3);
+    expect(s.getExactSizeIfKnown()).toBe(3);
+  });
+});
+
+describe('Spliterators.AbstractIntSpliterator / AbstractLongSpliterator / AbstractDoubleSpliterator', () => {
+  const kinds = [
+    ['AbstractIntSpliterator', Spliterators.AbstractIntSpliterator],
+    ['AbstractLongSpliterator', Spliterators.AbstractLongSpliterator],
+    ['AbstractDoubleSpliterator', Spliterators.AbstractDoubleSpliterator],
+  ] as const;
+  const make = (Base: typeof Spliterators.AbstractIntSpliterator, n: number, est: number, chars: number) =>
+    new (class extends Base {
+      private i = 0;
+      constructor() {
+        super(est, chars);
+      }
+      tryAdvance(action: (t: number) => void): boolean {
+        if (this.i >= n) return false;
+        action(this.i++);
+        return true;
+      }
+    })();
+
+  it.each(kinds)('%s behaves like AbstractSpliterator', (_n, Base) => {
+    const s = make(Base, 3000, 3000, Spliterator.SIZED);
+    expect(s).toBeInstanceOf(Spliterators.AbstractSpliterator);
+    expect(s.characteristics()).toBe(SIZED_SUB);
+    const p = s.trySplit()!;
+    expect(p.estimateSize()).toBe(1024);
+    expect(s.estimateSize()).toBe(3000 - 1024);
+    expect(all(p)).toEqual(range(1024));
+    const rest = all(s);
+    expect(rest[0]).toBe(1024);
+    expect(rest.length).toBe(3000 - 1024);
+  });
+  it.each(kinds)('%s with an unknown size splits into unsized batches', (_n, Base) => {
+    const s = make(Base, 10, Infinity, Spliterator.ORDERED);
+    expect(s.getExactSizeIfKnown()).toBe(-1);
+    const p = s.trySplit()!;
+    expect(p.estimateSize()).toBe(Infinity);
+    expect(all(p)).toEqual(range(10));
+  });
+  it('type names Spliterator.OfInt / OfLong / OfDouble / OfPrimitive and the abstract class types', () => {
+    const s: Spliterator.OfInt = make(Spliterators.AbstractIntSpliterator, 1, 1, 0);
+    const l: Spliterator.OfLong = s;
+    const d: Spliterator.OfDouble = l;
+    const p: Spliterator.OfPrimitive = d;
+    const a: Spliterators.AbstractIntSpliterator | Spliterators.AbstractLongSpliterator | Spliterators.AbstractDoubleSpliterator =
+      make(Spliterators.AbstractDoubleSpliterator, 1, 1, 0);
+    expect(all(p)).toEqual([0]);
+    expect(all(a)).toEqual([0]);
   });
 });

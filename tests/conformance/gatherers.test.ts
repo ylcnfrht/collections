@@ -8,7 +8,7 @@ const UOE = 'UnsupportedOperationException';
 const arrays = <T>(s: Stream<List<T>>): T[][] => s.map((w) => w.toArray()).toArray();
 
 // Gatherer class doc example: a "map" gatherer built from a stateless integrator.
-function map<T, R>(mapper: (t: T) => R): Gatherer<T, any, R> {
+function map<T, R>(mapper: (t: T) => R) {
   return Gatherer.of(Integrator.ofGreedy((_unused: unknown, element: T, downstream: Downstream<R>) => downstream.push(mapper(element))));
 }
 

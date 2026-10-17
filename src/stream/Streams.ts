@@ -12,9 +12,11 @@ import {
   Iterate3Spliterator,
   IterateSpliterator,
   IterableSpliterator,
+  ITERATE_FLAGS,
+  NUMBER_ITERATE_FLAGS,
   RangeSpliterator,
 } from './pipeline/spliterators';
-import type { Spliterator } from './Spliterator';
+import { Spliterator } from './Spliterator';
 import type {
   DoubleStream as DoubleStreamType,
   IntStream as IntStreamType,
@@ -34,6 +36,8 @@ type Ctor = typeof RefPipeline | typeof IntPipeline | typeof LongPipeline | type
 type Closeable = { isParallel(): boolean; spliterator(): Spliterator<any>; close(): void };
 
 const NONE: readonly never[] = [];
+/** empty() and empty ranges report only SIZED | SUBSIZED; of() with no values keeps the array flags. */
+const EMPTY_FLAGS = Spliterator.SIZED | Spliterator.SUBSIZED;
 
 function from(ctor: Ctor, sp: Spliterator<any>): any {
   return makeStream(ctor as any, sp, null, false);
@@ -43,10 +47,15 @@ function ofArray(ctor: Ctor, a: ArrayLike<any>): any {
   return from(ctor, new ArraySpliterator(requireNonNull(a), 0, a.length, ARRAY_FLAGS));
 }
 
+function empty(ctor: Ctor): any {
+  return from(ctor, new ArraySpliterator(NONE, 0, 0, EMPTY_FLAGS));
+}
+
 function iterate(ctor: Ctor, seed: any, a: any, b: any, n: number): any {
   requireNonNull(a);
-  if (n < 3) return from(ctor, new IterateSpliterator(seed, a));
-  return from(ctor, new Iterate3Spliterator(seed, a, requireNonNull(b)));
+  const flags = ctor === RefPipeline ? ITERATE_FLAGS : NUMBER_ITERATE_FLAGS;
+  if (n < 3) return from(ctor, new IterateSpliterator(seed, a, flags));
+  return from(ctor, new Iterate3Spliterator(seed, a, requireNonNull(b), flags));
 }
 
 function generate(ctor: Ctor, s: () => any): any {
@@ -83,7 +92,7 @@ class Builder<T, S> {
 }
 
 function range(ctor: Ctor, start: number, end: number): any {
-  return from(ctor, start < end ? new RangeSpliterator(start, end) : new ArraySpliterator(NONE, 0, 0, ARRAY_FLAGS));
+  return start < end ? from(ctor, new RangeSpliterator(start, end)) : empty(ctor);
 }
 
 function iterateOf(ctor: Ctor) {
@@ -100,7 +109,7 @@ function numberStatics<S>(ctor: Ctor) {
     of: (...values: number[]): S => ofArray(ctor, values),
     /** JS extra: a stream over the array itself (no copy). */
     ofArray: (array: ArrayLike<number>): S => ofArray(ctor, array),
-    empty: (): S => ofArray(ctor, NONE),
+    empty: (): S => empty(ctor),
     iterate: iterateOf(ctor) as {
       (seed: number, f: (n: number) => number): S;
       (seed: number, hasNext: (n: number) => boolean, next: (n: number) => number): S;
@@ -125,10 +134,10 @@ export const Stream = {
     return ofArray(RefPipeline, values);
   },
   ofNullable<T>(t: T | null | undefined): Stream<T> {
-    return ofArray(RefPipeline, t === null || t === undefined ? NONE : [t]);
+    return t === null || t === undefined ? empty(RefPipeline) : ofArray(RefPipeline, [t]);
   },
   empty<T>(): Stream<T> {
-    return ofArray(RefPipeline, NONE);
+    return empty(RefPipeline);
   },
   iterate: iterateOf(RefPipeline) as {
     <T>(seed: T, f: (t: T) => T): Stream<T>;

@@ -27,6 +27,12 @@ const first = (s: string) => s[0];
 const isEven = (n: number) => n % 2 === 0;
 const natural = (a: number, b: number) => a - b;
 
+/** Arguments the reference checks only when the collector runs: creating succeeds, collecting throws NullPointerException. */
+const throwsAtUse = (make: () => Collector<any, any, any>, input: unknown[] = ['ab', 'cd']) => {
+  const c = make();
+  expectThrows(() => collect(input, c), 'NullPointerException');
+};
+
 interface Person {
   name: string;
   city: string;
@@ -182,7 +188,7 @@ describe('toCollection', () => {
     const c = toCollection(() => new ArrayList<number>());
     expect(c.supplier()()).not.toBe(c.supplier()());
   });
-  it('null factory throws', () => expectThrows(() => toCollection(null as any), 'NullPointerException'));
+  it('null factory is accepted, throws NullPointerException when used', () => throwsAtUse(() => toCollection(null as any)));
 });
 
 describe('toList', () => {
@@ -288,11 +294,21 @@ describe('joining', () => {
   });
   it('combining two empty containers', () => expect(collectSplit([], joining(',', '(', ')'), 0)).toBe('()'));
   it.each([
-    ['delimiter', () => joining(null as any)],
-    ['delimiter (3-arg)', () => joining(null as any, '', '')],
-    ['prefix', () => joining(',', null as any, '')],
-    ['suffix', () => joining(',', '', null as any)],
-  ])('null %s throws NullPointerException', (_n, fn) => expectThrows(fn, 'NullPointerException'));
+    ['delimiter', () => joining(null as any), 'The delimiter must not be null'],
+    ['undefined delimiter', () => joining(undefined as any), 'The delimiter must not be null'],
+    ['delimiter (3-arg)', () => joining(null as any, '', ''), 'The delimiter must not be null'],
+    ['prefix', () => joining(',', null as any, ''), 'The prefix must not be null'],
+    ['undefined prefix', () => joining(',', undefined as any, ''), 'The prefix must not be null'],
+    ['suffix', () => joining(',', '', null as any), 'The suffix must not be null'],
+  ])('null %s is accepted, throws NullPointerException when used (even on empty input)', (_n, fn, message) => {
+    const c = fn();
+    expectThrows(() => collect([], c), 'NullPointerException');
+    expect(() => collect(['a'], c)).toThrow(message);
+  });
+  it('joining() and joining(d) keep their defaults', () => {
+    expect(collect(['a', 'b'], joining())).toBe('ab');
+    expect(collect(['a', 'b'], joining('-'))).toBe('a-b');
+  });
 });
 
 // ---------------------------------------------------------------- mapping / filtering / flatMapping
@@ -309,7 +325,7 @@ describe('mapping', () => {
     for (const r of allSplits(words, mapping(len, toList()))) expect(plain(r)).toEqual(words.map(len));
   });
   it('null args throw', () => {
-    expectThrows(() => mapping(null as any, toList()), 'NullPointerException');
+    throwsAtUse(() => mapping(null as any, toList()));
     expectThrows(() => mapping(len, null as any), 'NullPointerException');
   });
 });
@@ -328,7 +344,7 @@ describe('filtering', () => {
     for (const r of allSplits(nums, filtering(isEven, toList()))) expect(plain(r)).toEqual([8, 2, 4, 6, 10]);
   });
   it('null args throw', () => {
-    expectThrows(() => filtering(null as any, toList()), 'NullPointerException');
+    throwsAtUse(() => filtering(null as any, toList()));
     expectThrows(() => filtering(isEven, null as any), 'NullPointerException');
   });
 });
@@ -395,7 +411,7 @@ describe('flatMapping', () => {
     for (const r of allSplits([[1], [2, 3], [4]], flatMapping((a: number[]) => new FakeStream(a), toList()))) expect(plain(r)).toEqual([1, 2, 3, 4]);
   });
   it('null args throw', () => {
-    expectThrows(() => flatMapping(null as any, toList()), 'NullPointerException');
+    throwsAtUse(() => flatMapping(null as any, toList()));
     expectThrows(() => flatMapping(() => null, null as any), 'NullPointerException');
   });
 });
@@ -494,7 +510,7 @@ describe('summing', () => {
     ['summingInt', () => summingInt(null as any)],
     ['summingLong', () => summingLong(null as any)],
     ['summingDouble', () => summingDouble(null as any)],
-  ])('%s(null) throws', (_n, fn) => expectThrows(fn, 'NullPointerException'));
+  ])('%s(null) is accepted, throws NullPointerException when used', (_n, fn) => throwsAtUse(fn as () => Collector<any, any, any>));
 });
 
 describe('averaging', () => {
@@ -524,7 +540,7 @@ describe('averaging', () => {
     ['averagingInt', () => averagingInt(null as any)],
     ['averagingLong', () => averagingLong(null as any)],
     ['averagingDouble', () => averagingDouble(null as any)],
-  ])('%s(null) throws', (_n, fn) => expectThrows(fn, 'NullPointerException'));
+  ])('%s(null) is accepted, throws NullPointerException when used', (_n, fn) => throwsAtUse(fn as () => Collector<any, any, any>));
 });
 
 // ---------------------------------------------------------------- reducing
@@ -559,10 +575,10 @@ describe('reducing', () => {
     for (const r of allSplits(words, reducing(0, len, add))) expect(r).toBe(words.join('').length);
   });
   it('null args throw', () => {
-    expectThrows(() => reducing(null as any), 'NullPointerException');
-    expectThrows(() => reducing(0, null as any), 'NullPointerException');
-    expectThrows(() => reducing(0, null as any, add), 'NullPointerException');
-    expectThrows(() => reducing(0, len, null as any), 'NullPointerException');
+    throwsAtUse(() => reducing(null as any));
+    throwsAtUse(() => reducing(0, null as any));
+    throwsAtUse(() => reducing(0, null as any, add));
+    throwsAtUse(() => reducing(0, len, null as any));
   });
 });
 
@@ -623,9 +639,9 @@ describe('groupingBy', () => {
     expect(plain(r)).toEqual({ Oslo: { false: ['Flo'], true: ['Ann', 'Cid'] }, Rome: { false: ['Bob'], true: ['Eve'] }, Lima: { false: ['Dee'], true: [] } });
   });
   it('null args throw', () => {
-    expectThrows(() => groupingBy(null as any), 'NullPointerException');
+    throwsAtUse(() => groupingBy(null as any));
     expectThrows(() => groupingBy(first, null as any), 'NullPointerException');
-    expectThrows(() => groupingBy(first, null as any, toList()), 'NullPointerException');
+    throwsAtUse(() => groupingBy(first, null as any, toList()));
     expectThrows(() => groupingBy(first, () => new HashMap<any, any>(), null as any), 'NullPointerException');
   });
 });
@@ -645,9 +661,9 @@ describe('groupingByConcurrent', () => {
     for (const r of allSplits(words, groupingByConcurrent(first, counting()))) expect(plain(r)).toEqual({ a: 3, b: 2, c: 2, d: 1 });
   });
   it('null args throw', () => {
-    expectThrows(() => groupingByConcurrent(null as any), 'NullPointerException');
+    throwsAtUse(() => groupingByConcurrent(null as any));
     expectThrows(() => groupingByConcurrent(first, null as any), 'NullPointerException');
-    expectThrows(() => groupingByConcurrent(first, null as any, toList()), 'NullPointerException');
+    throwsAtUse(() => groupingByConcurrent(first, null as any, toList()));
   });
 });
 
@@ -715,7 +731,7 @@ describe('partitioningBy', () => {
     expect(plain(r)).toEqual({ false: { a: 1, d: 1 }, true: { a: 2, b: 2, c: 2 } });
   });
   it('null args throw', () => {
-    expectThrows(() => partitioningBy(null as any), 'NullPointerException');
+    throwsAtUse(() => partitioningBy(null as any));
     expectThrows(() => partitioningBy(isEven, null as any), 'NullPointerException');
     expectThrows(() => partitioningBy(isEven, undefined as any), 'NullPointerException');
   });
@@ -766,10 +782,10 @@ describe('toMap', () => {
     expect(r.keySet().toArray()).toEqual(['a', 'b', 'c']);
   });
   it('null args throw', () => {
-    expectThrows(() => toMap(null as any, first), 'NullPointerException');
-    expectThrows(() => toMap(first, null as any), 'NullPointerException');
-    expectThrows(() => toMap(first, first, null as any), 'NullPointerException');
-    expectThrows(() => toMap(first, first, (a) => a, null as any), 'NullPointerException');
+    throwsAtUse(() => toMap(null as any, first));
+    throwsAtUse(() => toMap(first, null as any));
+    throwsAtUse(() => toMap(first, first, null as any));
+    throwsAtUse(() => toMap(first, first, (a) => a, null as any));
   });
 });
 
@@ -813,10 +829,10 @@ describe('toConcurrentMap', () => {
     for (const r of allSplits(words, toConcurrentMap((w: string) => w, len))) expect(r.size()).toBe(8);
   });
   it('null args throw', () => {
-    expectThrows(() => toConcurrentMap(null as any, first), 'NullPointerException');
-    expectThrows(() => toConcurrentMap(first, null as any), 'NullPointerException');
-    expectThrows(() => toConcurrentMap(first, first, null as any), 'NullPointerException');
-    expectThrows(() => toConcurrentMap(first, first, (a) => a, null as any), 'NullPointerException');
+    throwsAtUse(() => toConcurrentMap(null as any, first));
+    throwsAtUse(() => toConcurrentMap(first, null as any));
+    throwsAtUse(() => toConcurrentMap(first, first, null as any));
+    throwsAtUse(() => toConcurrentMap(first, first, (a) => a, null as any));
   });
 });
 
@@ -852,7 +868,7 @@ describe('summarizing', () => {
     ['summarizingInt', () => summarizingInt(null as any)],
     ['summarizingLong', () => summarizingLong(null as any)],
     ['summarizingDouble', () => summarizingDouble(null as any)],
-  ])('%s(null) throws', (_n, fn) => expectThrows(fn, 'NullPointerException'));
+  ])('%s(null) is accepted, throws NullPointerException when used', (_n, fn) => throwsAtUse(fn as () => Collector<any, any, any>));
 });
 
 // ---------------------------------------------------------------- teeing
@@ -924,4 +940,84 @@ describe('contract', () => {
     const r = collect(nums, collectingAndThen(maxBy(natural), (o: Optional<number>) => o.orElse(-1)));
     expect(r).toBe(10);
   });
+});
+
+// ---------------------------------------------------------------- null arguments: when the reference checks them
+
+describe('null arguments follow the reference timing', () => {
+  it('a null function that never runs is never reported', () => {
+    expect(collect([], mapping(null as any, toList())).size()).toBe(0);
+    expect(collect([], summingInt(null as any))).toBe(0);
+    expect(collect([], groupingBy(null as any)).size()).toBe(0);
+    expect(collect([1], reducing(null as any)).get()).toBe(1);
+    expect(collect([], toMap(null as any, null as any)).size()).toBe(0);
+  });
+  it('a null supplier fails even on empty input', () => {
+    throwsAtUse(() => toCollection(null as any), []);
+    throwsAtUse(() => groupingBy(first, null as any, toList()), []);
+    throwsAtUse(() => toMap(first, first, (a) => a, null as any), []);
+  });
+  it.each([
+    ['minBy', () => minBy(null as any), undefined],
+    ['maxBy', () => maxBy(null as any), undefined],
+    ['collectingAndThen(null, f)', () => collectingAndThen(null as any, (x) => x), undefined],
+    ['collectingAndThen(c, null)', () => collectingAndThen(toList(), null as any), undefined],
+    ['mapping(f, null)', () => mapping(len, null as any), undefined],
+    ['filtering(p, null)', () => filtering(isEven, null as any), undefined],
+    ['flatMapping(f, null)', () => flatMapping(() => null, null as any), undefined],
+    ['groupingBy(f, null)', () => groupingBy(first, null as any), undefined],
+    ['groupingBy(f, m, null)', () => groupingBy(first, () => new HashMap<any, any>(), null as any), undefined],
+    ['partitioningBy(p, null)', () => partitioningBy(isEven, null as any), undefined],
+    ['toUnmodifiableMap(null, v)', () => toUnmodifiableMap(null as any, first), 'keyMapper'],
+    ['toUnmodifiableMap(k, null)', () => toUnmodifiableMap(first, null as any), 'valueMapper'],
+    ['toUnmodifiableMap(k, v, null)', () => toUnmodifiableMap(first, first, null as any), 'mergeFunction'],
+    ['teeing(null, c, m)', () => teeing(null as any, toList(), () => 0), 'downstream1'],
+    ['teeing(c, null, m)', () => teeing(toList(), null as any, () => 0), 'downstream2'],
+    ['teeing(c, c, null)', () => teeing(toList(), toList(), null as any), 'merger'],
+  ])('%s throws NullPointerException at creation', (_n, fn, message) => {
+    expectThrows(fn, 'NullPointerException');
+    if (message !== undefined) expect(fn).toThrow(message);
+  });
+});
+
+describe('teeing checks every downstream function', () => {
+  const withNull = (member: 'supplier' | 'accumulator' | 'combiner' | 'finisher'): Collector<any, any, any> => {
+    const c = toList();
+    return {
+      supplier: () => (member === 'supplier' ? null : c.supplier()),
+      accumulator: () => (member === 'accumulator' ? null : c.accumulator()),
+      combiner: () => (member === 'combiner' ? null : c.combiner()),
+      finisher: () => (member === 'finisher' ? null : c.finisher()),
+      characteristics: () => c.characteristics(),
+    } as unknown as Collector<any, any, any>;
+  };
+  it.each(['supplier', 'accumulator', 'combiner', 'finisher'] as const)('a null %s is reported with its downstream', (member) => {
+    expect(() => teeing(withNull(member), toList(), () => 0)).toThrow(`downstream1 ${member}`);
+    expect(() => teeing(toList(), withNull(member), () => 0)).toThrow(`downstream2 ${member}`);
+    expectThrows(() => teeing(toList(), withNull(member), () => 0), 'NullPointerException');
+  });
+  it('downstream1 supplier is checked before downstream2 supplier, suppliers before accumulators', () => {
+    expect(() => teeing(withNull('accumulator'), withNull('supplier'), () => 0)).toThrow('downstream2 supplier');
+    expect(() => teeing(withNull('supplier'), withNull('supplier'), () => 0)).toThrow('downstream1 supplier');
+  });
+});
+
+describe('Collector.of characteristics: enum order, deduplicated', () => {
+  const fns = [() => new ArrayList<number>(), (l: ArrayList<number>, t: number) => void l.add(t), (a: ArrayList<number>) => a] as const;
+  it('without a finisher IDENTITY_FINISH comes last', () => {
+    const c = Collector.of(fns[0], fns[1], fns[2], 'UNORDERED', 'UNORDERED');
+    expect(String(c.characteristics())).toBe('[UNORDERED, IDENTITY_FINISH]');
+    expect(c.characteristics().size()).toBe(2);
+  });
+  it('with a finisher', () => {
+    const c = Collector.of(fns[0], fns[1], fns[2], (a: ArrayList<number>) => a.size(), 'IDENTITY_FINISH', 'CONCURRENT', 'UNORDERED', 'CONCURRENT');
+    expect(String(c.characteristics())).toBe('[CONCURRENT, UNORDERED, IDENTITY_FINISH]');
+    expect(c.characteristics().toArray()).toEqual(['CONCURRENT', 'UNORDERED', 'IDENTITY_FINISH']);
+  });
+  it('none / one', () => {
+    expect(String(Collector.of(fns[0], fns[1], fns[2], (a: ArrayList<number>) => a).characteristics())).toBe('[]');
+    expect(String(Collector.of(fns[0], fns[1], fns[2], 'CONCURRENT').characteristics())).toBe('[CONCURRENT, IDENTITY_FINISH]');
+  });
+  it('a null characteristic throws NullPointerException', () =>
+    expectThrows(() => Collector.of(fns[0], fns[1], fns[2], (a: ArrayList<number>) => a, 'UNORDERED', null as any), 'NullPointerException'));
 });

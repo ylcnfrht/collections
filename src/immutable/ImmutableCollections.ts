@@ -509,26 +509,36 @@ class ValuesView<K, V> extends ImmutableCollectionBase<V> {
 
 // Map views are read-only collections built on an iterator whose remove() is unsupported, so in the reference
 // the removal methods throw only when they would actually remove something; otherwise they report no change.
+// Exception: a one-entry Map.of has fully immutable views (Set.of/List.of in the reference), which always throw.
+const alwaysLocked = (view: unknown) => {
+  const m = (view as { map: ImmutableMap<unknown, unknown> }).map;
+  if (m.nullHostile && m.entries.length === 1) uoe();
+};
 for (const View of [EntrySetView, KeySetView, ValuesView]) {
   const p = View.prototype as unknown as Collection<unknown>;
   p.remove = function (this: Collection<unknown>, o: unknown): boolean {
+    alwaysLocked(this);
     for (const e of this.toArray()) if (equals(o, e)) uoe();
     return false;
   };
   p.removeIf = function (this: Collection<unknown>, filter: (e: unknown) => boolean): boolean {
+    alwaysLocked(this);
     requireNonNull(filter);
     for (const e of this.toArray()) if (filter(e)) uoe();
     return false;
   };
   p.removeAll = function (this: Collection<unknown>, c: Collection<unknown>): boolean {
+    alwaysLocked(this);
     requireNonNull(c);
     return this.removeIf((e) => c.contains(e));
   };
   p.retainAll = function (this: Collection<unknown>, c: Collection<unknown>): boolean {
+    alwaysLocked(this);
     requireNonNull(c);
     return this.removeIf((e) => !c.contains(e));
   };
   p.clear = function (this: Collection<unknown>): void {
+    alwaysLocked(this);
     if (!this.isEmpty()) uoe();
   };
 }

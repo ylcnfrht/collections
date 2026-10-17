@@ -242,3 +242,44 @@ describe('OptionalInt / OptionalLong / OptionalDouble', () => {
     expect(OptionalLong.of(0).equals(OptionalLong.of(-0))).toBe(true);
   });
 });
+
+describe('null functional arguments: NullPointerException only on the branch used', () => {
+  const nul = null as any;
+  // [name, present instance, empty instance]
+  const kinds: [string, any, any][] = [
+    ['Optional', Optional.of(1), Optional.empty()],
+    ['OptionalInt', OptionalInt.of(1), OptionalInt.empty()],
+    ['OptionalLong', OptionalLong.of(1), OptionalLong.empty()],
+    ['OptionalDouble', OptionalDouble.of(1), OptionalDouble.empty()],
+  ];
+  const noop = () => undefined;
+
+  describe.each(kinds)('%s', (_name, present, empty) => {
+    it('ifPresent(null): throws when present, not when empty', () => {
+      expect(() => present.ifPresent(nul)).toThrow(NullPointerException);
+      expect(() => present.ifPresent(undefined)).toThrow(NullPointerException);
+      expect(() => empty.ifPresent(nul)).not.toThrow();
+    });
+    it('ifPresentOrElse: only the branch taken is checked', () => {
+      expect(() => present.ifPresentOrElse(nul, noop)).toThrow(NullPointerException);
+      expect(() => present.ifPresentOrElse(noop, nul)).not.toThrow();
+      expect(() => empty.ifPresentOrElse(noop, nul)).toThrow(NullPointerException);
+      expect(() => empty.ifPresentOrElse(nul, noop)).not.toThrow();
+    });
+    it('orElseGet(null): value when present, throws when empty', () => {
+      expect(present.orElseGet(nul)).toBe(1);
+      expect(() => empty.orElseGet(nul)).toThrow(NullPointerException);
+    });
+    it('orElseThrow(supplier) whose result is null/undefined throws NullPointerException', () => {
+      expect(() => empty.orElseThrow(() => null)).toThrow(NullPointerException);
+      expect(() => empty.orElseThrow(() => undefined)).toThrow(NullPointerException);
+      expect(() => empty.orElseThrow(nul)).toThrow(NullPointerException);
+      expect(present.orElseThrow(() => null)).toBe(1);
+      expect(present.orElseThrow(nul)).toBe(1);
+    });
+    it('orElseThrow(supplier) throws the supplied error', () => {
+      const e = new Boom();
+      expect(() => empty.orElseThrow(() => e)).toThrow(e);
+    });
+  });
+});

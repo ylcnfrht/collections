@@ -335,7 +335,7 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return new DescendingIterator(this);
   }
 
-  /** ORDERED|SIZED|SUBSIZED|NONNULL; late-binding, fail-fast, splits in halves. */
+  /** ORDERED|SIZED|SUBSIZED|NONNULL; late-binding, splits in halves; see DeqSpliterator for concurrent changes. */
   override spliterator(): Spliterator<E> {
     return new DeqSpliterator(this);
   }
@@ -593,16 +593,22 @@ class JsIterator<E> {
 
 const DEQ_CHARACTERISTICS = Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.NONNULL;
 
-/** Spliterator over [cursor, end) of the circular buffer, bound to head/tail/modCount at first use. */
+/**
+ * Spliterator over [cursor, end) of the circular buffer, bound to head/tail at first use. Like the reference it is
+ * not modCount-based: it reads the slots it was bound to, so an element added at either end after binding is not
+ * seen and traversal stops at the old end; reaching a vacated slot (one outside the live head..tail range) throws
+ * ConcurrentModificationException in tryAdvance, while forEachRemaining only checks both ends of its range up front
+ * and then passes null for vacated slots, as the reference does.
+ */
 class DeqSpliterator<E> extends BaseSpliterator<E> {
   private a: unknown[] = [];
   private mask = 0;
+  private expected = 0;
 
   constructor(
     private readonly d: ArrayDeque<E>,
     private cursor = 0,
-    private end = -1,
-    private expected = 0
+    private end = -1
   ) {
     super();
   }
@@ -619,6 +625,18 @@ class DeqSpliterator<E> extends BaseSpliterator<E> {
     return this.end;
   }
 
+  /**
+   * Whether physical slot i still holds a live element. The buffer grows in place (the reference allocates a new
+   * array whose old slots it then misreads); a grown buffer counts as modified everywhere.
+   * shortcut: a resize during traversal always throws, where the reference may yield stale slots.
+   */
+  private live(i: number): boolean {
+    const d = this.d;
+    if (d.modCount === this.expected) return true;
+    if (d.elements.length - 1 !== this.mask) return false;
+    return ((i - d.head) & this.mask) < ((d.tail - d.head) & this.mask);
+  }
+
   override trySplit(): Spliterator<E> | null {
     const end = this.getFence();
     const i = this.cursor;
@@ -626,9 +644,10 @@ class DeqSpliterator<E> extends BaseSpliterator<E> {
     if (n <= 0) return null;
     const mid = (i + n) & this.mask;
     this.cursor = mid;
-    const s = new DeqSpliterator(this.d, i, mid, this.expected);
+    const s = new DeqSpliterator(this.d, i, mid);
     s.a = this.a;
     s.mask = this.mask;
+    s.expected = this.expected;
     return s;
   }
 
@@ -637,11 +656,9 @@ class DeqSpliterator<E> extends BaseSpliterator<E> {
     const end = this.getFence();
     const i = this.cursor;
     if (i === end) return false;
-    const d = this.d;
-    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
+    if (!this.live(i)) throw new ConcurrentModificationException();
     this.cursor = (i + 1) & this.mask;
     action(this.a[i] as E);
-    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
     return true;
   }
 
@@ -650,15 +667,16 @@ class DeqSpliterator<E> extends BaseSpliterator<E> {
     const end = this.getFence();
     const a = this.a;
     const mask = this.mask;
+    let i = this.cursor;
+    if (i === end) return;
+    this.cursor = end;
+    if (!this.live(i) || !this.live((end - 1) & mask)) throw new ConcurrentModificationException();
     const d = this.d;
     const mc = this.expected;
-    let i = this.cursor;
-    this.cursor = end;
-    if (i !== end && d.modCount !== mc) throw new ConcurrentModificationException();
-    // checked per element: a mutating action may move the buffer, and stale slots must never reach it
     for (; i !== end; i = (i + 1) & mask) {
-      action(a[i] as E);
-      if (d.modCount !== mc) throw new ConcurrentModificationException();
+      if (d.modCount === mc) action(a[i] as E);
+      else if (d.elements.length - 1 !== mask) throw new ConcurrentModificationException();
+      else action((this.live(i) ? a[i] : null) as E);
     }
   }
 

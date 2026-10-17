@@ -1,5 +1,5 @@
 // Conformance: Stream intermediate operations.
-import { Comparator, DoubleStream, IntStream, List, LongStream, Optional, Stream } from '../../src';
+import { Comparator, DoubleStream, IntStream, List, LongStream, NullPointerException, Optional, Stream } from '../../src';
 import { expectThrows, Point } from '../helpers';
 
 const IAE = 'IllegalArgumentException';
@@ -146,7 +146,9 @@ describe('sorted', () => {
     expect(Stream.of(new Point(2, 0), new Point(1, 5), new Point(1, 3)).sorted().map(String).toArray()).toEqual(['(1,3)', '(1,5)', '(2,0)']));
   it('with a comparator', () => expect(Stream.of(1, 3, 2).sorted((a, b) => b - a).toArray()).toEqual([3, 2, 1]));
   it('with Comparator.reverseOrder()', () => expect(Stream.of('a', 'c', 'b').sorted(Comparator.reverseOrder()).toArray()).toEqual(['c', 'b', 'a']));
-  it('with a null comparator means natural order', () => expect(Stream.of(2, 1).sorted(null).toArray()).toEqual([1, 2]));
+  // sorted(Comparator) requires a non-null comparator; only sorted() means natural order
+  it('a null comparator throws NullPointerException eagerly', () =>
+    expect(() => Stream.of(2, 1).sorted(null as unknown as Comparator<number>)).toThrow(NullPointerException));
   // "For ordered streams, the sort is stable."
   it('is stable', () => {
     const items = ['b1', 'a1', 'b2', 'a2', 'b3', 'a3'];

@@ -9,6 +9,14 @@ export type Gatherer<T, A, R> = GathererType<T, A, R>;
 export type Integrator<A, T, R> = IntegratorType<A, T, R>;
 export type Downstream<T> = DownstreamType<T>;
 
+/** What the factories here return: a Gatherer with every member defined. */
+export interface DefinedGatherer<T, A, R> extends GathererType<T, A, R> {
+  initializer(): () => A;
+  combiner(): (left: A, right: A) => A;
+  finisher(): (state: A, downstream: Downstream<R>) => void;
+  andThen<RR>(that: GathererType<R, any, RR>): DefinedGatherer<T, any, RR>;
+}
+
 type Initializer<A> = () => A;
 type Combiner<A> = (left: A, right: A) => A;
 type Finisher<A, R> = (state: A, downstream: Downstream<R>) => void;
@@ -23,7 +31,7 @@ const DEFAULT_FINISHER: Finisher<any, any> = () => {};
 const STATELESS_COMBINER: Combiner<any> = () => null;
 
 function ofGreedy<A, T, R>(fn: (state: A, element: T, downstream: Downstream<R>) => boolean): Integrator<A, T, R> {
-  requireNonNull(fn, 'greedy');
+  if (fn === null || fn === undefined) return fn as unknown as Integrator<A, T, R>; // like the reference: no check
   return greedy((s: A, e: T, d: Downstream<R>) => fn(s, e, d));
 }
 
@@ -33,7 +41,7 @@ function greedy<F extends (...a: any[]) => boolean>(f: F): F & { readonly greedy
   return f as F & { readonly greedy: true };
 }
 
-class GathererImpl<T, A, R> implements GathererType<T, A, R> {
+class GathererImpl<T, A, R> implements DefinedGatherer<T, A, R> {
   constructor(
     private readonly init: Initializer<A>,
     private readonly integ: Integrator<A, T, R>,
@@ -52,20 +60,34 @@ class GathererImpl<T, A, R> implements GathererType<T, A, R> {
   finisher(): Finisher<A, R> {
     return this.fin;
   }
-  andThen<RR>(that: GathererType<R, any, RR>): GathererType<T, any, RR> {
+  andThen<RR>(that: GathererType<R, any, RR>): DefinedGatherer<T, any, RR> {
     return new Composite(this, requireNonNull(that, 'that'));
   }
 }
 
-function make<T, A, R>(init: Initializer<A>, integ: Integrator<A, T, R>, comb: Combiner<A>, fin: Finisher<A, R>): GathererType<T, A, R> {
+// Contract members other than integrator are optional; a missing one means its default sentinel.
+type AnyGatherer = Partial<GathererType<any, any, any>> & Pick<GathererType<any, any, any>, 'integrator'>;
+const initOf = (g: AnyGatherer): Initializer<any> => (g.initializer ? g.initializer() : DEFAULT_INITIALIZER);
+const combOf = (g: AnyGatherer): Combiner<any> => (g.combiner ? g.combiner() : DEFAULT_COMBINER);
+const finOf = (g: AnyGatherer): Finisher<any, any> => (g.finisher ? g.finisher() : DEFAULT_FINISHER);
+/** g.andThen(that), or the default composition when g has no andThen. */
+function andThenOf(g: AnyGatherer, that: GathererType<any, any, any>): DefinedGatherer<any, any, any> {
+  return defined(g.andThen ? g.andThen(that) : new Composite(g as GathererType<any, any, any>, requireNonNull(that, 'that')));
+}
+
+/** g itself when ours; a user andThen may return a gatherer with members missing, which gets them filled in. */
+function defined(g: GathererType<any, any, any>): DefinedGatherer<any, any, any> {
+  return g instanceof GathererImpl || g instanceof Composite ? g : make(initOf(g), g.integrator(), combOf(g), finOf(g));
+}
+function make<T, A, R>(init: Initializer<A>, integ: Integrator<A, T, R>, comb: Combiner<A>, fin: Finisher<A, R>): DefinedGatherer<T, A, R> {
   return new GathererImpl(requireNonNull(init, 'initializer'), requireNonNull(integ, 'integrator'), requireNonNull(comb, 'combiner'), requireNonNull(fin, 'finisher'));
 }
 
 /** this.andThen(that): left's output feeds right; built lazily on first access like the reference. */
-class Composite<T, R, RR> implements GathererType<T, any, RR> {
-  private impl: GathererType<T, any, RR> | null = null;
+class Composite<T, R, RR> implements DefinedGatherer<T, any, RR> {
+  private impl: DefinedGatherer<T, any, RR> | null = null;
   constructor(readonly left: GathererType<T, any, R>, readonly right: GathererType<R, any, RR>) {}
-  private get(): GathererType<T, any, RR> {
+  private get(): DefinedGatherer<T, any, RR> {
     return this.impl ?? (this.impl = compose(this.left, this.right));
   }
   initializer(): Initializer<any> {
@@ -80,18 +102,18 @@ class Composite<T, R, RR> implements GathererType<T, any, RR> {
   finisher(): Finisher<any, RR> {
     return this.get().finisher();
   }
-  andThen<RRR>(that: GathererType<RR, any, RRR>): GathererType<T, any, RRR> {
+  andThen<RRR>(that: GathererType<RR, any, RRR>): DefinedGatherer<T, any, RRR> {
     requireNonNull(that, 'that');
     // re-associate to the right so chains stay flat on the left
     return that instanceof Composite
-      ? this.left.andThen(this.right.andThen(that.left).andThen(that.right))
-      : this.left.andThen(this.right.andThen(that));
+      ? andThenOf(this.left, andThenOf(andThenOf(this.right, that.left), that.right))
+      : andThenOf(this.left, andThenOf(this.right, that));
   }
 }
 
-function compose<T, A, R, AA, RR>(left: GathererType<T, A, R>, right: GathererType<R, AA, RR>): GathererType<T, any, RR> {
-  const lInit = left.initializer(), lInteg = left.integrator(), lComb = left.combiner(), lFin = left.finisher();
-  const rInit = right.initializer(), rInteg = right.integrator(), rComb = right.combiner(), rFin = right.finisher();
+function compose<T, A, R, AA, RR>(left: GathererType<T, A, R>, right: GathererType<R, AA, RR>): DefinedGatherer<T, any, RR> {
+  const lInit = initOf(left), lInteg = left.integrator(), lComb = combOf(left), lFin = finOf(left);
+  const rInit = initOf(right), rInteg = right.integrator(), rComb = combOf(right), rFin = finOf(right);
   const lStateless = lInit === DEFAULT_INITIALIZER, rStateless = rInit === DEFAULT_INITIALIZER;
   const lGreedy = lInteg.greedy === true, rGreedy = rInteg.greedy === true;
   const sequential = lComb === DEFAULT_COMBINER || rComb === DEFAULT_COMBINER;
@@ -161,7 +183,7 @@ export const Integrator = {
   },
   /**
    * Returns a greedy Integrator (consumes all input; only the downstream may stop it) wrapping fn.
-   * @throws NullPointerException if fn is null
+   * Like the reference, null is returned as-is.
    */
   ofGreedy,
 };
@@ -188,18 +210,18 @@ export const Gatherer = {
   },
 
   /** Parallelizable gatherers. @throws NullPointerException if any argument is null */
-  of: function of(...args: any[]): GathererType<any, any, any> {
+  of: function of(...args: any[]): DefinedGatherer<any, any, any> {
     if (args.length <= 1) return make(DEFAULT_INITIALIZER, args[0], STATELESS_COMBINER, DEFAULT_FINISHER);
     if (args.length === 2) return make(DEFAULT_INITIALIZER, args[0], STATELESS_COMBINER, args[1]);
     return make(args[0], args[1], args[2], args[3]);
   } as {
-    <T, R>(integrator: Integrator<null, T, R>): GathererType<T, null, R>;
-    <T, R>(integrator: Integrator<null, T, R>, finisher: Finisher<null, R>): GathererType<T, null, R>;
-    <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>, combiner: Combiner<A>, finisher: Finisher<A, R>): GathererType<T, A, R>;
+    <T, R>(integrator: Integrator<null, T, R>): DefinedGatherer<T, null, R>;
+    <T, R>(integrator: Integrator<null, T, R>, finisher: Finisher<null, R>): DefinedGatherer<T, null, R>;
+    <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>, combiner: Combiner<A>, finisher: Finisher<A, R>): DefinedGatherer<T, A, R>;
   },
 
   /** Sequential-only gatherers (default combiner). @throws NullPointerException if any argument is null */
-  ofSequential: function ofSequential(...args: any[]): GathererType<any, any, any> {
+  ofSequential: function ofSequential(...args: any[]): DefinedGatherer<any, any, any> {
     switch (args.length) {
       case 0:
       case 1:
@@ -212,10 +234,10 @@ export const Gatherer = {
         return make(args[0], args[1], DEFAULT_COMBINER, args[2]);
     }
   } as {
-    <T, R>(integrator: Integrator<null, T, R>): GathererType<T, null, R>;
-    <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>): GathererType<T, A, R>;
-    <T, R>(integrator: Integrator<null, T, R>, finisher: Finisher<null, R>): GathererType<T, null, R>;
-    <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>, finisher: Finisher<A, R>): GathererType<T, A, R>;
+    <T, R>(integrator: Integrator<null, T, R>): DefinedGatherer<T, null, R>;
+    <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>): DefinedGatherer<T, A, R>;
+    <T, R>(integrator: Integrator<null, T, R>, finisher: Finisher<null, R>): DefinedGatherer<T, null, R>;
+    <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>, finisher: Finisher<A, R>): DefinedGatherer<T, A, R>;
   },
 };
 
@@ -223,8 +245,8 @@ function isInitializer(f: unknown): boolean {
   return typeof f === 'function' && (f === DEFAULT_INITIALIZER || (f.length === 0 && (f as { greedy?: boolean }).greedy !== true));
 }
 
-function requireSize(n: number, name: string): void {
-  if (!(Number.isInteger(n) && n >= 1)) throw new IllegalArgumentException(`'${name}' must be greater than zero`);
+function requireSize(n: number, name: string, zero = 'zero'): void {
+  if (!(Number.isInteger(n) && n >= 1)) throw new IllegalArgumentException(`'${name}' must be greater than ${zero}`);
 }
 
 // State classes rather than object literals: a literal's hidden class is shared with every same-shaped
@@ -248,7 +270,7 @@ export const Gatherers = {
    * Ordered reduction emitting a single value at the end of input.
    * @throws NullPointerException if initial or folder is null
    */
-  fold<T, R>(initial: () => R, folder: (acc: R, element: T) => R): GathererType<T, Acc<R>, R> {
+  fold<T, R>(initial: () => R, folder: (acc: R, element: T) => R): DefinedGatherer<T, Acc<R>, R> {
     requireNonNull(initial, "'initial' must not be null");
     requireNonNull(folder, "'folder' must not be null");
     return Gatherer.ofSequential(
@@ -267,7 +289,7 @@ export const Gatherers = {
    * Prefix scan: emits scanner(current, element) for every element, starting from initial().
    * @throws NullPointerException if initial or scanner is null
    */
-  scan<T, R>(initial: () => R, scanner: (acc: R, element: T) => R): GathererType<T, Acc<R>, R> {
+  scan<T, R>(initial: () => R, scanner: (acc: R, element: T) => R): DefinedGatherer<T, Acc<R>, R> {
     requireNonNull(initial, "'initial' must not be null");
     requireNonNull(scanner, "'scanner' must not be null");
     return Gatherer.ofSequential(
@@ -280,7 +302,7 @@ export const Gatherers = {
    * Groups elements into unmodifiable lists of windowSize; the last window may be shorter. No window for empty input.
    * @throws IllegalArgumentException if windowSize is less than 1 (or not an integer)
    */
-  windowFixed<T>(windowSize: number): GathererType<T, Window<T>, List<T>> {
+  windowFixed<T>(windowSize: number): DefinedGatherer<T, Window<T>, List<T>> {
     requireSize(windowSize, 'windowSize');
     return Gatherer.ofSequential(
       () => new Window<T>(),
@@ -305,7 +327,7 @@ export const Gatherers = {
    * elements than windowSize, one window holding all of them; none for empty input.
    * @throws IllegalArgumentException if windowSize is less than 1 (or not an integer)
    */
-  windowSliding<T>(windowSize: number): GathererType<T, Window<T>, List<T>> {
+  windowSliding<T>(windowSize: number): DefinedGatherer<T, Window<T>, List<T>> {
     requireSize(windowSize, 'windowSize');
     return Gatherer.ofSequential(
       () => new Window<T>(),
@@ -334,8 +356,8 @@ export const Gatherers = {
    * @throws IllegalArgumentException if maxConcurrency is less than 1 (or not an integer)
    * @throws NullPointerException if mapper is null
    */
-  mapConcurrent<T, R>(maxConcurrency: number, mapper: (element: T) => R): GathererType<T, null, R> {
-    requireSize(maxConcurrency, 'maxConcurrency');
+  mapConcurrent<T, R>(maxConcurrency: number, mapper: (element: T) => R): DefinedGatherer<T, null, R> {
+    requireSize(maxConcurrency, 'maxConcurrency', '0');
     requireNonNull(mapper, "'mapper' must not be null");
     return Gatherer.ofSequential(
       greedy((_: null, e: T, d: Downstream<R>) => {

@@ -827,3 +827,129 @@ describe('toArray(generator) on wrappers and immutable collections', () => {
     expect(ue.length).toBe(1);
   });
 });
+
+describe('unmodifiable wrappers: removeFirst/removeLast/pollFirstEntry on empty sources (reference parity)', () => {
+  type Case = [string, (empty: boolean) => unknown];
+  const al = (e: boolean) => (e ? new ArrayList<number>() : ArrayList.of(1));
+  const lhs = (e: boolean) => (e ? new LinkedHashSet<number>() : LinkedHashSet.of(1));
+  const ts = (e: boolean) => (e ? new TreeSet<number>() : TreeSet.of(1));
+  const lhm = (e: boolean) => {
+    const m = new LinkedHashMap<number, number>();
+    if (!e) m.put(1, 1);
+    return m;
+  };
+  const tm = (e: boolean) => {
+    const m = new TreeMap<number, number>();
+    if (!e) m.put(1, 1);
+    return m;
+  };
+  // empty: NoSuchElementException; non-empty: UnsupportedOperationException
+  const nsee: Case[] = [
+    ['unmodifiableList.removeFirst', (e) => C.unmodifiableList(al(e)).removeFirst()],
+    ['unmodifiableList.removeLast', (e) => C.unmodifiableList(al(e)).removeLast()],
+    ['unmodifiableList(LinkedList).removeFirst', (e) => C.unmodifiableList(e ? new LinkedList<number>() : LinkedList.of(1)).removeFirst()],
+    ['unmodifiableList.reversed.removeLast', (e) => C.unmodifiableList(al(e)).reversed().removeLast()],
+    ['unmodifiableList.subList.removeFirst', (e) => C.unmodifiableList(al(e)).subList(0, e ? 0 : 1).removeFirst()],
+    ['unmodifiableSortedSet.removeFirst', (e) => C.unmodifiableSortedSet(ts(e)).removeFirst()],
+    ['unmodifiableSortedSet.removeLast', (e) => C.unmodifiableSortedSet(ts(e)).removeLast()],
+    ['unmodifiableNavigableSet.removeFirst', (e) => C.unmodifiableNavigableSet(ts(e)).removeFirst()],
+    ['unmodifiableNavigableSet.reversed.removeFirst', (e) => C.unmodifiableNavigableSet(ts(e)).reversed().removeFirst()],
+    ['unmodifiableSequencedMap.sequencedKeySet.removeFirst', (e) => C.unmodifiableSequencedMap(lhm(e)).sequencedKeySet().removeFirst()],
+    ['unmodifiableSequencedMap.sequencedValues.removeFirst', (e) => C.unmodifiableSequencedMap(lhm(e)).sequencedValues().removeFirst()],
+    ['unmodifiableSequencedMap.sequencedEntrySet.removeLast', (e) => C.unmodifiableSequencedMap(lhm(e)).sequencedEntrySet().removeLast()],
+    ['unmodifiableSequencedMap.sequencedKeySet.reversed.removeFirst', (e) => C.unmodifiableSequencedMap(lhm(e)).sequencedKeySet().reversed().removeFirst()],
+    ['unmodifiableSequencedMap.sequencedValues.reversed.removeFirst', (e) => C.unmodifiableSequencedMap(lhm(e)).sequencedValues().reversed().removeFirst()],
+    ['unmodifiableSequencedMap.sequencedEntrySet.reversed.removeFirst', (e) => C.unmodifiableSequencedMap(lhm(e)).sequencedEntrySet().reversed().removeFirst()],
+    ['unmodifiableSequencedMap.reversed.sequencedKeySet.removeFirst', (e) => C.unmodifiableSequencedMap(lhm(e)).reversed().sequencedKeySet().removeFirst()],
+    ['unmodifiableNavigableMap.sequencedKeySet.removeFirst', (e) => C.unmodifiableNavigableMap(tm(e)).sequencedKeySet().removeFirst()],
+    ['unmodifiableNavigableMap.sequencedValues.removeFirst', (e) => C.unmodifiableNavigableMap(tm(e)).sequencedValues().removeFirst()],
+    ['unmodifiableNavigableMap.navigableKeySet.removeFirst', (e) => C.unmodifiableNavigableMap(tm(e)).navigableKeySet().removeFirst()],
+  ];
+  // always UnsupportedOperationException
+  const always: Case[] = [
+    ['unmodifiableSequencedCollection(ArrayDeque).removeFirst', (e) => C.unmodifiableSequencedCollection(e ? new ArrayDeque<number>() : ArrayDeque.of(1)).removeFirst()],
+    ['unmodifiableSequencedCollection(ArrayList).removeLast', (e) => C.unmodifiableSequencedCollection(al(e)).removeLast()],
+    ['unmodifiableSequencedCollection.reversed.removeFirst', (e) => C.unmodifiableSequencedCollection(al(e)).reversed().removeFirst()],
+    ['unmodifiableSequencedSet.removeFirst', (e) => C.unmodifiableSequencedSet(lhs(e)).removeFirst()],
+    ['unmodifiableSequencedSet.reversed.removeLast', (e) => C.unmodifiableSequencedSet(lhs(e)).reversed().removeLast()],
+    ['unmodifiableNavigableSet.pollFirst', (e) => C.unmodifiableNavigableSet(ts(e)).pollFirst()],
+    ['unmodifiableNavigableSet.descendingSet.pollFirst', (e) => C.unmodifiableNavigableSet(ts(e)).descendingSet().pollFirst()],
+    ['unmodifiableSequencedMap.pollFirstEntry', (e) => C.unmodifiableSequencedMap(lhm(e)).pollFirstEntry()],
+    ['unmodifiableSequencedMap.reversed.pollLastEntry', (e) => C.unmodifiableSequencedMap(lhm(e)).reversed().pollLastEntry()],
+    ['unmodifiableNavigableMap.pollFirstEntry', (e) => C.unmodifiableNavigableMap(tm(e)).pollFirstEntry()],
+    ['unmodifiableNavigableMap.pollLastEntry', (e) => C.unmodifiableNavigableMap(tm(e)).pollLastEntry()],
+  ];
+  // empty: null; non-empty: UnsupportedOperationException
+  const nullWhenEmpty: Case[] = [
+    ['unmodifiableSortedMap.pollFirstEntry', (e) => C.unmodifiableSortedMap(tm(e)).pollFirstEntry()],
+    ['unmodifiableSortedMap.pollLastEntry', (e) => C.unmodifiableSortedMap(tm(e)).pollLastEntry()],
+    ['unmodifiableSortedMap.headMap.pollFirstEntry', (e) => (C.unmodifiableSortedMap(tm(e)).headMap(5) as TreeMap<number, number>).pollFirstEntry()],
+    ['unmodifiableSortedMap.reversed.pollFirstEntry', (e) => C.unmodifiableSortedMap(tm(e)).reversed().pollFirstEntry()],
+    ['unmodifiableSortedMap(unmodifiableNavigableMap).pollFirstEntry', (e) => C.unmodifiableSortedMap(C.unmodifiableNavigableMap(tm(e))).pollFirstEntry()],
+  ];
+
+  it.each(nsee)('%s: NoSuchElementException when empty, UnsupportedOperationException otherwise', (_n, f) => {
+    expectThrows(() => f(true), NSEE);
+    expectThrows(() => f(false), UOE);
+  });
+  it.each(always)('%s: UnsupportedOperationException, empty or not', (_n, f) => {
+    expectThrows(() => f(true), UOE);
+    expectThrows(() => f(false), UOE);
+  });
+  it.each(nullWhenEmpty)('%s: null when empty, UnsupportedOperationException otherwise', (_n, f) => {
+    expect(f(true)).toBeNull();
+    expectThrows(() => f(false), UOE);
+  });
+  it('the source is left unchanged', () => {
+    const l = ArrayList.of(1);
+    expectThrows(() => C.unmodifiableList(l).removeFirst(), UOE);
+    expect(l.size()).toBe(1);
+  });
+  it('re-wrapping: unmodifiableSortedMap keeps its own wrapper, unmodifiableNavigableMap wraps a sorted-map wrapper', () => {
+    const s = C.unmodifiableSortedMap(tm(true));
+    expect(C.unmodifiableSortedMap(s)).toBe(s);
+    const n = C.unmodifiableNavigableMap(tm(true));
+    expect(C.unmodifiableNavigableMap(n)).toBe(n);
+    expect(C.unmodifiableSortedMap(n)).not.toBe(n);
+  });
+});
+
+describe('disjoint follows the reference algorithm', () => {
+  it('an empty Set still sees contains(e) of the other side: TreeSet rejects null', () => {
+    expectThrows(() => C.disjoint(new TreeSet<number>(), ArrayList.of<number | null>(null)), NPE);
+    expectThrows(() => C.disjoint(ArrayList.of<number | null>(null), new TreeSet<number>()), NPE);
+    expectThrows(() => C.disjoint(ISet.of<number>(), ArrayList.of<number | null>(null)), NPE);
+  });
+  it('the empty shortcut applies when neither side is a Set', () => {
+    expect(C.disjoint(new ArrayList<number>(), IList.of(1))).toBe(true);
+    // IList.of rejects contains(null) but is never asked: the other side is empty
+    expect(C.disjoint(IList.of(1), ArrayList.of<number | null>())).toBe(true);
+  });
+  it('which side is asked contains()', () => {
+    const asked: string[] = [];
+    const spy = <E>(name: string, c: { contains(o: unknown): boolean }) => {
+      const orig = c.contains.bind(c);
+      c.contains = (o: unknown) => (asked.push(name), orig(o));
+      return c as unknown as E;
+    };
+    // c1 a Set: c1 is asked
+    C.disjoint(spy('set1', HashSet.of(1)), spy('set2', HashSet.of(2, 3, 4)));
+    expect([...new globalThis.Set(asked)]).toEqual(['set1']);
+    asked.length = 0;
+    // only c2 a Set: c2 is asked
+    C.disjoint(spy('list', ArrayList.of(1, 2, 3)), spy('set', HashSet.of(9)));
+    expect([...new globalThis.Set(asked)]).toEqual(['set']);
+    asked.length = 0;
+    // no Set: the larger side is asked; equal sizes ask c2
+    C.disjoint(spy('big', ArrayList.of(1, 2, 3)), spy('small', ArrayList.of(9)));
+    expect([...new globalThis.Set(asked)]).toEqual(['big']);
+    asked.length = 0;
+    C.disjoint(spy('a', ArrayList.of(1)), spy('b', ArrayList.of(9)));
+    expect(asked).toEqual(['b']);
+  });
+  it('results', () => {
+    expect(C.disjoint(HashSet.of(1), ArrayList.of(1))).toBe(false);
+    expect(C.disjoint(ArrayList.of(2), HashSet.of(1))).toBe(true);
+    expect(C.disjoint(new HashSet<number>(), new ArrayList<number>())).toBe(true);
+  });
+});

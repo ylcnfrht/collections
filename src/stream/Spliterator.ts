@@ -40,6 +40,15 @@ export const Spliterator = {
   SUBSIZED: 0x00004000,
 } as const;
 
+/** Primitive spliterator type names, as members of Spliterator (types only: they carry numbers). */
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export declare namespace Spliterator {
+  type OfPrimitive<T = number> = Spliterator<T>;
+  type OfInt = Spliterator<number>;
+  type OfLong = Spliterator<number>;
+  type OfDouble = Spliterator<number>;
+}
+
 /** Primitive spliterators carry numbers; the aliases keep the reference names. */
 export type IntSpliterator = Spliterator<number>;
 export type LongSpliterator = Spliterator<number>;

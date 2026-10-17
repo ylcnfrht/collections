@@ -322,17 +322,21 @@ export class DropWhileSink<T> extends ChainedSink<T, T> {
   }
 }
 
+const noState = (): any => null;
+const noFinish = (): void => {};
+
 /** Evaluates a Gatherer; the sink itself is the Downstream handed to the integrator and finisher. */
 export class GatherSink<T, A, R> extends ChainedSink<T, R> implements Downstream<R> {
   state: A | null = null;
   readonly init: () => A;
   readonly integrator: Integrator<A, T, R>;
   readonly finisher: (state: A, downstream: Downstream<R>) => void;
+  /** A gatherer without initializer / finisher gets the defaults: null state, nothing at the end. */
   constructor(down: Sink<R>, g: Gatherer<T, A, R>) {
     super(down);
-    this.init = g.initializer();
+    this.init = g.initializer === undefined ? noState : g.initializer();
     this.integrator = g.integrator();
-    this.finisher = g.finisher();
+    this.finisher = g.finisher === undefined ? noFinish : g.finisher();
   }
   override begin(_size: number): void {
     this.state = this.init();
