@@ -6,15 +6,20 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "test": "jest",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts"
   },
   "keywords": [],
   "author": "baims <tech@baims.com>",
   "license": "MIT",
   "description": "Collections framework for TypeScript: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue and more, with value equality, fail-fast iterators and live views.",
   "devDependencies": {
+    "@datastructures-js/priority-queue": "6.4.0",
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
+    "js-sdsl": "4.4.2",
+    "mnemonist": "0.40.5",
+    "tinybench": "6.2.0",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
