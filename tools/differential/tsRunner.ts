@@ -2,19 +2,29 @@
 // normalised lines as RefRunner. Keep the two files in lock-step (same op names, same catalogue).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
+  AbstractCollection,
+  AbstractList,
+  AbstractMap,
+  AbstractQueue,
+  AbstractSequentialList,
+  AbstractSet,
   ArrayDeque,
   ArrayList,
   Collections,
+  Collector,
   Collectors,
   Comparator,
   DoubleStream,
   DoubleSummaryStatistics,
+  Gatherer,
   Gatherers,
   HashMap,
   HashSet,
   IdentityHashMap,
+  IllegalStateException,
   IntStream,
   IntSummaryStatistics,
+  Integrator,
   LinkedHashMap,
   LinkedHashSet,
   LinkedList,
@@ -23,6 +33,7 @@ import {
   LongSummaryStatistics,
   Map,
   NullPointerException,
+  Objects,
   Optional,
   OptionalDouble,
   OptionalInt,
@@ -30,12 +41,19 @@ import {
   PriorityQueue,
   Set,
   SimpleEntry,
+  SimpleImmutableEntry,
+  Spliterator,
+  Spliterators,
   Stack,
   Stream,
+  StreamSupport,
   TreeMap,
   TreeSet,
   Vector,
+  isRandomAccess,
+  naturalCompare,
 } from '../../src/index';
+import { hit, top } from './coverage';
 
 // ---------------------------------------------------------------- normalisation
 
@@ -71,6 +89,7 @@ export function fmt(x: any, ord?: boolean): string {
   if (x === null) return 'null';
   if (x === undefined) return 'undefined';
   if (typeof x === 'string') return `"${x}"`;
+  if (x instanceof Raw) return x.s;
   if (typeof x === 'boolean') return String(x);
   if (typeof x === 'number') return numD(x);
   if (x instanceof Optional) return x.isPresent() ? `OPT[${fmt(x.get())}]` : 'OPT_EMPTY';
@@ -109,6 +128,8 @@ function join(parts: string[], ordered: boolean): string {
 export function el(t: string): any {
   if (t === 'null') return null;
   if (t.startsWith("'")) return t.slice(1);
+  const eq = t.indexOf('=');
+  if (eq > 0) return new SimpleEntry(el(t.slice(0, eq)), el(t.slice(eq + 1)));
   return Number(t);
 }
 
@@ -202,6 +223,9 @@ function un(f: string, x: any): any {
   return Number.isInteger(x) ? fl(f, x) : fd(f, x);
 }
 
+/** Number of an element for the *ToInt/Long/Double catalogue: the value itself, or a string's length. */
+const numv = (x: any): number => (typeof x === 'string' ? x.length : nn(x));
+
 /** A mapper result the reference unboxes to a primitive: null throws there. */
 const unboxed = (f: string, x: any): number => nn(un(f, x));
 
@@ -220,6 +244,11 @@ function pl(p: string, x: number): boolean {
 
 function po(p: string, x: any): boolean {
   nn(x);
+  if (isFn(x, 'getKey')) {
+    if (p === 'evenV') return nn(x.getValue()) % 2 === 0;
+    if (p === 'posV') return nn(x.getValue()) > 0;
+    throw new Error('po entry ' + p);
+  }
   if (typeof x === 'string') {
     switch (p) {
       case 'empty': return x.length === 0;
@@ -277,6 +306,10 @@ function cmp(c: string): any {
     case 'lenNat': return Comparator.thenComparing(len, Comparator.naturalOrder());
     case 'nullsFirst': return Comparator.nullsFirst(Comparator.naturalOrder());
     case 'nullsLast': return Comparator.nullsLast(Comparator.naturalOrder());
+    case 'byKey': return Map.Entry.comparingByKey();
+    case 'byValue': return Map.Entry.comparingByValue();
+    case 'byKeyRev': return Map.Entry.comparingByKey(Comparator.reverseOrder());
+    case 'byValueRev': return Map.Entry.comparingByValue(Comparator.reverseOrder());
   }
   throw new Error('cmp ' + c);
 }
@@ -299,12 +332,64 @@ class Fmt {
 const fmtTop = (x: unknown) => (x instanceof Fmt ? fmt(x.x, x.ord) : fmt(x));
 
 function excName(e: unknown): string {
-  return `EXC:${(e as any)?.constructor?.name ?? typeof e}`;
+  const n = (e as any)?.constructor?.name ?? typeof e;
+  hit(`${n}.name`);
+  return `EXC:${n}`;
 }
 
 // ---------------------------------------------------------------- scripts
 
-const UNORDERED = new globalThis.Set(['PriorityQueue', 'PriorityQueueRev', 'HashSet', 'HashMap', 'IdentityHashMap', 'SetOf', 'MapOf']);
+/** Base targets whose iteration order is not defined (printed in sorted canonical form, views too). */
+const UNORDERED = new globalThis.Set(['PriorityQueue', 'PriorityQueueRev', 'HashSet', 'HashMap', 'IdentityHashMap', 'SetOf', 'MapOf',
+  'SetCopyOf', 'MapCopyOf', 'MapOfPairs', 'AbsSet', 'EmptySet', 'EmptyMap', 'EmptySetConst', 'EmptyMapConst', 'Singleton', 'SingletonMap']);
+
+/** Marks harness subclasses of the library's abstract skeletons (coverage counts them under the skeleton). */
+export const HARNESS = Symbol.for('ts-collections-framework.diff.harness');
+
+class AbsListImpl extends AbstractList<any> {
+  static readonly [HARNESS] = true;
+  readonly a = new ArrayList<any>();
+  get(i: number): any { return this.a.get(i); }
+  size(): number { return this.a.size(); }
+  override set(i: number, e: any): any { return this.a.set(i, e); }
+  protected override addAtIndex(i: number, e: any): void { this.a.add(i, e); this.modCount++; }
+  override removeAt(i: number): any { const r = this.a.removeAt(i); this.modCount++; return r; }
+}
+class AbsSeqListImpl extends AbstractSequentialList<any> {
+  static readonly [HARNESS] = true;
+  readonly a = new LinkedList<any>();
+  listIterator(i = 0): any { return this.a.listIterator(i); }
+  size(): number { return this.a.size(); }
+}
+class AbsSetImpl extends AbstractSet<any> {
+  static readonly [HARNESS] = true;
+  readonly a = new HashSet<any>();
+  iterator(): any { return this.a.iterator(); }
+  size(): number { return this.a.size(); }
+  override add(e: any): boolean { return this.a.add(e); }
+}
+class AbsMapImpl extends AbstractMap<any, any> {
+  static readonly [HARNESS] = true;
+  readonly a = new LinkedHashMap<any, any>();
+  entrySet(): any { return this.a.entrySet(); }
+  override put(k: any, v: any): any { return this.a.put(k, v); }
+}
+class AbsQueueImpl extends AbstractQueue<any> {
+  static readonly [HARNESS] = true;
+  readonly a = new ArrayDeque<any>();
+  offer(e: any): boolean { return this.a.offer(e); }
+  poll(): any { return this.a.poll(); }
+  peek(): any { return this.a.peek(); }
+  iterator(): any { return this.a.iterator(); }
+  size(): number { return this.a.size(); }
+}
+class AbsCollImpl extends AbstractCollection<any> {
+  static readonly [HARNESS] = true;
+  readonly a = new ArrayList<any>();
+  iterator(): any { return this.a.iterator(); }
+  size(): number { return this.a.size(); }
+  override add(e: any): boolean { return this.a.add(e); }
+}
 
 function newTarget(type: string): any {
   switch (type) {
@@ -312,6 +397,7 @@ function newTarget(type: string): any {
     case 'UnmodList': return new ArrayList();
     case 'LinkedList': return new LinkedList();
     case 'Vector': return new Vector();
+    case 'VectorCap': return new Vector(2, 3);
     case 'Stack': return new Stack();
     case 'ArrayDeque': return new ArrayDeque();
     case 'PriorityQueue': return new PriorityQueue();
@@ -324,13 +410,107 @@ function newTarget(type: string): any {
     case 'HashMap': return new HashMap();
     case 'LinkedHashMap': return new LinkedHashMap();
     case 'LinkedHashMapAccess': return new LinkedHashMap(16, 0.75, true);
+    case 'LinkedHashMapLru': return new LruMap();
     case 'TreeMap': return new TreeMap();
     case 'TreeMapRev': return new TreeMap(Comparator.reverseOrder());
     case 'IdentityHashMap': return new IdentityHashMap();
+    case 'AbsList': return new AbsListImpl();
+    case 'AbsSeqList': return new AbsSeqListImpl();
+    case 'AbsSet': return new AbsSetImpl();
+    case 'AbsMap': return new AbsMapImpl();
+    case 'AbsQueue': return new AbsQueueImpl();
+    case 'AbsColl': return new AbsCollImpl();
   }
-  return null;
+  return null; // immutable targets are built by init
 }
 
+/** removeEldestEntry hook: keeps at most 3 entries. */
+class LruMap extends LinkedHashMap<any, any> {
+  static readonly [HARNESS] = true;
+  protected override removeEldestEntry(): boolean {
+    return this.size() > 3;
+  }
+}
+
+/** Immutable targets: built from the init literal. */
+function buildImmutable(type: string, l: any[], ps: [any, any][]): any {
+  switch (type) {
+    case 'ListOf': return List.of(...l);
+    case 'SetOf': return Set.of(...l);
+    case 'ListCopyOf': return List.copyOf(ArrayList.of(...l));
+    case 'SetCopyOf': return Set.copyOf(ArrayList.of(...l));
+    case 'UnmodList': return Collections.unmodifiableList(ArrayList.of(...l));
+    case 'EmptyList': return Collections.emptyList();
+    case 'EmptySet': return Collections.emptySet();
+    case 'EmptySortedSet': return Collections.emptySortedSet();
+    case 'EmptyNavigableSet': return Collections.emptyNavigableSet();
+    case 'EmptyListConst': hit('Collections.EMPTY_LIST'); return Collections.EMPTY_LIST;
+    case 'EmptySetConst': hit('Collections.EMPTY_SET'); return Collections.EMPTY_SET;
+    case 'SingletonList': return Collections.singletonList(l[0] ?? null);
+    case 'Singleton': return Collections.singleton(l[0] ?? null);
+    case 'NCopies': return Collections.nCopies(l.length, l[0] ?? null);
+    case 'MapOf': return Map.ofEntries(...ps.map(([k, v]) => Map.entry(k, v)));
+    case 'MapOfPairs': return (Map.of as any)(...ps.flat());
+    case 'MapCopyOf': {
+      const m = new LinkedHashMap();
+      for (const [k, v] of ps) m.put(k, v);
+      return Map.copyOf(m);
+    }
+    case 'EmptyMap': return Collections.emptyMap();
+    case 'EmptySortedMap': return Collections.emptySortedMap();
+    case 'EmptyNavigableMap': return Collections.emptyNavigableMap();
+    case 'EmptyMapConst': hit('Collections.EMPTY_MAP'); return Collections.EMPTY_MAP;
+    case 'SingletonMap': return Collections.singletonMap(ps[0]?.[0] ?? null, ps[0]?.[1] ?? null);
+  }
+  return undefined;
+}
+
+const typeCheck = (t: string) => (t === 'str' ? (x: unknown) => typeof x === 'string' : (x: unknown) => typeof x === 'number');
+
+/** One view step: name[:arg...]. */
+function applyView(o: any, seg: string): any {
+  const [name, ...r] = seg.split(':');
+  const C = Collections as any;
+  switch (name) {
+    case 'subList': return o.subList(ni(r[0]), ni(r[1]));
+    case 'reversed': return o.reversed();
+    case 'keySet': return o.keySet();
+    case 'values': return o.values();
+    case 'entrySet': return o.entrySet();
+    case 'navigableKeySet': return o.navigableKeySet();
+    case 'descendingKeySet': return o.descendingKeySet();
+    case 'descendingMap': return o.descendingMap();
+    case 'descendingSet': return o.descendingSet();
+    case 'sequencedKeySet': return o.sequencedKeySet();
+    case 'sequencedValues': return o.sequencedValues();
+    case 'sequencedEntrySet': return o.sequencedEntrySet();
+    case 'headSet': return o.headSet(el(r[0]), bool(r[1]));
+    case 'tailSet': return o.tailSet(el(r[0]), bool(r[1]));
+    case 'subSet': return o.subSet(el(r[0]), bool(r[1]), el(r[2]), bool(r[3]));
+    case 'headSetPlain': return o.headSet(el(r[0]));
+    case 'tailSetPlain': return o.tailSet(el(r[0]));
+    case 'subSetPlain': return o.subSet(el(r[0]), el(r[1]));
+    case 'headMap': return o.headMap(el(r[0]), bool(r[1]));
+    case 'tailMap': return o.tailMap(el(r[0]), bool(r[1]));
+    case 'subMap': return o.subMap(el(r[0]), bool(r[1]), el(r[2]), bool(r[3]));
+    case 'headMapPlain': return o.headMap(el(r[0]));
+    case 'tailMapPlain': return o.tailMap(el(r[0]));
+    case 'subMapPlain': return o.subMap(el(r[0]), el(r[1]));
+    case 'checkedMap':
+    case 'checkedSortedMap':
+    case 'checkedNavigableMap': return C[name](o, typeCheck(r[0]), typeCheck('int'));
+  }
+  if (name.startsWith('checked')) return C[name](o, typeCheck(r[0]));
+  if (name.startsWith('unmodifiable') || name.startsWith('synchronized') || name === 'newSetFromMap' || name === 'newSequencedSetFromMap' || name === 'asLifoQueue')
+    return C[name](o);
+  throw new Error('view ' + seg);
+}
+
+/** Views created on the empty base before init (the reference requires an empty map). */
+const PRE_INIT = new globalThis.Set(['newSetFromMap', 'newSequencedSetFromMap']);
+
+const SET_BRAND = Symbol.for('ts-collections-framework.Set');
+const isSetObj = (t: any) => t?.[SET_BRAND] === true;
 const isMap = (t: any) => isFn(t, 'entrySet') && isFn(t, 'containsKey');
 
 /**
@@ -343,16 +523,34 @@ export const BULK = new globalThis.Set(['init', 'addAll', 'removeAll', 'retainAl
 
 class Script {
   t: any;
+  base: any;
   dead = false;
   readonly ordered: boolean;
+  readonly baseType: string;
+  readonly views: string[];
+  /** init goes into the view (PRE_INIT views) instead of the base */
+  readonly initOnView: boolean;
   constructor(readonly type: string) {
-    this.ordered = !UNORDERED.has(type);
-    this.t = newTarget(type);
+    [this.baseType, ...this.views] = type.split('/');
+    this.ordered = !UNORDERED.has(this.baseType);
+    this.t = this.base = newTarget(this.baseType);
+    this.initOnView = this.views.length > 0 && PRE_INIT.has(this.views[0].split(':')[0]);
+    if (this.initOnView) this.t = this.views.reduce(applyView, this.base);
   }
 
   exec(line: string): string {
     if (this.dead) return 'DEAD';
     if (line.startsWith('pipe ')) return runPipe(line.slice(5));
+    if (line.startsWith('x ')) {
+      const log: string[] = [];
+      let res: string;
+      try {
+        res = fmtTop(misc(line.slice(2).split(' '), log));
+      } catch (e) {
+        res = excName(e);
+      }
+      return log.length === 0 ? res : `${res} LOG[${log.join(',')}]`;
+    }
     const a = line.split(' ');
     let res: string;
     try {
@@ -368,6 +566,7 @@ class Script {
     let state: string;
     try {
       state = fmt(this.t, this.ordered);
+      if (this.views.length > 0) state += ' || ' + fmt(this.base, this.ordered);
     } catch (e) {
       state = excName(e);
     }
@@ -383,32 +582,27 @@ class Script {
     const op = a[0];
     switch (op) {
       case 'init': {
-        if (a[1].startsWith('{')) {
-          const ps = pairs(a[1]);
-          if (this.type === 'MapOf') this.t = Map.ofEntries(...ps.map(([k, v]) => Map.entry(k, v)));
-          else for (const [k, v] of ps) t.put(k, v);
-          return VOID;
-        }
-        const l = list(a[1]);
-        switch (this.type) {
-          case 'ListOf': this.t = List.of(...l); return VOID;
-          case 'SetOf': this.t = Set.of(...l); return VOID;
-          case 'UnmodList': this.t = Collections.unmodifiableList(ArrayList.of(...l)); return VOID;
-        }
-        return t.addAll(ArrayList.of(...l));
+        const isPairs = a[1].startsWith('{');
+        const imm = buildImmutable(this.baseType, isPairs ? [] : list(a[1]), isPairs ? pairs(a[1]) : []);
+        let r: unknown = VOID;
+        if (imm !== undefined) this.base = imm;
+        else if (isPairs) for (const [k, v] of pairs(a[1])) this.base.put(k, v);
+        else r = (this.initOnView ? t : this.base).addAll(ArrayList.of(...list(a[1])));
+        if (!this.initOnView) this.t = this.views.reduce(applyView, this.base);
+        return r;
       }
       case 'size': return t.size();
       case 'isEmpty': return t.isEmpty();
       case 'clear': t.clear(); return VOID;
       case 'hashCode': return t.hashCode();
-      case 'toStr': return t.toString();
+      case 'toStr': return this.ordered ? t.toString() : sortedItems(t.toString());
       case 'equalsCopy':
         if (isMap(t)) return t.equals(new HashMap(t));
-        if (t instanceof HashSet || t instanceof TreeSet || this.type === 'SetOf') return t.equals(new HashSet(t));
+        if (isSetObj(t)) return t.equals(new HashSet(t));
         return t.equals(new ArrayList(t));
       case 'equalsL': {
         const l = ArrayList.of(...list(a[1]));
-        if (t instanceof HashSet || t instanceof TreeSet || this.type === 'SetOf') return t.equals(new HashSet(l));
+        if (isSetObj(t)) return t.equals(new HashSet(l));
         return t.equals(l);
       }
       case 'add': return t.add(el(a[1]));
@@ -603,9 +797,142 @@ class Script {
       case 'descendingKeySet': return t.descendingKeySet();
       case 'headMapClear': t.headMap(el(a[1]), false).clear(); return VOID;
       case 'subMapPut': return t.subMap(el(a[1]), true, el(a[2]), false).put(el(a[3]), el(a[4]));
+      // ---- iteration protocols
+      case 'itw': return iterProg(t.iterator(), a[1], this.ordered);
+      case 'ditw': return iterProg(t.descendingIterator(), a[1], this.ordered);
+      case 'litw': return iterProg(t.listIterator(ni(a[1])), a[2], this.ordered);
+      case 'mitw': return iterProg((a[1] === 'k' ? t.keySet() : a[1] === 'v' ? t.values() : t.entrySet()).iterator(), a[2], this.ordered);
+      case 'splw': return splProg(t.spliterator(), a[1], this.ordered);
+      case 'enumw': return enumProg(t instanceof Vector ? t.elements() : Collections.enumeration(t), a[1], this.ordered);
+      case 'forEachLog': { const r: unknown[] = []; t.forEach((x: any) => r.push(x)); return this.ord(r); }
+      case 'mforEach': { const r: string[] = []; t.forEach((k: any, v: any) => r.push(`${fmt(k)}=${fmt(v)}`)); return this.ord(r.map((x) => new Raw(x))); }
+      case 'toArrayGen': return this.ord(t.toArray((n: number) => new Array(n)));
+      case 'parStream': { const ps = t.parallelStream(); return [ps.isParallel(), this.ord(ps.toList())].map(fmtTop).join('/'); }
+      case 'isRA': hit('isRandomAccess.()'); return isRandomAccess(t);
+      case 'cloneEq': { const c = t.clone(); return `${fmt(c, this.ordered)}/${c.equals(t)}/${c !== t}`; }
+      case 'ensureCapacity': t.ensureCapacity(ni(a[1])); return VOID;
+      case 'trimToSize': t.trimToSize(); return VOID;
+      case 'capacity': return t.capacity();
+      case 'copyInto': { const arr = new Array(t.size() + 1).fill(null); t.copyInto(arr); return arr; }
+      case 'removeAllElements': t.removeAllElements(); return VOID;
+      case 'clist': return this.ord(Collections.list(Collections.enumeration(t)));
+      case 'ccopyFrom': Collections.copy(t, ArrayList.of(...list(a[1]))); return VOID;
+      case 'creplaceAll': return Collections.replaceAll(t, el(a[1]), el(a[2]));
+      case 'cmpProbe': { const c = t.comparator(); return c === null ? null : Math.sign(c(el(a[1]), el(a[2]))); }
+      case 'addOther': return t.add(typeof el(a[1]) === 'string' ? 99 : 'zz');
+      case 'putOther': return t.put(typeof el(a[1]) === 'string' ? 99 : 'zz', 1);
+      case 'sequencedKeySet': return t.sequencedKeySet();
+      case 'sequencedValues': return t.sequencedValues();
+      case 'sequencedEntrySet': return t.sequencedEntrySet();
+      case 'navigableKeySet': return t.navigableKeySet();
+      case 'headMapPlain': return t.headMap(el(a[1]));
+      case 'tailMapPlain': return t.tailMap(el(a[1]));
+      case 'subMapPlain': return t.subMap(el(a[1]), el(a[2]));
+      case 'streamSorted': return t.stream().sorted(cmp(a[1])).toList();
     }
     throw new Error('unknown op ' + op);
   }
+}
+
+/** toString of a hash-ordered container with its items sorted (the item order is unspecified). */
+function sortedItems(s: string): string {
+  if (s.length < 2) return s;
+  const inner = s.slice(1, -1);
+  const items = inner === '' ? [] : inner.split(', ');
+  items.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return s[0] + items.join(', ') + s[s.length - 1];
+}
+
+/** Printed as-is (already formatted). */
+class Raw {
+  constructor(readonly s: string) {}
+}
+
+/** Runs an iterator program: h hasNext, n next, r remove, f forEachRemaining, H hasPrevious, p previous, i nextIndex,
+ * j previousIndex, s:<e> set, a:<e> add, v:<int> setValue on the last returned entry. Stops at the first exception. */
+function iterProg(it: any, prog: string, ord = true): string {
+  const el1 = (x: unknown) => (ord ? fmt(x) : '*');
+  const out: string[] = [];
+  let last: any = null;
+  try {
+    for (const tok of prog.split(',')) {
+      const [c, arg] = [tok[0], tok.slice(2)];
+      switch (c) {
+        case 'h': out.push(fmt(it.hasNext())); break;
+        case 'n': out.push(el1((last = it.next()))); break;
+        case 'r': it.remove(); out.push('r'); break;
+        case 'f': { const r: unknown[] = []; it.forEachRemaining((x: unknown) => r.push(x)); out.push(ord ? fmt(r) : `#${r.length}`); break; }
+        case 'H': out.push(fmt(it.hasPrevious())); break;
+        case 'p': out.push(el1((last = it.previous()))); break;
+        case 'i': out.push(fmt(it.nextIndex())); break;
+        case 'j': out.push(fmt(it.previousIndex())); break;
+        case 's': it.set(el(arg)); out.push('s'); break;
+        case 'a': it.add(el(arg)); out.push('a'); break;
+        case 'v': out.push(fmt(nn(last).setValue(el(arg)))); break;
+        default: throw new Error('iter ' + tok);
+      }
+    }
+  } catch (e) {
+    out.push(excName(e));
+  }
+  return `[${out.join(',')}]`;
+}
+
+const CHAR_NAMES: [string, number][] = [['ORDERED', 0x10], ['DISTINCT', 0x1], ['SORTED', 0x4], ['SIZED', 0x40], ['NONNULL', 0x100],
+  ['IMMUTABLE', 0x400], ['CONCURRENT', 0x1000], ['SUBSIZED', 0x4000]];
+const charNames = (c: number) => CHAR_NAMES.filter(([, v]) => (c & v) !== 0).map(([n]) => n).join('|') || 'none';
+const estimate = (n: number) => (n >= BIG ? 'UNKNOWN' : num(n));
+
+/** Spliterator program: t tryAdvance, f forEachRemaining, c characteristics, e estimateSize, x getExactSizeIfKnown,
+ * k hasCharacteristics(ORDERED), g getComparator (null / cmp), s trySplit (prints the prefix's elements). */
+function splProg(sp: any, prog: string, ord = true): string {
+  const out: string[] = [];
+  let touched = false; // estimates are only specified before traversal or splitting
+  try {
+    for (const c of prog.split(',')) {
+      if ((c === 'e' || c === 'x') && touched) { out.push('~'); continue; }
+      if (c === 't' || c === 'f' || c === 's') touched = true;
+      switch (c) {
+        case 't': { let got: unknown = NONE_SEEN; const ok = sp.tryAdvance((x: unknown) => (got = x)); out.push(ok ? (ord ? fmt(got) : '*') : 'false'); break; }
+        case 'f': { const r: unknown[] = []; sp.forEachRemaining((x: unknown) => r.push(x)); out.push(ord ? fmt(r) : `#${r.length}`); break; }
+        case 'c': out.push(charNames(sp.characteristics())); break;
+        case 'e': out.push(estimate(sp.estimateSize())); break;
+        case 'x': out.push(num(sp.getExactSizeIfKnown())); break;
+        case 'k': out.push(fmt(sp.hasCharacteristics(0x10))); break;
+        case 'g': out.push(sp.getComparator() === null ? 'null' : 'cmp'); break;
+        case 's': {
+          // where (and whether) to split is unspecified: print prefix ++ rest, which is the encounter order for ORDERED
+          const pre = sp.trySplit();
+          const r: unknown[] = [];
+          if (pre !== null) pre.forEachRemaining((x: unknown) => r.push(x));
+          sp.forEachRemaining((x: unknown) => r.push(x));
+          out.push('S' + (ord ? fmt(r) : `#${r.length}`));
+          return `[${out.join(',')}]`; // the split spliterator's later characteristics are unspecified
+        }
+        default: throw new Error('spl ' + c);
+      }
+    }
+  } catch (e) {
+    out.push(excName(e));
+  }
+  return `[${out.join(',')}]`;
+}
+const NONE_SEEN = Symbol('none');
+
+/** Enumeration program: h hasMoreElements, n nextElement, a asIterator().forEachRemaining. */
+function enumProg(en: any, prog: string, ord = true): string {
+  const out: string[] = [];
+  try {
+    for (const c of prog.split(',')) {
+      if (c === 'h') out.push(fmt(en.hasMoreElements()));
+      else if (c === 'n') out.push(ord ? fmt(en.nextElement()) : (en.nextElement(), '*'));
+      else if (c === 'a') { const r: unknown[] = []; en.asIterator().forEachRemaining((x: unknown) => r.push(x)); out.push(ord ? fmt(r) : `#${r.length}`); }
+      else throw new Error('enum ' + c);
+    }
+  } catch (e) {
+    out.push(excName(e));
+  }
+  return `[${out.join(',')}]`;
 }
 
 /** The reference's 48-bit LCG (seed scrambling, next(bits), nextInt(bound)), so shuffle is comparable. */
@@ -684,6 +1011,31 @@ function source(a: string[]): [any, Kind] {
     case 'lrange': return [LongStream.range(ni(a[1]), ni(a[2])), 'L'];
     case 'lrangeClosed': return [LongStream.rangeClosed(ni(a[1]), ni(a[2])), 'L'];
     case 'dof': return [DoubleStream.of(...list(a[1])), 'D'];
+    case 'sbuilderAcc': { const b = Stream.builder<any>(); for (const x of list(a[1])) b.accept(x); return [b.build(), 'O']; }
+    case 'ibuilder': { const b = IntStream.builder(); for (const x of list(a[1])) b.add(x); return [b.build(), 'I']; }
+    case 'lbuilder': { const b = LongStream.builder(); for (const x of list(a[1])) b.accept(x); return [b.build(), 'L']; }
+    case 'dbuilder': { const b = DoubleStream.builder(); for (const x of list(a[1])) b.add(x); return [b.build(), 'D']; }
+    case 'igenerate': { const v = ni(a[1]); return [IntStream.generate(() => v), 'I']; }
+    case 'lgenerate': { const v = ni(a[1]); return [LongStream.generate(() => v), 'L']; }
+    case 'dgenerate': { const v = Number(a[1]); return [DoubleStream.generate(() => v), 'D']; }
+    case 'literate2': return [LongStream.iterate(ni(a[1]), (x) => fl(a[2], x)), 'L'];
+    case 'literate3': return [LongStream.iterate(ni(a[1]), (x) => pl(a[2], x), (x) => fl(a[3], x)), 'L'];
+    case 'diterate2': return [DoubleStream.iterate(Number(a[1]), (x) => fd(a[2], x)), 'D'];
+    case 'diterate3': return [DoubleStream.iterate(Number(a[1]), (x) => pl(a[2], x), (x) => fd(a[3], x)), 'D'];
+    case 'lconcat': return [LongStream.concat(LongStream.of(...list(a[1])), LongStream.of(...list(a[2]))), 'L'];
+    case 'dconcat': return [DoubleStream.concat(DoubleStream.of(...list(a[1])), DoubleStream.of(...list(a[2]))), 'D'];
+    case 'iempty': return [IntStream.empty(), 'I'];
+    case 'lempty': return [LongStream.empty(), 'L'];
+    case 'dempty': return [DoubleStream.empty(), 'D'];
+    case 'sstream': { const c = newColl(a[1]); for (const x of list(a[2])) c.add(x); return [StreamSupport.stream(c.spliterator(), false), 'O']; }
+    case 'sstreamSup': {
+      const c = newColl(a[1]);
+      for (const x of list(a[2])) c.add(x);
+      return [StreamSupport.stream(() => c.spliterator(), 0x10 | 0x40, false), 'O'];
+    }
+    case 'sint': return [StreamSupport.intStream(IntStream.of(...list(a[1])).spliterator(), false), 'I'];
+    case 'slong': return [StreamSupport.longStream(LongStream.of(...list(a[1])).spliterator(), false), 'L'];
+    case 'sdouble': return [StreamSupport.doubleStream(DoubleStream.of(...list(a[1])).spliterator(), false), 'D'];
   }
   throw new Error('source ' + a[0]);
 }
@@ -724,6 +1076,10 @@ function stage(s: any, kind: Kind, a: string[], log: string[]): [any, Kind] {
       case 'skip': return [s.skip(ni(a[1])), kind];
       case 'takeWhile': return [s.takeWhile(p), kind];
       case 'dropWhile': return [s.dropWhile(p), kind];
+      case 'sequential': return [s.sequential(), kind];
+      case 'parallel': return [s.parallel(), kind];
+      case 'unordered': return [s.unordered(), kind];
+      case 'onClose': return [s.onClose(() => log.push(a[1])), kind];
     }
     throw new Error('stage ' + op);
   }
@@ -746,6 +1102,16 @@ function stage(s: any, kind: Kind, a: string[], log: string[]): [any, Kind] {
     case 'takeWhile': return [s.takeWhile((x: any) => po(a[1], x)), 'O'];
     case 'dropWhile': return [s.dropWhile((x: any) => po(a[1], x)), 'O'];
     case 'gather': return [s.gather(gatherer(a)), 'O'];
+    case 'flatMapToInt': return [s.flatMapToInt((x: any) => (a[1] === 'nullS' ? null : IntStream.of(numv(x), numv(x)))), 'I'];
+    case 'flatMapToLong': return [s.flatMapToLong((x: any) => (a[1] === 'nullS' ? null : LongStream.of(numv(x), numv(x)))), 'L'];
+    case 'flatMapToDouble': return [s.flatMapToDouble((x: any) => (a[1] === 'nullS' ? null : DoubleStream.of(numv(x), numv(x)))), 'D'];
+    case 'mapMultiToInt': return [s.mapMultiToInt((x: any, c: (n: number) => void) => { c(numv(x)); c(numv(x)); }), 'I'];
+    case 'mapMultiToLong': return [s.mapMultiToLong((x: any, c: (n: number) => void) => { c(numv(x)); c(numv(x)); }), 'L'];
+    case 'mapMultiToDouble': return [s.mapMultiToDouble((x: any, c: (n: number) => void) => { c(numv(x)); c(numv(x)); }), 'D'];
+    case 'sequential': return [s.sequential(), 'O'];
+    case 'parallel': return [s.parallel(), 'O'];
+    case 'unordered': return [s.unordered(), 'O'];
+    case 'onClose': return [s.onClose(() => log.push(a[1])), 'O'];
   }
   throw new Error('stage ' + op);
 }
@@ -756,8 +1122,65 @@ function gatherer(a: string[]): any {
     case 'scan': { const id = el(a[2]); return Gatherers.scan(() => id, (x: any, y: any) => bin(a[3], x, y)); }
     case 'windowFixed': return Gatherers.windowFixed(ni(a[2]));
     case 'windowSliding': return Gatherers.windowSliding(ni(a[2]));
+    case 'custom': return customGatherer(a[2]);
   }
   throw new Error('gatherer ' + a[1]);
+}
+
+const NONE_STATE = Symbol('none');
+
+/** User-defined gatherers built with Gatherer.of / ofSequential / Integrator.of / ofGreedy / andThen (same in RefRunner). */
+function customGatherer(name: string): any {
+  const G = Gatherer as any;
+  const I = Integrator as any;
+  switch (name) {
+    case 'dedupe':
+      return G.ofSequential(() => [NONE_STATE], I.ofGreedy(top((st: any[], e: any, d: any) => {
+        if (st[0] !== NONE_STATE && Objects.equals(st[0], e)) return true;
+        st[0] = e;
+        return d.push(e);
+      })));
+    case 'takeN2':
+      return G.ofSequential(() => [0], I.of(top((st: number[], e: any, d: any) => {
+        if (st[0] >= 2) return false;
+        st[0]++;
+        return d.push(e) && st[0] < 2;
+      })));
+    case 'sumAll':
+      return G.of(() => [0], I.ofGreedy(top((st: number[], e: any) => {
+        st[0] += nn(e);
+        return true;
+      })), (x: number[], y: number[]) => {
+        x[0] += y[0];
+        return x;
+      }, top((st: number[], d: any) => {
+        d.push(st[0]);
+      }));
+    case 'pairs':
+      return G.ofSequential(() => [] as any[], I.ofGreedy(top((st: any[], e: any, d: any) => {
+        st.push(e);
+        if (st.length === 2) {
+          const p = ArrayList.of(...st);
+          st.length = 0;
+          return d.push(p);
+        }
+        return true;
+      })), top((st: any[], d: any) => {
+        if (st.length > 0) d.push(ArrayList.of(...st));
+      }));
+    case 'rejecting':
+      return G.ofSequential(I.of(top((_st: unknown, e: any, d: any) => {
+        d.push(e);
+        return !d.isRejecting();
+      })));
+    case 'doubler': return G.of(I.ofGreedy(top((_st: unknown, e: any, d: any) => d.push(un('times2', e)))));
+    case 'defaults':
+      return G.of(G.defaultInitializer(), I.ofGreedy(top((_st: unknown, e: any, d: any) => d.push(e))), G.defaultCombiner(), G.defaultFinisher());
+    case 'indexed': return G.ofSequential(() => [0], I.ofGreedy(top((st: number[], _e: any, d: any) => d.push(st[0]++))));
+    case 'andThen': return Gatherers.scan(() => 0, (x: any, y: any) => bin('add', x, y)).andThen(Gatherers.windowFixed(2));
+    case 'mapConc': return Gatherers.mapConcurrent(2, (x: any) => un('plus1', x));
+  }
+  throw new Error('custom gatherer ' + name);
 }
 
 function terminal(s: any, kind: Kind, a: string[], log: string[]): unknown {
@@ -783,6 +1206,28 @@ function terminal(s: any, kind: Kind, a: string[], log: string[]): unknown {
       case 'noneMatch': return s.noneMatch(p);
       case 'forEach': s.forEach((x: number) => log.push(fmtN(x))); return VOID;
       case 'boxedList': return s.boxed().toList();
+      case 'collect3': return s.collect(() => new ArrayList(), (l: any, x: number) => l.add(x), (l: any, r: any) => l.addAll(r));
+      case 'forEachOrdered': s.forEachOrdered((x: number) => log.push(fmtN(x))); return VOID;
+      case 'isParallelT': return s.isParallel();
+      case 'closeNow': s.close(); return VOID;
+      case 'splwT': return new Raw(splProg(s.spliterator(), a[1]));
+      case 'primIter': {
+        const it = s.iterator();
+        const nx = kind === 'I' ? () => it.nextInt() : kind === 'L' ? () => it.nextLong() : () => it.nextDouble();
+        const out: string[] = [];
+        try {
+          for (const c of a[1].split(',')) {
+            if (c === 'h') out.push(fmt(it.hasNext()));
+            else if (c === 'n') out.push(fmtN(nx()));
+            else if (c === 'N') out.push(fmtN(it.next()));
+            else if (c === 'r') { it.remove(); out.push('r'); }
+            else { const r: string[] = []; it.forEachRemaining((x: number) => r.push(fmtN(x))); out.push(`[${r.join(',')}]`); }
+          }
+        } catch (e) {
+          out.push(excName(e));
+        }
+        return new Raw(`[${out.join(',')}]`);
+      }
       case 'statsStr': return s.summaryStatistics().toString().replace(/9007199254740991/g, 'BIG'); // empty LongSummaryStatistics limits
       case 'findFirstStr': return s.findFirst().toString();
       case 'averageStr': return s.average().toString();
@@ -808,6 +1253,12 @@ function terminal(s: any, kind: Kind, a: string[], log: string[]): unknown {
     case 'collect': return s.collect(new Coll(a, 1).parse());
     case 'forEach': s.forEach((x: any) => log.push(fmt(x))); return VOID;
     case 'forEachOrdered': s.forEachOrdered((x: any) => log.push(fmt(x))); return VOID;
+    case 'toArrayGen': return s.toArray((n: number) => new Array(n));
+    case 'collect3': return s.collect(() => new ArrayList(), (l: any, x: any) => l.add(x), (l: any, r: any) => l.addAll(r));
+    case 'isParallelT': return s.isParallel();
+    case 'closeNow': s.close(); return VOID;
+    case 'splwT': return new Raw(splProg(s.spliterator(), a[1]));
+    case 'iterT': return new Raw(iterProg(s.iterator(), a[1]));
     case 'iterator': {
       const r: unknown[] = [];
       for (const it = s.iterator(); it.hasNext(); ) r.push(it.next());
@@ -870,9 +1321,318 @@ class Coll {
       }
       case 'toUnmodifiableMap2': { const k = this.next(), v = this.next(); return C.toUnmodifiableMap((x: any) => un(k, x), (x: any) => un(v, x)); }
       case 'teeing': { const c1 = this.parse(), c2 = this.parse(); return C.teeing(c1, c2, (x: any, y: any) => [x, y]); }
+      case 'joining1': return C.joining(el(this.next()));
+      case 'toDeque': return C.toCollection(() => new ArrayDeque());
+      case 'averagingLong': { const f = this.next(); return C.averagingLong((x: any) => unboxed(f, x)); }
+      case 'summarizingLong': { const f = this.next(); return C.summarizingLong((x: any) => unboxed(f, x)); }
+      case 'groupingByConc1': { const f = this.next(); return C.groupingByConcurrent((x: any) => un(f, x)); }
+      case 'groupingByConc2': { const f = this.next(); return C.groupingByConcurrent((x: any) => un(f, x), this.parse()); }
+      case 'groupingByConcTree': { const f = this.next(); return C.groupingByConcurrent((x: any) => un(f, x), () => new TreeMap(), this.parse()); }
+      case 'toConcMap2': { const k = this.next(), v = this.next(); return C.toConcurrentMap((x: any) => un(k, x), (x: any) => un(v, x)); }
+      case 'toConcMap3': {
+        const k = this.next(), v = this.next(), op = this.next();
+        return C.toConcurrentMap((x: any) => un(k, x), (x: any) => un(v, x), (x: any, y: any) => bin(op, x, y));
+      }
+      case 'toConcMapTree': {
+        const k = this.next(), v = this.next(), op = this.next();
+        return C.toConcurrentMap((x: any) => un(k, x), (x: any) => un(v, x), (x: any, y: any) => bin(op, x, y), () => new TreeMap());
+      }
+      case 'toUnmodifiableMap3': {
+        const k = this.next(), v = this.next(), op = this.next();
+        return C.toUnmodifiableMap((x: any) => un(k, x), (x: any) => un(v, x), (x: any, y: any) => bin(op, x, y));
+      }
+      case 'collectorOf':
+        return (Collector as any).of(() => new ArrayList(), (l: any, x: any) => l.add(x), (l: any, r: any) => {
+          l.addAll(r);
+          return l;
+        });
+      case 'collectorOfF':
+        return (Collector as any).of(() => new ArrayList(), (l: any, x: any) => l.add(x), (l: any, r: any) => {
+          l.addAll(r);
+          return l;
+        }, (l: any) => l.size(), Collector.Characteristics.UNORDERED);
     }
     throw new Error('collector ' + n);
   }
+}
+
+// ---------------------------------------------------------------- misc (statics, Optional, comparators, entries, ...)
+
+/** Comparator expression (prefix): see README. */
+class CmpExpr {
+  constructor(readonly a: string[], private i: number) {}
+  next(): string {
+    return this.a[this.i++];
+  }
+  key(f: string): (x: any) => any {
+    return (x: any) => un(f, x);
+  }
+  parse(): any {
+    const n = this.next();
+    const C = Comparator as any;
+    switch (n) {
+      case 'nat': return Comparator.naturalOrder();
+      case 'rev': return Comparator.reverseOrder();
+      case 'natCmp': hit('naturalCompare.()'); return naturalCompare;
+      case 'named': return cmp(this.next());
+      case 'revOf': return C.reversed(this.parse());
+      case 'crev0': return Collections.reverseOrder();
+      case 'crev': return Collections.reverseOrder(this.parse());
+      case 'comparing': return C.comparing(this.key(this.next()));
+      case 'comparingC': { const k = this.key(this.next()); return C.comparing(k, this.parse()); }
+      case 'comparingInt': { const f = this.next(); return C.comparingInt((x: any) => unboxed(f, x)); }
+      case 'comparingLong': { const f = this.next(); return C.comparingLong((x: any) => unboxed(f, x)); }
+      case 'comparingDouble': { const f = this.next(); return C.comparingDouble((x: any) => unboxed(f, x)); }
+      case 'then': { const x = this.parse(); return C.thenComparing(x, this.parse()); }
+      case 'thenBy': { const x = this.parse(); return C.thenComparingBy(x, this.key(this.next())); }
+      case 'thenByC': { const x = this.parse(); const k = this.key(this.next()); return C.thenComparingBy(x, k, this.parse()); }
+      case 'thenInt': { const x = this.parse(); const f = this.next(); return C.thenComparingInt(x, (y: any) => unboxed(f, y)); }
+      case 'thenLong': { const x = this.parse(); const f = this.next(); return C.thenComparingLong(x, (y: any) => unboxed(f, y)); }
+      case 'thenDouble': { const x = this.parse(); const f = this.next(); return C.thenComparingDouble(x, (y: any) => unboxed(f, y)); }
+      case 'nullsFirst': return C.nullsFirst(this.parse());
+      case 'nullsLast': return C.nullsLast(this.parse());
+    }
+    throw new Error('cmpexpr ' + n);
+  }
+}
+
+const CH = (t: string): number => (t === '0' ? 0 : t.split('+').reduce((a, n) => a | (Spliterator as any)[n], 0));
+
+/** Spliterator over a list via AbstractSpliterator (tryAdvance only). */
+class ListSpliterator extends (Spliterators.AbstractSpliterator as any) {
+  static readonly [HARNESS] = true;
+  private i = 0;
+  constructor(private readonly l: any[]) {
+    super(l.length, 0x10);
+  }
+  tryAdvance(action: (x: any) => void): boolean {
+    nn(action);
+    if (this.i >= this.l.length) return false;
+    action(this.l[this.i++]);
+    return true;
+  }
+}
+class IntListSpliterator extends (Spliterators.AbstractIntSpliterator as any) {
+  static readonly [HARNESS] = true;
+  private i = 0;
+  constructor(private readonly l: any[]) {
+    super(l.length, 0x10 | 0x100);
+  }
+  tryAdvance(action: (x: any) => void): boolean {
+    nn(action);
+    if (this.i >= this.l.length) return false;
+    action(this.l[this.i++]);
+    return true;
+  }
+}
+
+class LongListSpliterator extends (Spliterators.AbstractLongSpliterator as any) {
+  static readonly [HARNESS] = true;
+  private i = 0;
+  constructor(private readonly l: any[]) {
+    super(l.length, 0x10 | 0x100);
+  }
+  tryAdvance(action: (x: any) => void): boolean {
+    nn(action);
+    if (this.i >= this.l.length) return false;
+    action(this.l[this.i++]);
+    return true;
+  }
+}
+class DoubleListSpliterator extends (Spliterators.AbstractDoubleSpliterator as any) {
+  static readonly [HARNESS] = true;
+  private i = 0;
+  constructor(private readonly l: any[]) {
+    super(Infinity, 0x10);
+  }
+  tryAdvance(action: (x: any) => void): boolean {
+    nn(action);
+    if (this.i >= this.l.length) return false;
+    action(this.l[this.i++]);
+    return true;
+  }
+}
+
+function splSource(a: string[]): any {
+  const S = Spliterators as any;
+  switch (a[0]) {
+    case 'array': return S.spliterator(list(a[1]), CH(a[2]));
+    case 'arrayRange': return S.spliterator(list(a[1]), ni(a[2]), ni(a[3]), CH(a[4]));
+    case 'coll': return S.spliterator(ArrayList.of(...list(a[1])), CH(a[2]));
+    case 'iterSized': return S.spliterator(ArrayList.of(...list(a[1])).iterator(), ni(a[2]), CH(a[3]));
+    case 'unknown': return S.spliteratorUnknownSize(ArrayList.of(...list(a[1])).iterator(), CH(a[2]));
+    case 'empty': return S.emptySpliterator();
+    case 'emptyInt': return S.emptyIntSpliterator();
+    case 'emptyLong': return S.emptyLongSpliterator();
+    case 'emptyDouble': return S.emptyDoubleSpliterator();
+    case 'abs': hit('Spliterators.AbstractSpliterator'); return new ListSpliterator(list(a[1]));
+    case 'absInt': hit('Spliterators.AbstractIntSpliterator'); return new IntListSpliterator(list(a[1]));
+    case 'absLong': hit('Spliterators.AbstractLongSpliterator'); return new LongListSpliterator(list(a[1]));
+    case 'absDouble': hit('Spliterators.AbstractDoubleSpliterator'); return new DoubleListSpliterator(list(a[1]));
+  }
+  throw new Error('spl source ' + a[0]);
+}
+
+/** A collecting Downstream for driving a gatherer by hand. */
+class ListDownstream {
+  static readonly [HARNESS] = true;
+  readonly out: unknown[] = [];
+  push(x: unknown): boolean {
+    this.out.push(x);
+    return true;
+  }
+  isRejecting(): boolean {
+    return false;
+  }
+}
+
+const OPT_KINDS: Record<string, any> = { O: Optional, I: OptionalInt, L: OptionalLong, D: OptionalDouble };
+const STATS: Record<string, any> = { I: IntSummaryStatistics, L: LongSummaryStatistics, D: DoubleSummaryStatistics };
+
+/** Collector driven by hand: supplier, accumulator over each half, combiner, finisher; plus its characteristics. */
+function driveCollector(c: any, l: any[]): string {
+  const sup = c.supplier(), acc = c.accumulator(), comb = c.combiner(), fin = c.finisher();
+  const h = l.length >> 1;
+  const a1 = sup(), a2 = sup();
+  for (const x of l.slice(0, h)) acc(a1, x);
+  for (const x of l.slice(h)) acc(a2, x);
+  const r = fin(comb(a1, a2));
+  const chars = [...c.characteristics()].map(String).sort().join('|');
+  return `${fmt(r)} ${chars}`;
+}
+
+function misc(a: string[], log: string[]): unknown {
+  const O = Objects as any;
+  switch (a[0]) {
+    case 'oeq': return O.equals(el(a[1]), el(a[2]));
+    case 'ohash': return O.hashCode(el(a[1]));
+    case 'ohashv': return O.hash(...list(a[1]));
+    case 'oreq': return O.requireNonNull(el(a[1]));
+    case 'oreqm': return O.requireNonNull(el(a[1]), 'm');
+    case 'oreqs': return O.requireNonNull(el(a[1]), () => 'm');
+    case 'oisnull': return O.isNull(el(a[1]));
+    case 'ononnull': return O.nonNull(el(a[1]));
+    case 'ostr': return O.toString(el(a[1]));
+    case 'ostr2': return O.toString(el(a[1]), el(a[2]));
+    case 'ochk': return O.checkIndex(ni(a[1]), ni(a[2]));
+    case 'ochkft': return O.checkFromToIndex(ni(a[1]), ni(a[2]), ni(a[3]));
+    case 'ochkfs': return O.checkFromIndexSize(ni(a[1]), ni(a[2]), ni(a[3]));
+    case 'oelse': return O.requireNonNullElse(el(a[1]), el(a[2]));
+    case 'oelseget': { const d = el(a[2]); return O.requireNonNullElseGet(el(a[1]), () => d); }
+    case 'ocmp': return Math.sign(O.compare(el(a[1]), el(a[2]), new CmpExpr(a, 3).parse()));
+    case 'odeq': return O.deepEquals(list(a[1]), list(a[2]));
+    case 'csort': { const l = ArrayList.of(...list(a[1])); l.sort(new CmpExpr(a, 2).parse()); return l; }
+    case 'capply': return Math.sign(new CmpExpr(a, 3).parse()(el(a[1]), el(a[2])));
+    case 'splconst':
+      for (const n of ['DISTINCT', 'SORTED', 'ORDERED', 'SIZED', 'NONNULL', 'IMMUTABLE', 'CONCURRENT', 'SUBSIZED']) hit(`Spliterator.${n}`);
+      return ['DISTINCT', 'SORTED', 'ORDERED', 'SIZED', 'NONNULL', 'IMMUTABLE', 'CONCURRENT', 'SUBSIZED'].map((n) => (Spliterator as any)[n]);
+    case 'collchars': hit('Collector.Characteristics'); return Object.values(Collector.Characteristics).map(String).sort();
+    case 'cemptyIter': return iterProg(Collections.emptyIterator(), a[1]);
+    case 'cemptyListIter': return iterProg(Collections.emptyListIterator(), a[1]);
+    case 'cemptyEnum': return enumProg(Collections.emptyEnumeration(), a[1]);
+    case 'cenum': return enumProg(Collections.enumeration(ArrayList.of(...list(a[1]))), a[2]);
+    case 'cconst': hit('Collections.EMPTY_LIST'); hit('Collections.EMPTY_SET'); hit('Collections.EMPTY_MAP'); return `${fmt(Collections.EMPTY_LIST)}/${fmt(Collections.EMPTY_SET)}/${fmt(Collections.EMPTY_MAP)}/${Collections.EMPTY_LIST.equals(Collections.emptyList())}`;
+    case 'newHash': {
+      const n = ni(a[2]);
+      const m: any = a[1] === 'HashMap' ? HashMap.newHashMap(n) : a[1] === 'LinkedHashMap' ? LinkedHashMap.newLinkedHashMap(n)
+        : a[1] === 'LinkedHashMapH' ? (LinkedHashMap as any).newHashMap(n) : a[1] === 'HashSet' ? HashSet.newHashSet(n)
+        : a[1] === 'LinkedHashSet' ? LinkedHashSet.newLinkedHashSet(n) : (LinkedHashSet as any).newHashSet(n);
+      if (isMap(m)) { m.put(2, 1); m.put(1, 2); } else { m.add(2); m.add(1); }
+      return `${m.constructor.name}/${fmt(m, true)}`;
+    }
+    case 'spl': { const i = a.indexOf('|'); return splProg(splSource(a.slice(1, i)), a[i + 1]); }
+    case 'spit': { const i = a.indexOf('|'); return iterProg(Spliterators.iterator(splSource(a.slice(1, i))), a[i + 1]); }
+    case 'coll': return driveCollector(new Coll(a, 1).parse(), list(a[a.length - 1]));
+    case 'gath': {
+      const g = gatherer(['gather', ...a.slice(1, -1)]);
+      const d = new ListDownstream();
+      const st = g.initializer()();
+      const integ = g.integrator();
+      for (const x of list(a[a.length - 1])) if (!integ(st, x, d)) break;
+      g.finisher()(st, d);
+      return `${fmt(d.out)}/${g.combiner() === (Gatherer as any).defaultCombiner() ? 'seq' : 'par'}`;
+    }
+    case 'opt': {
+      const segs = a.slice(1).join(' ').split(' | ').map((x) => x.split(' '));
+      const [kind, src, arg] = segs[0];
+      const K = OPT_KINDS[kind];
+      const out: string[] = [];
+      try {
+        // primitive optionals: the reference unboxes the argument (null throws)
+        let o: any = src === 'empty' ? K.empty() : src === 'of' ? K.of(kind === 'O' ? el(arg) : nn(el(arg))) : K.ofNullable(el(arg));
+        for (const [op, x] of segs.slice(1)) {
+          switch (op) {
+            case 'get': out.push(fmt(kind === 'O' ? o.get() : kind === 'I' ? o.getAsInt() : kind === 'L' ? o.getAsLong() : o.getAsDouble())); break;
+            case 'isPresent': out.push(fmt(o.isPresent())); break;
+            case 'isEmpty': out.push(fmt(o.isEmpty())); break;
+            case 'ifPresent': o.ifPresent((v: unknown) => log.push(fmt(v))); out.push('v'); break;
+            case 'ifPresentOrElse': o.ifPresentOrElse((v: unknown) => log.push(fmt(v)), () => log.push('else')); out.push('v'); break;
+            case 'filter': o = o.filter((v: unknown) => po(x, v)); break;
+            case 'map': o = o.map((v: unknown) => un(x, v)); break;
+            case 'flatMap': o = o.flatMap((v: unknown) => (x === 'some' ? Optional.of(un('plus1', v)) : x === 'none' ? Optional.empty() : null)); break;
+            case 'or': o = o.or(() => (x === 'null' ? null : Optional.of(el(x)))); break;
+            case 'orElse': out.push(fmt(o.orElse(el(x)))); break;
+            case 'orElseGet': out.push(fmt(o.orElseGet(() => el(x)))); break;
+            case 'orElseThrow': out.push(fmt(o.orElseThrow())); break;
+            case 'orElseThrowS': out.push(fmt(o.orElseThrow(() => new IllegalStateException()))); break;
+            case 'stream': out.push(fmt(o.stream().toArray())); break;
+            case 'equals': out.push(fmt(o.equals(x === 'empty' ? K.empty() : K.of(el(x))))); break;
+            case 'hashCode': out.push(fmt(o.hashCode())); break;
+            case 'toString': out.push(fmt(o.toString())); break;
+            default: throw new Error('opt ' + op);
+          }
+        }
+        out.push(fmt(o));
+      } catch (e) {
+        out.push(excName(e));
+      }
+      return new Raw(`[${out.join(',')}]`);
+    }
+    case 'stats': {
+      const segs = a.slice(1).join(' ').split(' | ').map((x) => x.split(' '));
+      const [kind, ctor, ...cargs] = segs[0];
+      const S = STATS[kind];
+      const out: string[] = [];
+      try {
+        const st = ctor === 'new' ? new S() : new S(...cargs.map(Number));
+        for (const [op, x] of segs.slice(1)) {
+          switch (op) {
+            case 'accept': st.accept(Number(x)); break;
+            case 'combine': { const o = new S(); for (const v of list(x)) o.accept(v); st.combine(o); break; }
+            case 'toString': out.push(fmt(st.toString().replace(/9007199254740991/g, 'BIG'))); break;
+            default: out.push(fmt(st[op]()));
+          }
+        }
+      } catch (e) {
+        out.push(excName(e));
+      }
+      return new Raw(`[${out.join(',')}]`);
+    }
+    case 'entry': {
+      const segs = a.slice(1).join(' ').split(' | ').map((x) => x.split(' '));
+      const [kind, k, v] = segs[0];
+      const out: string[] = [];
+      try {
+        const e: any = kind === 'simple' ? new SimpleEntry(el(k), el(v)) : kind === 'immutable' ? new SimpleImmutableEntry(el(k), el(v))
+          : kind === 'mapEntry' ? Map.entry(el(k), el(v)) : (Map.Entry as any).copyOf(new SimpleEntry(el(k), el(v)));
+        for (const [op, x, y] of segs.slice(1)) {
+          switch (op) {
+            case 'getKey': out.push(fmt(e.getKey())); break;
+            case 'getValue': out.push(fmt(e.getValue())); break;
+            case 'setValue': out.push(fmt(e.setValue(el(x)))); break;
+            case 'equals': out.push(fmt(e.equals(new SimpleEntry(el(x), el(y))))); break;
+            case 'hashCode': out.push(fmt(e.hashCode())); break;
+            case 'toString': out.push(fmt(e.toString())); break;
+            default: throw new Error('entry ' + op);
+          }
+        }
+      } catch (e) {
+        out.push(excName(e));
+      }
+      return new Raw(`[${out.join(',')}]`);
+    }
+  }
+  throw new Error('misc ' + a[0]);
 }
 
 /** Runs a whole script file's text; returns the output text (same layout as RefRunner). */

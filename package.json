@@ -49,6 +49,7 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:diff": "ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --count 20000 --batch 5000",
+    "test:diff:proof": "ts-node --transpile-only -P tsconfig.test.json tools/differential/proof.ts --scripts 200000 --batch 5000",
     "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },

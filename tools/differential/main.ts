@@ -7,10 +7,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { generate, Script, scriptText } from './gen';
+import { assess } from './assessments';
 import { isKnown } from './known';
 import { runScripts } from './tsRunner';
 
-const REF_SH = path.join(__dirname, 'ref.sh');
+export const REF_SH = path.join(__dirname, 'ref.sh');
 
 export function refAvailable(): boolean {
   return spawnSync('sh', [REF_SH, '--check'], { stdio: 'inherit' }).status === 0;
@@ -19,12 +20,12 @@ export function refAvailable(): boolean {
 const tmpDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ts-cf-diff-'));
 
 /** Runs scripts on the reference side; returns id -> output lines. */
-export function runRef(scripts: Script[]): Map<string, string[]> {
+export function runRef(scripts: Script[], timeoutMs = 600_000): Map<string, string[]> {
   const dir = tmpDir();
   const inFile = path.join(dir, 'scripts.txt');
   const outFile = path.join(dir, 'ref.out');
   fs.writeFileSync(inFile, scripts.map(scriptText).join(''));
-  const r = spawnSync('sh', [REF_SH, inFile, outFile], { stdio: ['ignore', 'inherit', 'inherit'], timeout: 600_000 });
+  const r = spawnSync('sh', [REF_SH, inFile, outFile], { stdio: ['ignore', 'inherit', 'inherit'], timeout: timeoutMs, killSignal: 'SIGKILL' });
   if (r.status !== 0) throw new Error(`reference runner failed (status ${r.status})`);
   const out = parseOutput(fs.readFileSync(outFile, 'utf8'));
   fs.rmSync(dir, { recursive: true, force: true });
@@ -59,6 +60,7 @@ const kindOf = (s: string) => (s.startsWith('EXC:') ? s.split(' ')[0] : s === 'D
 function signature(s: Script, line: number, ref: string, ours: string): string {
   const l = s.lines[line];
   let opName = l.split(' ')[0];
+  if (opName === 'x') opName = `x:${l.split(' ')[1]}`;
   if (opName === 'pipe') {
     const stages = l.slice(5).split(' | ');
     const term = stages[stages.length - 1].split(' ');
@@ -68,7 +70,8 @@ function signature(s: Script, line: number, ref: string, ours: string): string {
   const [rr, rs] = ref.split(' ;; ');
   const [or, os_] = ours.split(' ;; ');
   const where = rr !== or ? 'result' : rs !== os_ ? 'state' : 'log';
-  const type = s.type === 'Stream' ? 'Stream' : s.type;
+  // view arguments (ranges, type tags) do not matter for grouping
+  const type = s.type.split('/').map((seg) => seg.split(':')[0]).join('/');
   return `${type} ${opName} ${where} ref=${kindOf(rr)} ours=${kindOf(or)}`;
 }
 
@@ -78,6 +81,18 @@ function signature(s: Script, line: number, ref: string, ours: string): string {
  */
 let relax = false;
 const relaxed = (l: string[]) => (relax ? l.map((x) => x.replace(/EXC:ArrayIndexOutOfBoundsException/g, 'EXC:IndexOutOfBoundsException')) : l);
+
+/** Lines actually compared for a script: up to and including its first divergence, DEAD lines excluded. */
+export function comparedLines(s: Script, ref: Map<string, string[]>, ours: Map<string, string[]>): number {
+  const a = relaxed(ref.get(s.id) ?? []);
+  const b = relaxed(ours.get(s.id) ?? []);
+  let n = 0;
+  for (let i = 0; i < s.lines.length; i++) {
+    if (a[i] !== 'DEAD') n++;
+    if (a[i] !== b[i]) break;
+  }
+  return n;
+}
 
 export function compare(scripts: Script[], ref: Map<string, string[]>, ours: Map<string, string[]>): Divergence[] {
   const out: Divergence[] = [];
@@ -107,7 +122,7 @@ function candidates(s: Script): Script[] {
       const st = l.slice(5).split(' | ');
       for (let j = 1; j < st.length - 1; j++) {
         // keep the mandatory limit after an infinite source
-        if (j === 1 && /^(iterate2|generate|iiterate2) /.test(st[0])) continue;
+        if (j === 1 && /^(iterate2|generate|iiterate2|igenerate|lgenerate|dgenerate|literate2|diterate2) /.test(st[0])) continue;
         const ns = [...st.slice(0, j), ...st.slice(j + 1)];
         mk(s.lines.map((x, k) => (k === i ? 'pipe ' + ns.join(' | ') : x)));
       }
@@ -135,6 +150,41 @@ export function shrink(d: Divergence, log = (_: string) => {}): Divergence {
     const hit = cands.map((c) => divs.find((x) => x.script === c && x.signature === d.signature)).find((x) => x !== undefined);
     if (!hit) break;
     best = { ...hit, script: { ...hit.script, id: d.script.id } };
+    log('.');
+  }
+  return best;
+}
+
+/** Shrinks many divergences at once: each round runs every candidate of every unfinished divergence in one batch. */
+export function shrinkMany(
+  ds: Divergence[],
+  log = (_: string) => {},
+  /** extra condition for accepting a smaller script (e.g. the same assessment as the original) */
+  same: (orig: Divergence, cand: Divergence) => boolean = () => true
+): Divergence[] {
+  const best = [...ds];
+  const done = ds.map(() => false);
+  for (let round = 0; round < 200 && done.some((x) => !x); round++) {
+    const cands: { i: number; s: Script }[] = [];
+    best.forEach((d, i) => {
+      if (done[i]) return;
+      const cs = candidates({ ...d.script, id: `${i}` }).map((c, j) => ({ i, s: { ...c, id: `${i}~${j}` } }));
+      if (cs.length === 0) done[i] = true;
+      cands.push(...cs);
+    });
+    if (cands.length === 0) break;
+    const scripts = cands.map((c) => c.s);
+    const divs = compare(scripts, runRef(scripts), runOurs(scripts));
+    const byId = new Map(divs.map((d) => [d.script.id, d]));
+    best.forEach((d, i) => {
+      if (done[i]) return;
+      const hit = cands
+        .filter((c) => c.i === i)
+        .map((c) => byId.get(c.s.id))
+        .find((x) => x !== undefined && x.signature === d.signature && same(ds[i], x));
+      if (hit) best[i] = { ...hit, script: { ...hit.script, id: ds[i].script.id } };
+      else done[i] = true;
+    });
     log('.');
   }
   return best;
@@ -200,6 +250,8 @@ export function formatReport(r: Result): string {
   for (const g of r.groups) {
     const d = g.minimal ?? g.example;
     lines.push('', `== ${g.signature}  (${g.count} script(s); e.g. ${g.example.script.id})${isKnown(g.signature) ? '  [known, see known.ts]' : ''}`);
+    const a = assess(g.signature, d);
+    if (a.category !== 'unassessed') lines.push(`   assessed (${a.category}): ${a.note}`);
     lines.push(...scriptText(d.script).trimEnd().split('\n').map((l, i) => (i === d.line + 1 ? `>> ${l}` : `   ${l}`)));
     lines.push(`   ref : ${d.ref}`, `   ours: ${d.ours}`);
   }
