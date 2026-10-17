@@ -19,6 +19,8 @@ import { HashMap, isPlainKey, jsIterator } from '../map/HashMap';
 import { HashSet } from '../set/HashSet';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { naturalCompare } from '../util/Comparator';
+import { Spliterator } from '../stream/Spliterator';
+import { ArraySpliterator } from '../stream/Spliterators';
 import { isEntry, isList, RANDOM_ACCESS } from '../util/guards';
 import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 
@@ -208,6 +210,11 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
     return new ArrayItr(this.es, 0);
   }
 
+  /** ORDERED|SIZED|SUBSIZED over the frozen array, splitting in halves (what the reference's List.of reports). */
+  override spliterator(): Spliterator<E> {
+    return new ArraySpliterator(this.es, 0, this.es.length, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+  }
+
   override listIterator(index = 0): ListIterator<E> {
     checkPositionIndex(index, this.es.length);
     return new ArrayItr(this.es, index);
@@ -304,6 +311,11 @@ export class ImmutableSet<E> extends ImmutableSetBase<E> {
 
   iterator(): Iterator<E> {
     return new ArrayItr(this.es, 0);
+  }
+
+  /** DISTINCT|SIZED|SUBSIZED over the frozen array (what the reference's Set.of reports). */
+  override spliterator(): Spliterator<E> {
+    return new ArraySpliterator(this.es, 0, this.es.length, Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
   override [Symbol.iterator](): Generator<E> {

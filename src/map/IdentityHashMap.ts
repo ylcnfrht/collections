@@ -6,6 +6,8 @@ import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry } from '../interfaces/Map';
 import { Set } from '../interfaces/Set';
+import { Spliterator } from '../stream/Spliterator';
+import { hashSpliterator } from '../stream/Spliterators';
 import { isEntry, isMap } from '../util/guards';
 import { hashCode, identityHashCode, requireNonNull, toString } from '../util/Objects';
 import { jsIterator } from './HashMap';
@@ -234,6 +236,9 @@ class EntrySet<K, V> extends AbstractSet<MapEntry<K, V>> {
   iterator(): Iterator<MapEntry<K, V>> {
     return new IdentityIterator(this.map);
   }
+  override spliterator(): Spliterator<MapEntry<K, V>> {
+    return hashSpliterator(this, this.map, true);
+  }
   size(): number {
     return this.map.size();
   }
@@ -263,6 +268,9 @@ class KeySet<K, V> extends AbstractSet<K> {
   iterator(): Iterator<K> {
     return mapIterator(new IdentityIterator(this.map), (n) => n.key);
   }
+  override spliterator(): Spliterator<K> {
+    return hashSpliterator(this, this.map, true);
+  }
   size(): number {
     return this.map.size();
   }
@@ -291,6 +299,9 @@ class Values<K, V> extends AbstractCollection<V> {
   }
   iterator(): Iterator<V> {
     return mapIterator(new IdentityIterator(this.map), (n) => n.value);
+  }
+  override spliterator(): Spliterator<V> {
+    return hashSpliterator(this, this.map, false);
   }
   size(): number {
     return this.map.size();

@@ -2,7 +2,8 @@ import { UnsupportedOperationException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { streamFactories } from '../stream/hook';
-import { BaseSpliterator, Spliterator } from '../stream/Spliterator';
+import { Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator } from '../stream/Spliterators';
 import type { Stream } from '../stream/Stream';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { equals, identityHashCode, requireNonNull, toString } from '../util/Objects';
@@ -107,9 +108,9 @@ export abstract class AbstractCollection<E> implements Collection<E> {
     while (it.hasNext()) yield it.next();
   }
 
-  /** Late-binding, SIZED spliterator over iterator(); collections override with faster ones. */
+  /** Late-binding SIZED|SUBSIZED spliterator over iterator(), splitting in batches; collections override with faster ones. */
   spliterator(): Spliterator<E> {
-    return new IteratorSpliterator(this, Spliterator.SIZED | Spliterator.SUBSIZED);
+    return new IteratorSpliterator(this, null, -1, Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
   stream(): Stream<E> {
@@ -137,51 +138,5 @@ export abstract class AbstractCollection<E> implements Collection<E> {
       parts.push((e as unknown) === this ? '(this Collection)' : toString(e));
     }
     return `[${parts.join(', ')}]`;
-  }
-}
-
-/**
- * Spliterator over a collection's iterator, bound to the collection on first use
- * (so changes made before traversal starts are seen). Does not split.
- */
-export class IteratorSpliterator<E> extends BaseSpliterator<E> {
-  private it: Iterator<E> | null = null;
-  private est = -1;
-
-  constructor(private readonly source: { iterator(): Iterator<E>; size(): number }, private readonly flags: number) {
-    super();
-  }
-
-  private bind(): Iterator<E> {
-    if (this.it === null) {
-      this.it = this.source.iterator();
-      this.est = this.source.size();
-    }
-    return this.it;
-  }
-
-  tryAdvance(action: (e: E) => void): boolean {
-    requireNonNull(action);
-    const it = this.bind();
-    if (!it.hasNext()) return false;
-    this.est--;
-    action(it.next());
-    return true;
-  }
-
-  override forEachRemaining(action: (e: E) => void): void {
-    requireNonNull(action);
-    const it = this.bind();
-    while (it.hasNext()) action(it.next());
-    this.est = 0;
-  }
-
-  estimateSize(): number {
-    this.bind();
-    return Math.max(this.est, 0);
-  }
-
-  characteristics(): number {
-    return this.flags;
   }
 }

@@ -3,6 +3,8 @@ import { Collection } from '../interfaces/Collection';
 import { Set } from '../interfaces/Set';
 import { SET_BRAND, isSet } from '../util/guards';
 import { hashCode, requireNonNull } from '../util/Objects';
+import { Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator } from '../stream/Spliterators';
 import { AbstractCollection } from './AbstractCollection';
 
 /** Skeleton of AbstractSet: value equality with any Set, hashCode = sum of element hashes. */
@@ -39,6 +41,11 @@ export abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
       return modified;
     }
     return this.removeIf((e) => c.contains(e));
+  }
+
+  /** Late-binding DISTINCT|SIZED|SUBSIZED spliterator over iterator(). */
+  override spliterator(): Spliterator<E> {
+    return new IteratorSpliterator(this, null, -1, Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
   override hashCode(): number {

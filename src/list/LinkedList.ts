@@ -5,6 +5,8 @@ import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { List } from '../interfaces/List';
 import { Deque } from '../interfaces/Queue';
+import { BaseSpliterator, Spliterator } from '../stream/Spliterator';
+import { ArraySpliterator, BATCH_UNIT, IteratorSpliterator, MAX_BATCH } from '../stream/Spliterators';
 import { Comparator, stableSort } from '../util/Comparator';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { isList } from '../util/guards';
@@ -340,6 +342,11 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return new ListItr(this, index);
   }
 
+  /** ORDERED|SIZED|SUBSIZED; late-binding, fail-fast, splits off growing array batches. */
+  override spliterator(): Spliterator<E> {
+    return new LLSpliterator(this);
+  }
+
   // plain iterator object instead of a generator: several times faster in for..of
   override [Symbol.iterator](): Generator<E> {
     return new ValueItr(this) as unknown as Generator<E>;
@@ -587,6 +594,81 @@ class ListItr<E> implements ListIterator<E> {
 }
 
 /** JS-protocol iterator for for..of and spread, fail-fast like the others. */
+const LL_CHARACTERISTICS = Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
+
+class LLSpliterator<E> extends BaseSpliterator<E> {
+  private current: Node<E> | null = null;
+  private est = -1;
+  private expectedModCount = 0;
+  private batch = 0;
+
+  constructor(private readonly list: LinkedList<E>) {
+    super();
+  }
+
+  private getEst(): number {
+    if (this.est < 0) {
+      const l = this.list;
+      this.expectedModCount = l.modCount;
+      this.current = l.first;
+      this.est = l._size;
+    }
+    return this.est;
+  }
+
+  estimateSize(): number {
+    return this.getEst();
+  }
+
+  override trySplit(): Spliterator<E> | null {
+    const s = this.getEst();
+    let p = this.current;
+    if (s > 1 && p !== null) {
+      const n = Math.min(this.batch + BATCH_UNIT, s, MAX_BATCH);
+      const a: E[] = [];
+      let j = 0;
+      do a[j++] = p.item;
+      while ((p = p.next) !== null && j < n);
+      this.current = p;
+      this.batch = j;
+      this.est = s - j;
+      return new ArraySpliterator(a, 0, j, LL_CHARACTERISTICS);
+    }
+    return null;
+  }
+
+  override forEachRemaining(action: (e: E) => void): void {
+    requireNonNull(action);
+    let n = this.getEst();
+    let p = this.current;
+    if (n > 0 && p !== null) {
+      this.current = null;
+      this.est = 0;
+      do {
+        const e = p.item;
+        p = p.next;
+        action(e);
+      } while (p !== null && --n > 0);
+    }
+    if (this.list.modCount !== this.expectedModCount) throw new ConcurrentModificationException();
+  }
+
+  tryAdvance(action: (e: E) => void): boolean {
+    requireNonNull(action);
+    const q = this.getEst() > 0 ? this.current : null;
+    if (q === null) return false;
+    this.est--;
+    this.current = q.next;
+    action(q.item);
+    if (this.list.modCount !== this.expectedModCount) throw new ConcurrentModificationException();
+    return true;
+  }
+
+  characteristics(): number {
+    return LL_CHARACTERISTICS;
+  }
+}
+
 class ValueItr<E> {
   private node: Node<E> | null;
   private readonly expectedModCount: number;
@@ -904,6 +986,11 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
 
   override descendingIterator(): Iterator<E> {
     return this.base.iterator();
+  }
+
+  /** ORDERED|SIZED|SUBSIZED over iterator(), as the reference's reverse-ordered view. */
+  override spliterator(): Spliterator<E> {
+    return new IteratorSpliterator(this, null, -1, LL_CHARACTERISTICS);
   }
 
   // Object

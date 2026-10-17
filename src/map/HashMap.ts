@@ -11,6 +11,8 @@ import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry } from '../interfaces/Map';
 import { Set } from '../interfaces/Set';
+import { Spliterator } from '../stream/Spliterator';
+import { hashSpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { isEntry } from '../util/guards';
 import { equals, hashCode, requireNonNull } from '../util/Objects';
@@ -719,6 +721,9 @@ class KeySet<K, V> extends AbstractSet<K> {
   iterator(): Iterator<K> {
     return new KeyIterator(this.map.nodeIterator());
   }
+  override spliterator(): Spliterator<K> {
+    return hashSpliterator(this, this.map, true);
+  }
   override [Symbol.iterator](): Generator<K> {
     return jsIterator(this.iterator()) as unknown as Generator<K>;
   }
@@ -757,6 +762,9 @@ class Values<K, V> extends AbstractCollection<V> {
   iterator(): Iterator<V> {
     return new ValueIterator(this.map.nodeIterator());
   }
+  override spliterator(): Spliterator<V> {
+    return hashSpliterator(this, this.map, false);
+  }
   override [Symbol.iterator](): Generator<V> {
     return jsIterator(this.iterator()) as unknown as Generator<V>;
   }
@@ -791,6 +799,9 @@ class EntrySet<K, V> extends AbstractSet<MapEntry<K, V>> {
   }
   iterator(): Iterator<MapEntry<K, V>> {
     return new EntryIterator(this.map.nodeIterator());
+  }
+  override spliterator(): Spliterator<MapEntry<K, V>> {
+    return hashSpliterator(this, this.map, true);
   }
   override [Symbol.iterator](): Generator<MapEntry<K, V>> {
     return jsIterator(this.iterator()) as unknown as Generator<MapEntry<K, V>>;

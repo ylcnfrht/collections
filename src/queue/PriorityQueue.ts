@@ -8,6 +8,8 @@ import {
 } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
+import { Spliterator } from '../stream/Spliterator';
+import { OwnedArraySpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { Comparator, naturalCompare } from '../util/Comparator';
 import { equals, requireNonNull } from '../util/Objects';
@@ -360,6 +362,11 @@ export class PriorityQueue<E> extends AbstractQueue<E> {
 
   iterator(): Iterator<E> {
     return new Itr(this);
+  }
+
+  /** SIZED|SUBSIZED|NONNULL, in heap order; late-binding, fail-fast, splits in halves. */
+  override spliterator(): Spliterator<E> {
+    return new OwnedArraySpliterator(this, () => this.queue, Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.NONNULL);
   }
 
   // plain object iterator: much faster than a generator in for..of

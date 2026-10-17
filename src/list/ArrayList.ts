@@ -8,6 +8,8 @@ import {
 } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
+import { Spliterator } from '../stream/Spliterator';
+import { OwnedArraySpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { Comparator, naturalCompare, stableSort } from '../util/Comparator';
 import { isList, RANDOM_ACCESS } from '../util/guards';
@@ -296,6 +298,11 @@ export class ArrayList<E> extends AbstractList<E> {
   override listIterator(index = 0): ListIterator<E> {
     checkPositionIndex(index, this.es.length);
     return new ArrayListItr(this, index);
+  }
+
+  /** ORDERED|SIZED|SUBSIZED; late-binding, fail-fast, splits in halves. */
+  override spliterator(): Spliterator<E> {
+    return new OwnedArraySpliterator(this, () => this.es, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
   // typed as Generator only to match the base signature; it is a plain next()-only iterator

@@ -12,6 +12,8 @@ import { SequencedCollection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry, SequencedMap } from '../interfaces/Map';
 import { SequencedSet } from '../interfaces/Set';
+import { Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { SET_BRAND, isEntry } from '../util/guards';
 import { equals, requireNonNull } from '../util/Objects';
@@ -386,6 +388,10 @@ abstract class LinkedView<K, V, T> extends AbstractCollection<T> implements Sequ
   abstract reversed(): SequencedCollection<T>;
   iterator(): Iterator<T> {
     return new LinkedIterator<K, V, T>(this.map, this.rev, this.kind);
+  }
+  /** ORDERED|SIZED|SUBSIZED (+DISTINCT for the key and entry sets), over iterator(); late-binding. */
+  override spliterator(): Spliterator<T> {
+    return new IteratorSpliterator(this, null, -1, (this.kind === VALUE ? 0 : Spliterator.DISTINCT) | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
   override [Symbol.iterator](): Generator<T> {
     return new LinkedJsIterator<K, V, T>(this.map, this.rev, this.kind) as unknown as Generator<T>;

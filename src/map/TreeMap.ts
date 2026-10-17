@@ -12,6 +12,8 @@ import {
 } from '../exceptions';
 import { SequencedCollection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
+import { Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator } from '../stream/Spliterators';
 import { Map, MapEntry, NavigableMap, SortedMap } from '../interfaces/Map';
 import { NavigableSet, SequencedSet, SortedSet } from '../interfaces/Set';
 import { Comparator, naturalCompare } from '../util/Comparator';
@@ -1353,6 +1355,13 @@ class EntrySetView<K, V> extends AbstractSet<MapEntry<K, V>> implements Sequence
   iterator(): Iterator<MapEntry<K, V>> {
     return this.m.iter(ENTRY);
   }
+  /** TreeMap: SIZED (until split)|DISTINCT|SORTED|ORDERED, ordered by key; range views: DISTINCT|SIZED|SUBSIZED. */
+  override spliterator(): Spliterator<MapEntry<K, V>> {
+    const m = this.m;
+    if (!(m instanceof TreeMap)) return super.spliterator();
+    const cmp = (a: MapEntry<K, V>, b: MapEntry<K, V>) => m.compare(a.getKey(), b.getKey());
+    return new IteratorSpliterator(this, null, -1, TREE_CHARACTERISTICS | Spliterator.SORTED, { modCounter: m, sizedOnlyUnsplit: true, comparator: cmp });
+  }
   override [Symbol.iterator](): Generator<MapEntry<K, V>> {
     return jsIter(this.iterator());
   }
@@ -1409,6 +1418,12 @@ class ValuesView<V> extends AbstractCollection<V> implements SequencedCollection
   iterator(): Iterator<V> {
     return this.m.iter(VALUE);
   }
+  /** TreeMap: SIZED (until split)|ORDERED; range views: SIZED|SUBSIZED. */
+  override spliterator(): Spliterator<V> {
+    const m = this.m;
+    if (!(m instanceof TreeMap)) return super.spliterator();
+    return new IteratorSpliterator(this, null, -1, Spliterator.SIZED | Spliterator.ORDERED, { modCounter: m, sizedOnlyUnsplit: true });
+  }
   override [Symbol.iterator](): Generator<V> {
     return jsIter(this.iterator());
   }
@@ -1447,6 +1462,8 @@ class ValuesView<V> extends AbstractCollection<V> implements SequencedCollection
   }
 }
 
+const TREE_CHARACTERISTICS = Spliterator.SIZED | Spliterator.DISTINCT | Spliterator.ORDERED;
+
 /** @internal marks a key set whose add() is unsupported (map key views) */
 export const NO_ADD: unknown = Object.freeze({});
 
@@ -1462,6 +1479,21 @@ export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E
 
   iterator(): Iterator<E> {
     return this.m.iter(KEY);
+  }
+  /**
+   * TreeMap keys: SIZED (until split)|DISTINCT|SORTED|ORDERED, getComparator() = comparator();
+   * full descending view: SIZED (until split)|DISTINCT|ORDERED; ascending range: DISTINCT|SORTED|ORDERED,
+   * descending range: DISTINCT|ORDERED, both of unknown size. Late-binding and fail-fast.
+   */
+  override spliterator(): Spliterator<E> {
+    const m = this.m;
+    if (m instanceof TreeMap) {
+      return new IteratorSpliterator(this, null, -1, TREE_CHARACTERISTICS | Spliterator.SORTED, { modCounter: m, sizedOnlyUnsplit: true, comparator: m.comparator() });
+    }
+    const sm = m as unknown as { desc: boolean; full(): boolean; m: TreeMap<E, unknown> };
+    if (sm.desc && sm.full()) return new IteratorSpliterator(this, null, -1, TREE_CHARACTERISTICS, { modCounter: sm.m, sizedOnlyUnsplit: true });
+    const chars = sm.desc ? Spliterator.DISTINCT | Spliterator.ORDERED : Spliterator.DISTINCT | Spliterator.ORDERED | Spliterator.SORTED;
+    return new IteratorSpliterator(this, null, -1, chars, { modCounter: sm.m, unknownSize: true, comparator: m.comparator() });
   }
   override [Symbol.iterator](): Generator<E> {
     return jsIter(this.m.iter<E>(KEY));

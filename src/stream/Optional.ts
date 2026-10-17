@@ -7,10 +7,12 @@ import type { DoubleStream, IntStream, LongStream, Stream } from './Stream';
 
 const NO_VALUE = 'No value present';
 
-/** One-element (or empty) spliterator backing Optional*.stream(). */
+/** One-element (or empty) spliterator backing Optional*.stream(): what Stream.of(x) / Stream.empty() report. */
 class SingleSpliterator<T> extends BaseSpliterator<T> {
+  private readonly chars: number;
   constructor(private value: T, private remaining: number) {
     super();
+    this.chars = Spliterator.SIZED | Spliterator.SUBSIZED | (remaining > 0 ? Spliterator.ORDERED | Spliterator.IMMUTABLE : 0);
   }
   tryAdvance(action: (t: T) => void): boolean {
     requireNonNull(action);
@@ -23,8 +25,18 @@ class SingleSpliterator<T> extends BaseSpliterator<T> {
     return this.remaining;
   }
   characteristics(): number {
-    return Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.ORDERED | Spliterator.IMMUTABLE | Spliterator.NONNULL;
+    return this.chars;
   }
+}
+
+const f64 = new Float64Array(1);
+const i32 = new Int32Array(f64.buffer);
+
+/** Double.hashCode: high word XOR low word of the bits, NaN canonicalized. */
+function doubleHash(x: number): number {
+  if (x !== x) return 0x7ff80000;
+  f64[0] = x;
+  return i32[0] ^ i32[1];
 }
 
 /** A container that may or may not hold a non-null value. null and undefined both mean "absent". */
@@ -176,8 +188,14 @@ abstract class NumberOptional {
     return !this.present || Object.is(this.value, o.value) || (this.typeName !== 'OptionalDouble' && this.value === o.value);
   }
 
+  /** Integer.hashCode / Long.hashCode / Double.hashCode of the value; 0 when empty. */
   hashCode(): number {
-    return this.present ? hashCode(this.value) : 0;
+    if (!this.present) return 0;
+    const v = this.value;
+    if (this.typeName === 'OptionalDouble') return doubleHash(v);
+    // Long.hashCode: low word XOR high word (two's complement)
+    if (this.typeName === 'OptionalLong' && Number.isInteger(v)) return (v | 0) ^ (Math.floor(v / 4294967296) | 0);
+    return hashCode(v);
   }
 
   toString(): string {

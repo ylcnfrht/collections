@@ -2,6 +2,8 @@ import { AbstractSet, requireCollection } from '../abstract/AbstractSet';
 import { ConcurrentModificationException, IllegalArgumentException, IllegalStateException, NoSuchElementException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
+import { Spliterator } from '../stream/Spliterator';
+import { hashSpliterator } from '../stream/Spliterators';
 import { checkCapacity, fitsIndexTable, isIndexKey, isPlainKey, jsIterator } from '../map/HashMap';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { equals, hashCode, requireNonNull } from '../util/Objects';
@@ -173,6 +175,11 @@ export class HashSet<E> extends AbstractSet<E> {
 
   iterator(): Iterator<E> {
     return new HashSetIterator(this);
+  }
+
+  /** SIZED|DISTINCT (SIZED until split); late-binding, fail-fast. */
+  override spliterator(): Spliterator<E> {
+    return hashSpliterator(this, this, true);
   }
 
   // typed as Generator to match the base signature; a plain iterator object is faster

@@ -39,3 +39,17 @@ export { TreeSet } from './set/TreeSet';
 
 export { Collections } from './Collections';
 export type { RandomSource, TypeCheck } from './Collections';
+
+// Streams. Importing this module also registers the stream engine with the collections.
+export { Stream, IntStream, LongStream, DoubleStream } from './stream/Streams';
+export type { BaseStream, StreamBuilder, NumberStreamBuilder } from './stream/Stream';
+export { StreamSupport } from './stream/StreamSupport';
+export { Collectors, Collector } from './stream/Collectors';
+export type { CollectorCharacteristics } from './stream/Collectors';
+export { Gatherers, Gatherer, Integrator } from './stream/Gatherers';
+export type { Downstream } from './stream/Gatherers';
+export { Optional, OptionalInt, OptionalLong, OptionalDouble } from './stream/Optional';
+export { Spliterator } from './stream/Spliterator';
+export type { SourceComparator } from './stream/Spliterator';
+export { Spliterators } from './stream/Spliterators';
+export { IntSummaryStatistics, LongSummaryStatistics, DoubleSummaryStatistics } from './util/SummaryStatistics';

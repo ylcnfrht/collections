@@ -6,6 +6,8 @@ import { List } from '../interfaces/List';
 import { Map, MapEntry, NavigableMap, SortedMap } from '../interfaces/Map';
 import { Queue } from '../interfaces/Queue';
 import { NavigableSet, Set, SortedSet } from '../interfaces/Set';
+import { Spliterator } from '../stream/Spliterator';
+import { Spliterators } from '../stream/Spliterators';
 import { identityHashCode, requireNonNull } from '../util/Objects';
 
 type Methods = Record<PropertyKey, unknown>;
@@ -158,7 +160,9 @@ function checkedEntry<K, V>(e: MapEntry<K, V>, cv: <T>(o: T) => T): MapEntry<K, 
 
 function checkedEntrySet<K, V>(s: Set<MapEntry<K, V>>, cv: <T>(o: T) => T): Set<MapEntry<K, V>> {
   const wrap = (e: MapEntry<K, V>) => checkedEntry(e, cv);
-  return delegate(s, () => ({
+  return delegate(s, (view) => ({
+    // over the wrapping iterator, so split-off entries are checked too (the reference's default Set spliterator)
+    spliterator: () => Spliterators.spliterator(view, Spliterator.DISTINCT),
     iterator: (): Iterator<MapEntry<K, V>> => {
       const it = s.iterator();
       return delegate(it, () => ({ next: () => wrap(it.next()), forEachRemaining: (f: (e: MapEntry<K, V>) => void) => it.forEachRemaining((e) => f(wrap(e))) }));

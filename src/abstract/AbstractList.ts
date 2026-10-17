@@ -9,6 +9,8 @@ import {
 import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { List } from '../interfaces/List';
+import { BaseSpliterator, Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator } from '../stream/Spliterators';
 import { Comparator, stableSort } from '../util/Comparator';
 import { isList, isRandomAccess, RANDOM_ACCESS } from '../util/guards';
 import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from '../util/Objects';
@@ -106,6 +108,15 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     return new SubList(this, null, 0, fromIndex, toIndex);
   }
 
+  /**
+   * ORDERED|SIZED|SUBSIZED. RandomAccess lists get a late-binding, fail-fast, index-based spliterator
+   * that splits in halves; others one over iterator().
+   */
+  override spliterator(): Spliterator<E> {
+    if (isRandomAccess(this)) return new RandomAccessSpliterator(this);
+    return new IteratorSpliterator(this, null, -1, ORDERED_SIZED);
+  }
+
   replaceAll(operator: (e: E) => E): void {
     requireNonNull(operator);
     const it = this.listIterator();
@@ -174,6 +185,77 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
       h = (Math.imul(31, h) + ((e as unknown) === this ? 0 : hashCode(e))) | 0;
     }
     return h;
+  }
+}
+
+const ORDERED_SIZED = Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
+
+/** Index-based spliterator over a random-access AbstractList, bound to its size and modCount at first use. */
+class RandomAccessSpliterator<E> extends BaseSpliterator<E> {
+  constructor(
+    private readonly list: AbstractList<E>,
+    private index = 0,
+    private fence = -1,
+    private expectedModCount = 0
+  ) {
+    super();
+  }
+
+  private getFence(): number {
+    if (this.fence < 0) {
+      this.expectedModCount = this.list.modCount;
+      this.fence = this.list.size();
+    }
+    return this.fence;
+  }
+
+  private get(i: number): E {
+    try {
+      return this.list.get(i);
+    } catch (e) {
+      if (e instanceof IndexOutOfBoundsException) throw new ConcurrentModificationException();
+      throw e;
+    }
+  }
+
+  private check(): void {
+    if (this.list.modCount !== this.expectedModCount) throw new ConcurrentModificationException();
+  }
+
+  override trySplit(): Spliterator<E> | null {
+    const hi = this.getFence();
+    const lo = this.index;
+    const mid = (lo + hi) >>> 1;
+    if (lo >= mid) return null;
+    this.index = mid;
+    return new RandomAccessSpliterator(this.list, lo, mid, this.expectedModCount);
+  }
+
+  tryAdvance(action: (e: E) => void): boolean {
+    requireNonNull(action);
+    const i = this.index;
+    if (i >= this.getFence()) return false;
+    this.index = i + 1;
+    action(this.get(i));
+    this.check();
+    return true;
+  }
+
+  override forEachRemaining(action: (e: E) => void): void {
+    requireNonNull(action);
+    const hi = this.getFence();
+    let i = this.index;
+    this.index = hi;
+    for (; i < hi; i++) action(this.get(i));
+    this.check();
+  }
+
+  estimateSize(): number {
+    return this.getFence() - this.index;
+  }
+
+  characteristics(): number {
+    return ORDERED_SIZED;
   }
 }
 
@@ -447,6 +529,11 @@ export class ReversedList<E> extends AbstractList<E> {
     const n = this.size();
     subListRangeCheck(fromIndex, toIndex, n);
     return this.base.subList(n - toIndex, n - fromIndex).reversed();
+  }
+
+  /** ORDERED|SIZED|SUBSIZED over iterator(), as the reference's reverse-ordered list view. */
+  override spliterator(): Spliterator<E> {
+    return new IteratorSpliterator(this, null, -1, ORDERED_SIZED);
   }
 
   override reversed(): List<E> {

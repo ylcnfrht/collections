@@ -3,6 +3,7 @@ import { IllegalArgumentException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { SequencedSet } from '../interfaces/Set';
+import { Spliterator } from '../stream/Spliterator';
 import { checkCapacity } from '../map/HashMap';
 import { LinkedHashMap } from '../map/LinkedHashMap';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
@@ -79,6 +80,11 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
 
   override iterator(): Iterator<E> {
     return this.map.sequencedKeySet().iterator();
+  }
+
+  /** SIZED|SUBSIZED|DISTINCT|ORDERED, late-binding (the backing key set's). */
+  override spliterator(): Spliterator<E> {
+    return this.map.sequencedKeySet().spliterator();
   }
 
   override [Symbol.iterator](): Generator<E> {

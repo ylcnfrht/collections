@@ -24,6 +24,8 @@ import { Enumeration, Iterator, ListIterator } from './interfaces/Iterator';
 import { List } from './interfaces/List';
 import { Map, MapEntry, NavigableMap, SequencedMap, SortedMap } from './interfaces/Map';
 import { NavigableSet, SequencedSet, Set, SortedSet } from './interfaces/Set';
+import { SourceComparator, Spliterator } from './stream/Spliterator';
+import { SingletonSpliterator, Spliterators } from './stream/Spliterators';
 import { Comparator, naturalCompare, reverseOrder } from './util/Comparator';
 import { toArrayWith, WritableArrayLike } from './util/arrays';
 import { isRandomAccess, isSet, RANDOM_ACCESS, SET_BRAND } from './util/guards';
@@ -402,12 +404,25 @@ class EmptyList<E> extends ImmutableList<E> {
     return EMPTY_ITERATOR;
   }
   override sort(_c?: Comparator<E> | null): void {}
+  /** SIZED|SUBSIZED, like the reference's emptyList(). */
+  override spliterator(): Spliterator<E> {
+    return Spliterators.emptySpliterator();
+  }
+}
+
+/** singletonList(): reports the reference's singleton spliterator characteristics. */
+class SingletonList<E> extends ImmutableList<E> {
+  override spliterator(): Spliterator<E> {
+    return new SingletonSpliterator(this.es[0]);
+  }
 }
 
 /** Shared immutable empty list, same instance as emptyList(). */
 export const EMPTY_LIST: List<never> = new EmptyList<never>([], true);
 /** Shared immutable empty set, same instance as emptySet(). */
-export const EMPTY_SET: Set<never> = buildSet<never>([], false, true);
+export const EMPTY_SET: Set<never> = Object.assign(buildSet<never>([], false, true), {
+  spliterator: (): Spliterator<never> => Spliterators.emptySpliterator(),
+});
 /** Shared immutable empty map, same instance as emptyMap(). */
 export const EMPTY_MAP: Map<never, never> = buildMap<never, never>([], true);
 
@@ -424,11 +439,11 @@ export function emptyMap<K, V>(): Map<K, V> {
 }
 
 export function singletonList<E>(o: E): List<E> {
-  return new ImmutableList([o], o != null);
+  return new SingletonList([o], o != null);
 }
 
 export function singleton<E>(o: E): Set<E> {
-  return buildSet([o], false, false);
+  return Object.assign(buildSet([o], false, false), { spliterator: (): Spliterator<E> => new SingletonSpliterator(o) });
 }
 
 export function singletonMap<K, V>(key: K, value: V): Map<K, V> {
@@ -509,6 +524,10 @@ class UnmodifiableCollection<E> extends ImmutableCollectionBase<E> {
   }
   override toString(): string {
     return this.c.toString();
+  }
+  /** The backing collection's spliterator (same characteristics). */
+  override spliterator(): Spliterator<E> {
+    return this.c.spliterator();
   }
 }
 
@@ -673,6 +692,9 @@ class UnmodifiableList<E> extends ImmutableListBase<E> {
   override reversed(): List<E> {
     return new UnmodifiableList(this.l.reversed());
   }
+  override spliterator(): Spliterator<E> {
+    return this.l.spliterator();
+  }
   override equals(o: unknown): boolean {
     return o === this || this.l.equals(o);
   }
@@ -710,6 +732,37 @@ function wrapEntry<K, V>(e: MapEntry<K, V> | null): MapEntry<K, V> | null {
   return e === null ? null : new UnmodifiableEntry(e);
 }
 
+class UnmodifiableEntrySpliterator<K, V> implements Spliterator<MapEntry<K, V>> {
+  constructor(private readonly s: Spliterator<MapEntry<K, V>>) {}
+  tryAdvance(action: (e: MapEntry<K, V>) => void): boolean {
+    requireNonNull(action);
+    return this.s.tryAdvance((e) => action(new UnmodifiableEntry(e)));
+  }
+  forEachRemaining(action: (e: MapEntry<K, V>) => void): void {
+    requireNonNull(action);
+    this.s.forEachRemaining((e) => action(new UnmodifiableEntry(e)));
+  }
+  trySplit(): Spliterator<MapEntry<K, V>> | null {
+    const split = this.s.trySplit();
+    return split === null ? null : new UnmodifiableEntrySpliterator(split);
+  }
+  estimateSize(): number {
+    return this.s.estimateSize();
+  }
+  getExactSizeIfKnown(): number {
+    return this.s.getExactSizeIfKnown();
+  }
+  characteristics(): number {
+    return this.s.characteristics();
+  }
+  hasCharacteristics(characteristics: number): boolean {
+    return this.s.hasCharacteristics(characteristics);
+  }
+  getComparator(): SourceComparator<MapEntry<K, V>> | null {
+    return this.s.getComparator();
+  }
+}
+
 /** Entry set whose entries reject setValue. Also serves sequencedEntrySet(). */
 class UnmodifiableEntrySet<K, V> extends UnmodifiableSet<MapEntry<K, V>> implements SequencedSet<MapEntry<K, V>> {
   private get s(): SequencedSet<MapEntry<K, V>> {
@@ -730,6 +783,10 @@ class UnmodifiableEntrySet<K, V> extends UnmodifiableSet<MapEntry<K, V>> impleme
   override forEach(action: (e: MapEntry<K, V>) => void): void {
     requireNonNull(action);
     this.c.forEach((e) => action(new UnmodifiableEntry(e)));
+  }
+  /** The backing entry set's spliterator, handing out read-only entries. */
+  override spliterator(): Spliterator<MapEntry<K, V>> {
+    return new UnmodifiableEntrySpliterator(this.c.spliterator());
   }
   override toString(): string {
     return this.c.toString();

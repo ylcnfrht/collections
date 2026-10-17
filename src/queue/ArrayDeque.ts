@@ -8,6 +8,8 @@ import {
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Deque } from '../interfaces/Queue';
+import { BaseSpliterator, Spliterator } from '../stream/Spliterator';
+import { IteratorSpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { equals, requireNonNull, toString } from '../util/Objects';
 
@@ -333,6 +335,11 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return new DescendingIterator(this);
   }
 
+  /** ORDERED|SIZED|SUBSIZED|NONNULL; late-binding, fail-fast, splits in halves. */
+  override spliterator(): Spliterator<E> {
+    return new DeqSpliterator(this);
+  }
+
   // typed as Generator to match the base signature; it is a plain iterator object
   override [Symbol.iterator](): Generator<E> {
     return new JsIterator(this) as unknown as Generator<E>;
@@ -584,6 +591,86 @@ class JsIterator<E> {
   }
 }
 
+const DEQ_CHARACTERISTICS = Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED | Spliterator.NONNULL;
+
+/** Spliterator over [cursor, end) of the circular buffer, bound to head/tail/modCount at first use. */
+class DeqSpliterator<E> extends BaseSpliterator<E> {
+  private a: unknown[] = [];
+  private mask = 0;
+
+  constructor(
+    private readonly d: ArrayDeque<E>,
+    private cursor = 0,
+    private end = -1,
+    private expected = 0
+  ) {
+    super();
+  }
+
+  private getFence(): number {
+    if (this.end < 0) {
+      const d = this.d;
+      this.a = d.elements;
+      this.mask = this.a.length - 1;
+      this.cursor = d.head;
+      this.end = d.tail;
+      this.expected = d.modCount;
+    }
+    return this.end;
+  }
+
+  override trySplit(): Spliterator<E> | null {
+    const end = this.getFence();
+    const i = this.cursor;
+    const n = ((end - i) & this.mask) >> 1;
+    if (n <= 0) return null;
+    const mid = (i + n) & this.mask;
+    this.cursor = mid;
+    const s = new DeqSpliterator(this.d, i, mid, this.expected);
+    s.a = this.a;
+    s.mask = this.mask;
+    return s;
+  }
+
+  tryAdvance(action: (e: E) => void): boolean {
+    requireNonNull(action);
+    const end = this.getFence();
+    const i = this.cursor;
+    if (i === end) return false;
+    const d = this.d;
+    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
+    this.cursor = (i + 1) & this.mask;
+    action(this.a[i] as E);
+    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
+    return true;
+  }
+
+  override forEachRemaining(action: (e: E) => void): void {
+    requireNonNull(action);
+    const end = this.getFence();
+    const a = this.a;
+    const mask = this.mask;
+    const d = this.d;
+    const mc = this.expected;
+    let i = this.cursor;
+    this.cursor = end;
+    if (i !== end && d.modCount !== mc) throw new ConcurrentModificationException();
+    // checked per element: a mutating action may move the buffer, and stale slots must never reach it
+    for (; i !== end; i = (i + 1) & mask) {
+      action(a[i] as E);
+      if (d.modCount !== mc) throw new ConcurrentModificationException();
+    }
+  }
+
+  estimateSize(): number {
+    return (this.getFence() - this.cursor) & this.mask;
+  }
+
+  characteristics(): number {
+    return DEQ_CHARACTERISTICS;
+  }
+}
+
 /** Live mirrored view: first/last, iteration order and removal order are swapped. */
 class ReversedDeque<E> extends AbstractCollection<E> implements Deque<E> {
   constructor(private readonly d: ArrayDeque<E>) {
@@ -616,6 +703,10 @@ class ReversedDeque<E> extends AbstractCollection<E> implements Deque<E> {
   }
   descendingIterator(): Iterator<E> {
     return this.d.iterator();
+  }
+  /** ORDERED|SIZED|SUBSIZED over iterator() (no NONNULL), as the reference's reverse-ordered deque view. */
+  override spliterator(): Spliterator<E> {
+    return new IteratorSpliterator(this, null, -1, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
   override [Symbol.iterator](): Generator<E> {
     const it = this.d.descendingIterator();
