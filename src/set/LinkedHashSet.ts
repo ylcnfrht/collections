@@ -1,0 +1,182 @@
+import { AbstractSet } from '../abstract/AbstractSet';
+import { Collection } from '../interfaces/Collection';
+import { Iterator } from '../interfaces/Iterator';
+import { SequencedSet } from '../interfaces/Set';
+import { checkCapacity } from '../map/HashMap';
+import { LinkedHashMap } from '../map/LinkedHashMap';
+import { requireNonNull } from '../util/Objects';
+import { HashSet } from './HashSet';
+
+/**
+ * Hash set that iterates in insertion order (re-adding an element keeps its place).
+ * Extends HashSet so `instanceof HashSet` holds, but HashSet keeps no map to reuse: every method is
+ * overridden to use a LinkedHashMap instead, and the inherited storage fields (and modCount) stay unused.
+ */
+export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
+  /** @internal */
+  readonly map: LinkedHashMap<E, boolean>;
+  private rev: ReversedLinkedHashSet<E> | undefined;
+
+  constructor();
+  constructor(initialCapacity: number, loadFactor?: number);
+  constructor(c: Collection<E>);
+  constructor(a?: number | Collection<E>, loadFactor?: number) {
+    // never hand the collection to super: its addAll would run before map exists
+    super();
+    this.map = new LinkedHashMap<E, boolean>();
+    if (typeof a === 'number') checkCapacity(a, loadFactor);
+    else if (a !== undefined) this.addAll(requireNonNull(a));
+  }
+
+  static override of<E>(...xs: E[]): LinkedHashSet<E> {
+    const s = new LinkedHashSet<E>();
+    for (const x of xs) s.add(x);
+    return s;
+  }
+
+  override clone(): LinkedHashSet<E> {
+    return new LinkedHashSet<E>(this);
+  }
+
+  override size(): number {
+    return this.map.size();
+  }
+
+  override isEmpty(): boolean {
+    return this.map.isEmpty();
+  }
+
+  override contains(o: unknown): boolean {
+    return this.map.containsKey(o);
+  }
+
+  override add(e: E): boolean {
+    return this.map.put(e, true) === null;
+  }
+
+  override remove(o: unknown): boolean {
+    return this.map.removeKey(o) !== undefined;
+  }
+
+  /** @internal */
+  override removeExact(e: E): void {
+    this.map.removeKey(e);
+  }
+
+  override clear(): void {
+    this.map.clear();
+  }
+
+  override iterator(): Iterator<E> {
+    return this.map.sequencedKeySet().iterator();
+  }
+
+  override [Symbol.iterator](): Generator<E> {
+    return this.map.sequencedKeySet()[Symbol.iterator]() as Generator<E>;
+  }
+
+  override forEach(action: (e: E) => void): void {
+    this.map.sequencedKeySet().forEach(action);
+  }
+
+  override toArray(): E[] {
+    return this.map.sequencedKeySet().toArray();
+  }
+
+  override removeIf(filter: (e: E) => boolean): boolean {
+    return this.map.sequencedKeySet().removeIf(filter);
+  }
+
+  // SequencedSet
+
+  getFirst(): E {
+    return this.map.sequencedKeySet().getFirst();
+  }
+
+  getLast(): E {
+    return this.map.sequencedKeySet().getLast();
+  }
+
+  removeFirst(): E {
+    return this.map.sequencedKeySet().removeFirst();
+  }
+
+  removeLast(): E {
+    return this.map.sequencedKeySet().removeLast();
+  }
+
+  /** Adds e, or moves it, to the front. */
+  addFirst(e: E): void {
+    this.map.putFirst(e, true);
+  }
+
+  /** Adds e, or moves it, to the end. */
+  addLast(e: E): void {
+    this.map.putLast(e, true);
+  }
+
+  reversed(): SequencedSet<E> {
+    return (this.rev ??= new ReversedLinkedHashSet(this));
+  }
+}
+
+/** Live reverse-ordered view; add() appends to the base (so it shows up first here). */
+class ReversedLinkedHashSet<E> extends AbstractSet<E> implements SequencedSet<E> {
+  constructor(private readonly base: LinkedHashSet<E>) {
+    super();
+  }
+  private keys(): SequencedSet<E> {
+    return this.base.map.sequencedKeySet().reversed();
+  }
+  iterator(): Iterator<E> {
+    return this.keys().iterator();
+  }
+  override [Symbol.iterator](): Generator<E> {
+    return this.keys()[Symbol.iterator]() as Generator<E>;
+  }
+  size(): number {
+    return this.base.size();
+  }
+  override isEmpty(): boolean {
+    return this.base.isEmpty();
+  }
+  override contains(o: unknown): boolean {
+    return this.base.contains(o);
+  }
+  override add(e: E): boolean {
+    return this.base.add(e);
+  }
+  override remove(o: unknown): boolean {
+    return this.base.remove(o);
+  }
+  override clear(): void {
+    this.base.clear();
+  }
+  override forEach(action: (e: E) => void): void {
+    this.keys().forEach(action);
+  }
+  override toArray(): E[] {
+    return this.keys().toArray();
+  }
+  reversed(): SequencedSet<E> {
+    return this.base;
+  }
+  getFirst(): E {
+    return this.base.getLast();
+  }
+  getLast(): E {
+    return this.base.getFirst();
+  }
+  removeFirst(): E {
+    return this.base.removeLast();
+  }
+  removeLast(): E {
+    return this.base.removeFirst();
+  }
+  addFirst(e: E): void {
+    this.base.addLast(e);
+  }
+  addLast(e: E): void {
+    this.base.addFirst(e);
+  }
+}
