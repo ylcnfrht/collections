@@ -12,7 +12,8 @@ export interface RandomAccess {
 }
 
 export function isList(o: unknown): o is List<unknown> {
-  return typeof (o as List<unknown>)?.listIterator === 'function' && typeof (o as List<unknown>).get === 'function';
+  const l = o as List<unknown>;
+  return typeof l?.listIterator === 'function' && typeof l.get === 'function' && typeof l.iterator === 'function';
 }
 
 export function isSet(o: unknown): o is Set<unknown> {

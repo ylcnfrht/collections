@@ -2,7 +2,8 @@
 
 export * from './exceptions';
 
-export type { Iterator, ListIterator } from './interfaces/Iterator';
+export type { Enumeration, Iterator, ListIterator } from './interfaces/Iterator';
+export type { WritableArrayLike } from './util/arrays';
 export type { Collection, SequencedCollection } from './interfaces/Collection';
 export type { Queue, Deque } from './interfaces/Queue';
 export type { SequencedSet, SortedSet, NavigableSet } from './interfaces/Set';

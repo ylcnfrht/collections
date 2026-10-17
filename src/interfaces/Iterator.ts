@@ -8,6 +8,15 @@ export interface Iterator<E> {
   forEachRemaining(action: (e: E) => void): void;
 }
 
+/** Legacy cursor (Vector.elements, Collections.enumeration). Not fail-fast. */
+export interface Enumeration<E> {
+  hasMoreElements(): boolean;
+  /** @throws NoSuchElementException when exhausted */
+  nextElement(): E;
+  /** Adapts this enumeration to an Iterator whose remove() throws UnsupportedOperationException. */
+  asIterator(): Iterator<E>;
+}
+
 /** ListIterator */
 export interface ListIterator<E> extends Iterator<E> {
   hasPrevious(): boolean;

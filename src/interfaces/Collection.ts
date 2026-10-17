@@ -1,3 +1,4 @@
+import { WritableArrayLike } from '../util/arrays';
 import { Iterator } from './Iterator';
 
 /**
@@ -11,6 +12,8 @@ export interface Collection<E> extends Iterable<E> {
   isEmpty(): boolean;
   contains(o: unknown): boolean;
   toArray(): E[];
+  /** Fills an array created by generator(size()); e.g. `n => new Float64Array(n)`. */
+  toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
   add(e: E): boolean;
   remove(o: unknown): boolean;
   containsAll(c: Collection<unknown>): boolean;

@@ -1,6 +1,7 @@
 import { UnsupportedOperationException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { equals, identityHashCode, requireNonNull, toString } from '../util/Objects';
 
 /**
@@ -22,11 +23,13 @@ export abstract class AbstractCollection<E> implements Collection<E> {
     return false;
   }
 
-  toArray(): E[] {
+  toArray(): E[];
+  toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     const out: E[] = [];
     const it = this.iterator();
     while (it.hasNext()) out.push(it.next());
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 
   add(_e: E): boolean {

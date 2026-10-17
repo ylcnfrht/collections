@@ -8,8 +8,16 @@ export class IndexOutOfBoundsException extends RuntimeException {
   override name = 'IndexOutOfBoundsException';
 }
 
+export class ArrayIndexOutOfBoundsException extends IndexOutOfBoundsException {
+  override name = 'ArrayIndexOutOfBoundsException';
+}
+
 export class NoSuchElementException extends RuntimeException {
   override name = 'NoSuchElementException';
+}
+
+export class EmptyStackException extends RuntimeException {
+  override name = 'EmptyStackException';
 }
 
 export class NullPointerException extends RuntimeException {
