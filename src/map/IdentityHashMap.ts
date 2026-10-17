@@ -1,14 +1,19 @@
-import { AbstractMap } from '../abstract/AbstractMap';
+import { AbstractCollection } from '../abstract/AbstractCollection';
+import { AbstractMap, mapIterator } from '../abstract/AbstractMap';
 import { AbstractSet } from '../abstract/AbstractSet';
 import { ConcurrentModificationException, IllegalArgumentException, IllegalStateException, NoSuchElementException } from '../exceptions';
+import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry } from '../interfaces/Map';
 import { Set } from '../interfaces/Set';
-import { isEntry } from '../util/guards';
-import { equals, hashCode, identityHashCode, requireNonNull, toString } from '../util/Objects';
+import { isEntry, isMap } from '../util/guards';
+import { hashCode, identityHashCode, requireNonNull, toString } from '../util/Objects';
 import { jsIterator } from './HashMap';
 
-/** Entry whose key compares by reference; setValue writes through. */
+/** Reference equality: ===, except NaN equals NaN (SameValueZero, the native Map key rule). */
+const same = (a: unknown, b: unknown): boolean => a === b || (a !== a && b !== b);
+
+/** Entry whose key and value compare by reference; setValue writes through. */
 class IdentityNode<K, V> implements MapEntry<K, V> {
   readonly key: K;
   value: V;
@@ -30,8 +35,7 @@ class IdentityNode<K, V> implements MapEntry<K, V> {
   equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isEntry(o)) return false;
-    const k = o.getKey();
-    return (k === this.key || (k !== k && this.key !== this.key)) && equals(this.value, o.getValue());
+    return same(this.key, o.getKey()) && same(this.value, o.getValue());
   }
   hashCode(): number {
     return identityHash(this.key, this.value);
@@ -41,21 +45,24 @@ class IdentityNode<K, V> implements MapEntry<K, V> {
   }
 }
 
-// values compare with Objects.equals, so they hash with hashCode() to keep equals/hashCode consistent
+// values hash with hashCode(): reference-equal values have equal hashCodes, so equals/hashCode stay consistent
 function identityHash(k: unknown, v: unknown): number {
   return identityHashCode(k) ^ hashCode(v);
 }
 
 /**
- * Map whose keys compare by reference (===, except NaN equals NaN; equals()/hashCode() ignored).
- * Values compare with Objects.equals. Backed by a native Map, which uses exactly that key rule.
+ * Map whose keys and values compare by reference (===, except NaN equals NaN; equals()/hashCode() ignored):
+ * containsValue, remove(k, v), replace(k, old, new), entry and map equality, and the views all use it.
+ * Backed by a native Map, which uses exactly that key rule.
  */
 export class IdentityHashMap<K, V> extends AbstractMap<K, V> {
   /** @internal */
-  readonly nodes = new globalThis.Map<K, IdentityNode<K, V>>();
+  nodes = new globalThis.Map<K, IdentityNode<K, V>>();
   /** Structural modification count; iterators compare against it. */
   modCount = 0;
   private es: EntrySet<K, V> | undefined;
+  private ks: KeySet<K, V> | undefined;
+  private vs: Values<K, V> | undefined;
 
   constructor();
   constructor(expectedMaxSize: number);
@@ -67,8 +74,14 @@ export class IdentityHashMap<K, V> extends AbstractMap<K, V> {
     } else if (a !== undefined) this.putAll(requireNonNull(a));
   }
 
+  /** Shallow copy of the same runtime class (subclass fields included). */
   clone(): IdentityHashMap<K, V> {
-    return new IdentityHashMap<K, V>(this);
+    const m = this.cloneShell();
+    m.nodes = new globalThis.Map();
+    for (const n of this.nodes.values()) m.nodes.set(n.key, new IdentityNode(n.key, n.value));
+    m.modCount = 0;
+    m.es = m.ks = m.vs = undefined;
+    return m;
   }
 
   override size(): number {
@@ -93,7 +106,7 @@ export class IdentityHashMap<K, V> extends AbstractMap<K, V> {
   }
 
   override containsValue(value: unknown): boolean {
-    for (const n of this.nodes.values()) if (equals(value, n.value)) return true;
+    for (const n of this.nodes.values()) if (same(value, n.value)) return true;
     return false;
   }
 
@@ -110,16 +123,36 @@ export class IdentityHashMap<K, V> extends AbstractMap<K, V> {
   override remove(key: unknown, value?: unknown): V | null | boolean {
     const n = this.nodes.get(key as K);
     if (arguments.length >= 2) {
-      if (n === undefined || !equals(n.value, value)) return false;
+      if (n === undefined || !same(n.value, value)) return false;
     } else if (n === undefined) return null;
     this.nodes.delete(key as K);
     this.modCount++;
     return arguments.length >= 2 ? true : n.value;
   }
 
+  override replace(key: K, value: V): V | null;
+  override replace(key: K, oldValue: V, newValue: V): boolean;
+  override replace(key: K, a: V, b?: V): V | null | boolean {
+    const n = this.nodes.get(key);
+    if (arguments.length >= 3) {
+      if (n === undefined || !same(n.value, a)) return false;
+      n.value = b as V;
+      return true;
+    }
+    return n === undefined ? null : n.setValue(a);
+  }
+
   override clear(): void {
     this.nodes.clear();
     this.modCount++;
+  }
+
+  override keySet(): Set<K> {
+    return (this.ks ??= new KeySet(this));
+  }
+
+  override values(): Collection<V> {
+    return (this.vs ??= new Values(this));
   }
 
   entrySet(): Set<MapEntry<K, V>> {
@@ -140,16 +173,18 @@ export class IdentityHashMap<K, V> extends AbstractMap<K, V> {
     }
   }
 
-  /** Identity maps compare keys by reference with each other; otherwise the usual Map equality. */
+  /** True when o is a Map with the same key/value pairs, both compared by reference. */
   override equals(o: unknown): boolean {
     if (o === this) return true;
-    if (!(o instanceof IdentityHashMap)) return super.equals(o);
-    if (o.size() !== this.size()) return false;
-    for (const n of this.nodes.values()) {
-      const m = (o as IdentityHashMap<K, V>).nodes.get(n.key);
-      if (m === undefined || !equals(n.value, m.value)) return false;
+    if (o instanceof IdentityHashMap) {
+      if (o.size() !== this.size()) return false;
+      for (const n of this.nodes.values()) {
+        const m = (o as IdentityHashMap<K, V>).nodes.get(n.key);
+        if (m === undefined || !same(n.value, m.value)) return false;
+      }
+      return true;
     }
-    return true;
+    return isMap(o) && this.entrySet().equals(o.entrySet());
   }
 
   override hashCode(): number {
@@ -205,7 +240,7 @@ class EntrySet<K, V> extends AbstractSet<MapEntry<K, V>> {
   private find(o: unknown): IdentityNode<K, V> | undefined {
     if (!isEntry(o)) return undefined;
     const n = this.map.nodes.get(o.getKey() as K);
-    return n !== undefined && equals(n.value, o.getValue()) ? n : undefined;
+    return n !== undefined && same(n.value, o.getValue()) ? n : undefined;
   }
   override contains(o: unknown): boolean {
     return this.find(o) !== undefined;
@@ -215,6 +250,63 @@ class EntrySet<K, V> extends AbstractSet<MapEntry<K, V>> {
     if (n === undefined) return false;
     this.map.remove(n.key);
     return true;
+  }
+  override clear(): void {
+    this.map.clear();
+  }
+}
+
+class KeySet<K, V> extends AbstractSet<K> {
+  constructor(private readonly map: IdentityHashMap<K, V>) {
+    super();
+  }
+  iterator(): Iterator<K> {
+    return mapIterator(new IdentityIterator(this.map), (n) => n.key);
+  }
+  size(): number {
+    return this.map.size();
+  }
+  override contains(k: unknown): boolean {
+    return this.map.containsKey(k);
+  }
+  override remove(k: unknown): boolean {
+    if (!this.map.containsKey(k)) return false;
+    this.map.remove(k);
+    return true;
+  }
+  override clear(): void {
+    this.map.clear();
+  }
+  /** Sum of the keys' identity hash codes (keys compare by reference). */
+  override hashCode(): number {
+    let h = 0;
+    for (const k of this.map.nodes.keys()) h = (h + identityHashCode(k)) | 0;
+    return h;
+  }
+}
+
+class Values<K, V> extends AbstractCollection<V> {
+  constructor(private readonly map: IdentityHashMap<K, V>) {
+    super();
+  }
+  iterator(): Iterator<V> {
+    return mapIterator(new IdentityIterator(this.map), (n) => n.value);
+  }
+  size(): number {
+    return this.map.size();
+  }
+  override contains(v: unknown): boolean {
+    return this.map.containsValue(v);
+  }
+  /** Removes one mapping whose value is v by reference. */
+  override remove(v: unknown): boolean {
+    for (const n of this.map.nodes.values()) {
+      if (same(n.value, v)) {
+        this.map.remove(n.key);
+        return true;
+      }
+    }
+    return false;
   }
   override clear(): void {
     this.map.clear();

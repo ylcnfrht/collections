@@ -322,6 +322,29 @@ export function collectionContract(name: string, create: () => Collection<any>, 
         const c = of(1, 2, 2, 3);
         expect(c.toArray().length).toBe(c.size());
       });
+      it('toArray(generator) fills a generated plain array', () => {
+        const c = of(3, 1, 2);
+        const out = c.toArray((n: number) => new Array<number>(n));
+        expect(Array.isArray(out)).toBe(true);
+        expect(out).toEqual(c.toArray());
+      });
+      it('toArray(generator) fills a typed array', () => {
+        const c = of(3, 1, 2);
+        const out = c.toArray((n: number) => new Float64Array(n));
+        expect(out).toBeInstanceOf(Float64Array);
+        expect([...out]).toEqual(c.toArray());
+      });
+      it('toArray(generator) passes size() to the generator', () => {
+        const c = of(1, 2, 3);
+        const seen: number[] = [];
+        c.toArray((n: number) => (seen.push(n), new Array(n)));
+        expect(seen).toEqual([3]);
+        const e = create();
+        expect(e.toArray((n: number) => new Int32Array(n)).length).toBe(0);
+      });
+      it('toArray(null) throws NullPointerException', () => expectThrows(() => of(1).toArray(null as any), 'NullPointerException'));
+      it('toArray(generator) with a too-short typed array throws IndexOutOfBoundsException', () =>
+        expectThrows(() => of(1, 2).toArray(() => new Float64Array(1)), 'IndexOutOfBoundsException'));
     });
 
     describe('iterator', () => {

@@ -150,10 +150,15 @@ describe('List.of / List.copyOf', () => {
     expect(List.of(o).contains({})).toBe(false);
   });
 
-  it('contains(null) is false, never throws', () => {
-    expect(List.of(1).contains(null)).toBe(false);
-    expect(List.of(1).contains(undefined)).toBe(false);
-    expect(List.of(1).indexOf(null)).toBe(-1);
+  it.each([null, undefined])('null queries (%s) throw NullPointerException, also through views', (x) => {
+    const l = List.of(1, 2, 3);
+    for (const q of [l, l.subList(0, 2), l.reversed(), List.copyOf(ArrayList.of(1))]) {
+      expectThrows(() => q.contains(x), NPE);
+      expectThrows(() => q.indexOf(x), NPE);
+      expectThrows(() => q.lastIndexOf(x), NPE);
+      expectThrows(() => q.containsAll(ArrayList.of(1, x)), NPE);
+    }
+    expect(l.equals(ArrayList.of(1, 2, x))).toBe(false);
   });
 
   it.each([null, undefined])('of rejects %s', (x) => {
@@ -320,7 +325,11 @@ describe('Set.of / Set.copyOf', () => {
     expect(s.contains(new Point(1, 2))).toBe(true);
     expect(s.contains(NaN)).toBe(true);
     expect(s.contains('b')).toBe(false);
-    expect(s.contains(null)).toBe(false);
+    expectThrows(() => s.contains(null), NPE);
+    expectThrows(() => s.contains(undefined), NPE);
+    expectThrows(() => s.containsAll(ArrayList.of('a', null)), NPE);
+    expectThrows(() => Set.copyOf(ArrayList.of(1)).contains(null), NPE);
+    expect(s.equals(HashSet.of<unknown>('a', null, NaN))).toBe(false);
   });
 
   it.each([
@@ -439,9 +448,17 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
     expect(m.get(7)).toBe('seven');
     expect(m.get(NaN)).toBe('nan');
     expect(m.get('x')).toBeNull();
-    expect(m.get(null)).toBeNull();
+    expectThrows(() => m.get(null), NPE);
+    expectThrows(() => m.get(undefined), NPE);
     expect(m.containsKey(new Point(1, 2))).toBe(true);
-    expect(m.containsKey(null)).toBe(false);
+    expectThrows(() => m.containsKey(null), NPE);
+    expectThrows(() => m.containsValue(null), NPE);
+    expectThrows(() => m.getOrDefault(null, 'd'), NPE);
+    expectThrows(() => m.keySet().contains(null), NPE);
+    expectThrows(() => m.values().contains(undefined), NPE);
+    expectThrows(() => m.entrySet().contains(null), NPE);
+    expect(m.entrySet().contains(new SimpleEntry(null, 'p'))).toBe(false);
+    for (const q of [Map.ofEntries(Map.entry(1, 2)), Map.copyOf(HashMap.of([1, 2]))]) expectThrows(() => q.get(null), NPE);
     expect(m.containsValue('seven')).toBe(true);
     expect(m.containsValue('x')).toBe(false);
     expect(m.getOrDefault(7, 'd')).toBe('seven');

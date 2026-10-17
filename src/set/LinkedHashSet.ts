@@ -1,10 +1,11 @@
-import { AbstractSet } from '../abstract/AbstractSet';
+import { AbstractSet, requireCollection } from '../abstract/AbstractSet';
+import { IllegalArgumentException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { SequencedSet } from '../interfaces/Set';
 import { checkCapacity } from '../map/HashMap';
 import { LinkedHashMap } from '../map/LinkedHashMap';
-import { requireNonNull } from '../util/Objects';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { HashSet } from './HashSet';
 
 /**
@@ -25,7 +26,16 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
     super();
     this.map = new LinkedHashMap<E, boolean>();
     if (typeof a === 'number') checkCapacity(a, loadFactor);
-    else if (a !== undefined) this.addAll(requireNonNull(a));
+    else if (a !== undefined) this.addAll(requireCollection<E>(a, 'a capacity or a Collection'));
+  }
+
+  /**
+   * An empty LinkedHashSet sized for numElements (capacity is only a hint, so this just validates it).
+   * @throws IllegalArgumentException if numElements is negative or NaN
+   */
+  static newLinkedHashSet<E>(numElements: number): LinkedHashSet<E> {
+    if (!(numElements >= 0)) throw new IllegalArgumentException(`Negative number of elements: ${numElements}`);
+    return new LinkedHashSet<E>();
   }
 
   static override of<E>(...xs: E[]): LinkedHashSet<E> {
@@ -79,8 +89,11 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
     this.map.sequencedKeySet().forEach(action);
   }
 
-  override toArray(): E[] {
-    return this.map.sequencedKeySet().toArray();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    const out = this.map.sequencedKeySet().toArray();
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 
   override removeIf(filter: (e: E) => boolean): boolean {
@@ -155,8 +168,11 @@ class ReversedLinkedHashSet<E> extends AbstractSet<E> implements SequencedSet<E>
   override forEach(action: (e: E) => void): void {
     this.keys().forEach(action);
   }
-  override toArray(): E[] {
-    return this.keys().toArray();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    const out = this.keys().toArray();
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
   reversed(): SequencedSet<E> {
     return this.base;

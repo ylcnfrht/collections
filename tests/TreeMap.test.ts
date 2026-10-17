@@ -1,13 +1,13 @@
 import { mapContract } from './contracts/map';
 import { navigableMapContract } from './contracts/navigableMap';
 import { SimpleImmutableEntry } from '../src/abstract/AbstractMap';
-import { MapEntry, NavigableMap } from '../src/interfaces/Map';
+import { MapEntry, NavigableMap, SortedMap } from '../src/interfaces/Map';
 import { TreeMap, natCmp } from '../src/map/TreeMap';
 import { naturalCompare } from '../src/util/Comparator';
 import { expectThrows, Point, rng } from './helpers';
 import { SimpleMap } from './support';
 
-mapContract('TreeMap', () => new TreeMap(), { allowsNullKey: false, allowsNullValue: true, requiresComparableKeys: true });
+mapContract('TreeMap', () => new TreeMap(), { allowsNullKey: false, allowsNullValue: true, requiresComparableKeys: true, detectsComodificationInCompute: true });
 navigableMapContract('TreeMap', (c) => new TreeMap(c));
 
 // a wide range view behaves like a whole map: natural ordering plus two sentinels below/above every key
@@ -20,6 +20,7 @@ mapContract('TreeMap.subMap view', () => new TreeMap<any, any>(bracketed).subMap
   allowsNullValue: true,
   requiresComparableKeys: true,
   skipScale: true,
+  detectsComodificationInCompute: true,
 });
 // descending view of a map that held data and was cleared
 mapContract(
@@ -30,7 +31,7 @@ mapContract(
     m.clear();
     return m.descendingMap();
   },
-  { allowsNullKey: false, allowsNullValue: true, requiresComparableKeys: true }
+  { allowsNullKey: false, allowsNullValue: true, requiresComparableKeys: true, detectsComodificationInCompute: true }
 );
 
 const keys = (m: { keySet(): Iterable<unknown> }) => [...m.keySet()];
@@ -487,19 +488,28 @@ describe('TreeMap · navigation and default methods', () => {
     m.put(1, null);
     expect([m.putIfAbsent(1, 'a'), m.get(1), m.putIfAbsent(1, 'b'), m.get(1)]).toEqual([null, 'a', 'a', 'a']);
   });
-  it('compute family with null values and map changes inside the callback', () => {
+  it('compute family with null values', () => {
     const m = new TreeMap<number, string | null>();
     m.put(1, null);
     expect([m.computeIfPresent(1, () => 'x'), m.containsKey(1)]).toEqual([null, true]);
     expect(m.computeIfAbsent(1, () => 'a')).toBe('a');
-    expect(m.compute(2, (_k, v) => (m.put(3, 'z'), v ?? 'n'))).toBe('n');
-    expect(m.compute(4, () => (m.put(4, 'w'), null))).toBeNull();
-    expect(m.containsKey(4)).toBe(false);
+    expect(m.compute(2, (_k, v) => v ?? 'n')).toBe('n');
     expect(m.compute(9, () => null)).toBeNull();
-    expect(m.merge(1, 'b', (a, b) => (m.put(7, 'q'), a! + b!))).toBe('ab');
+    expect(m.merge(1, 'b', (a, b) => a! + b!)).toBe('ab');
     expect(m.merge(1, 'c', () => null)).toBeNull();
-    expect(m.computeIfPresent(2, () => (m.remove(3), undefined))).toBeNull();
-    expect(keys(m)).toEqual([7]);
+    expect(m.computeIfPresent(2, () => undefined)).toBeNull();
+    expect(m.isEmpty()).toBe(true);
+    m.__checkInvariants();
+  });
+  it('compute family: structural changes inside the callback throw ConcurrentModificationException', () => {
+    const m = of(1, 2);
+    const CME = 'ConcurrentModificationException';
+    expectThrows(() => m.computeIfAbsent(3, () => (m.put(4, 'z'), 'a')), CME);
+    expectThrows(() => m.computeIfPresent(1, () => (m.remove(2), 'a')), CME);
+    expectThrows(() => m.compute(5, () => (m.put(5, 'w'), null)), CME);
+    expectThrows(() => m.merge(1, 'b', () => (m.pollLastEntry(), 'c')), CME);
+    expect(keys(m)).toEqual([1, 4]);
+    expect(m.compute(1, (_k, v) => (m.put(4, 'value only'), v + '!'))).toBe('v1!');
     m.__checkInvariants();
   });
   it('getOrDefault / containsValue / replace / remove(k, v)', () => {
@@ -585,6 +595,21 @@ describe('TreeMap · construction, clone, equality', () => {
     expect(new TreeMap<number, number>(null).comparator()).toBeNull();
     expectThrows(() => new TreeMap(5 as any), 'IllegalArgumentException');
   });
+  it('clone keeps the runtime subclass, its fields and the comparator', () => {
+    class Sub<K, V> extends TreeMap<K, V> {
+      tag = 'sub';
+    }
+    const desc = (a: number, b: number) => b - a;
+    const m = new Sub<number, string>(desc);
+    [1, 3, 2].forEach((k) => m.put(k, `v${k}`));
+    m.keySet();
+    m.descendingMap();
+    const c = m.clone() as Sub<number, string>;
+    c.put(0, 'v0');
+    expect([c instanceof Sub, c.tag, c.comparator(), keys(c), keys(m), keys(c.descendingMap())]).toEqual([true, 'sub', desc, [3, 2, 1, 0], [3, 2, 1], [0, 1, 2, 3]]);
+    expect(new Sub().clone()).toBeInstanceOf(Sub);
+    c.__checkInvariants();
+  });
   it('clone is independent', () => {
     const m = of(1, 2);
     const c = m.clone();
@@ -618,5 +643,21 @@ describe('TreeMap · construction, clone, equality', () => {
     expect([d.size(), d.isEmpty()]).toEqual([3, false]);
     d.clear();
     expect(m.isEmpty()).toBe(true);
+  });
+});
+
+describe('TreeMap · interfaces and views', () => {
+  it('SortedMap.reversed() is typed as a SortedMap', () => {
+    const m: SortedMap<number, string> = new TreeMap<number, string>();
+    m.put(1, 'a');
+    m.put(2, 'b');
+    const r: SortedMap<number, string> = m.reversed();
+    expect([r.firstKey(), r.comparator()!(1, 2) > 0]).toEqual([2, true]);
+  });
+  it('view toArray(generator)', () => {
+    const m = of(1, 2, 3);
+    expect(m.keySet().toArray((n) => new Float64Array(n))).toEqual(new Float64Array([1, 2, 3]));
+    expect(m.headMap(3).values().toArray((n) => new Array<string>(n))).toEqual(['v1', 'v2']);
+    expect(m.descendingMap().entrySet().toArray((n) => new Array<MapEntry<number, string>>(n)).map((e) => e.getKey())).toEqual([3, 2, 1]);
   });
 });

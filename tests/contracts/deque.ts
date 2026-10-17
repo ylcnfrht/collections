@@ -224,6 +224,77 @@ export function dequeContract(name: string, create: () => Deque<any>, opts: Dequ
       it('reversed().reversed() has the original order', () => expect([...of(1, 2).reversed().reversed()]).toEqual([1, 2]));
     });
 
+    describe('removeIf whose predicate modifies the deque', () => {
+      it('pollLast() in the predicate: ConcurrentModificationException, nothing else lost', () => {
+        const d = of(1, 2, 3, 4);
+        let first = true;
+        expectThrows(
+          () =>
+            d.removeIf(() => {
+              if (first) {
+                first = false;
+                d.pollLast();
+              }
+              return true;
+            }),
+          'ConcurrentModificationException'
+        );
+        expect(d.toArray()).toEqual([1, 2, 3]);
+      });
+      it('addLast(9) in the predicate: ConcurrentModificationException, nothing lost', () => {
+        const d = of(1, 2, 3, 4);
+        let first = true;
+        expectThrows(
+          () =>
+            d.removeIf(() => {
+              if (first) {
+                first = false;
+                d.addLast(9);
+              }
+              return true;
+            }),
+          'ConcurrentModificationException'
+        );
+        expect(d.toArray()).toEqual([1, 2, 3, 4, 9]);
+      });
+      it('modification on the last element is still detected', () => {
+        const d = of(1, 2, 3);
+        expectThrows(() => d.removeIf((x: number) => (x === 3 && d.addFirst(0), x === 2)), 'ConcurrentModificationException');
+        expect(d.toArray()).toEqual([0, 1, 2, 3]);
+      });
+      it('throwing predicate leaves the deque unchanged', () => {
+        const d = of(1, 2, 3, 4);
+        expect(() =>
+          d.removeIf((x: number) => {
+            if (x === 3) throw new Error('boom');
+            return true;
+          })
+        ).toThrow('boom');
+        expect(d.toArray()).toEqual([1, 2, 3, 4]);
+      });
+    });
+
+    describe('toArray(generator)', () => {
+      it('generator gets size() and the result is filled in deque order', () => {
+        const d = of(1, 2, 3);
+        d.addFirst(0);
+        const lens: number[] = [];
+        const out = d.toArray((n: number) => (lens.push(n), new Float64Array(n)));
+        expect(out).toBeInstanceOf(Float64Array);
+        expect(Array.from(out)).toEqual([0, 1, 2, 3]);
+        expect(lens).toEqual([4]);
+      });
+      it('on the reversed view', () => {
+        const out = of(1, 2, 3).reversed().toArray((n: number) => new Int32Array(n));
+        expect(out).toBeInstanceOf(Int32Array);
+        expect(Array.from(out)).toEqual([3, 2, 1]);
+      });
+      it('null generator throws NullPointerException', () => {
+        expectThrows(() => of(1).toArray(null as any), 'NullPointerException');
+        expectThrows(() => of(1).reversed().toArray(null as any), 'NullPointerException');
+      });
+    });
+
     describe('performance (O(1) at both ends)', () => {
       it('100k addFirst + removeLast under 500ms', () => {
         const d = create();

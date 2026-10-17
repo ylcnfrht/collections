@@ -11,6 +11,12 @@ listContract('LinkedList', () => new LinkedList());
 queueContract('LinkedList', () => new LinkedList(), { fifo: true });
 dequeContract('LinkedList', () => new LinkedList(), { allowsNull: true });
 
+// the reverse view is itself a full LinkedList
+collectionContract('LinkedList.reversed()', () => new LinkedList().reversed(), { allowsNull: true, allowsDuplicates: true });
+listContract('LinkedList.reversed()', () => new LinkedList().reversed());
+queueContract('LinkedList.reversed()', () => new LinkedList().reversed(), { fifo: true });
+dequeContract('LinkedList.reversed()', () => new LinkedList().reversed(), { allowsNull: true });
+
 const NSEE = 'NoSuchElementException';
 const ISE = 'IllegalStateException';
 const CME = 'ConcurrentModificationException';
@@ -39,6 +45,9 @@ describe('LinkedList · implementation', () => {
     it('from an empty collection', () => expect(checkLinks(new LinkedList(SimpleList.of()))).toEqual([]));
     it('of()', () => expect(checkLinks(LinkedList.of('a', null, undefined))).toEqual(['a', null, undefined]));
     it('from another LinkedList', () => expect(checkLinks(new LinkedList(LinkedList.of(1, 2)))).toEqual([1, 2]));
+    it('from a reversed view', () => expect(checkLinks(new LinkedList(LinkedList.of(1, 2).reversed()))).toEqual([2, 1]));
+    it('explicit undefined collection throws NullPointerException', () => expectThrows(() => new LinkedList(undefined as any), 'NullPointerException'));
+    it('null collection throws NullPointerException', () => expectThrows(() => new LinkedList(null as any), 'NullPointerException'));
   });
 
   describe('node relinking', () => {
@@ -290,6 +299,15 @@ describe('LinkedList · implementation', () => {
       expect([it.next(), it.next(), it.hasNext()]).toEqual([2, 1, false]);
       expect(checkLinks(l)).toEqual([1, 2]);
     });
+    it('remove() without next() after an outside change throws ConcurrentModificationException first', () => {
+      const l = LinkedList.of(1, 2);
+      const it = l.descendingIterator();
+      l.add(3);
+      expectThrows(() => it.remove(), CME);
+      const li = l.listIterator();
+      l.add(4);
+      expectThrows(() => li.remove(), CME);
+    });
     it('remove() twice throws IllegalStateException', () => {
       const it = LinkedList.of(1).descendingIterator();
       it.next();
@@ -398,7 +416,146 @@ describe('LinkedList · implementation', () => {
     });
   });
 
+  describe('reversed() is a LinkedList', () => {
+    it('instanceof LinkedList, typed as LinkedList', () => {
+      const r: LinkedList<number> = LinkedList.of(1, 2).reversed();
+      expect(r).toBeInstanceOf(LinkedList);
+      const rr: LinkedList<number> = r.reversed();
+      expect(rr.toArray()).toEqual([1, 2]);
+    });
+    it('reversed().reversed() is the original instance', () => {
+      const l = LinkedList.of(1, 2);
+      expect(l.reversed().reversed()).toBe(l);
+    });
+    it('the view keeps no nodes of its own', () => {
+      const l = LinkedList.of(1, 2);
+      const r = l.reversed();
+      r.add(0);
+      r.addFirst(3);
+      r.add(1, 9);
+      expect([r.first, r.last, r._size]).toEqual([null, null, 0]);
+      expect(checkLinks(l)).toEqual([0, 1, 2, 9, 3]);
+      expect(r.toArray()).toEqual([3, 9, 2, 1, 0]);
+    });
+    it('clone() is an independent LinkedList in reversed order', () => {
+      const l = LinkedList.of(1, 2, 3);
+      const c = l.reversed().clone();
+      expect(c).toBeInstanceOf(LinkedList);
+      expect(checkLinks(c)).toEqual([3, 2, 1]);
+      c.addLast(0);
+      l.addLast(4);
+      expect([l.toArray(), c.toArray()]).toEqual([[1, 2, 3, 4], [3, 2, 1, 0]]);
+      expect(c.reversed().reversed()).toBe(c);
+    });
+    it('push / pop / get / set / add(index) / addAll(index) write through mirrored', () => {
+      const l = LinkedList.of(1, 2, 3);
+      const r = l.reversed();
+      r.push(4);
+      expect(l.toArray()).toEqual([1, 2, 3, 4]);
+      expect(r.pop()).toBe(4);
+      expect(r.set(0, 30)).toBe(3);
+      expect(r.get(2)).toBe(1);
+      r.add(3, 0);
+      expect(r.addAll(1, SimpleList.of(20, 21))).toBe(true);
+      expect(r.addAll(SimpleList.of(-1, -2))).toBe(true);
+      expect(r.addAll(SimpleList.of())).toBe(false);
+      expect(r.toArray()).toEqual([30, 20, 21, 2, 1, 0, -1, -2]);
+      expect(checkLinks(l)).toEqual([-2, -1, 0, 1, 2, 21, 20, 30]);
+      expectThrows(() => r.get(8), 'IndexOutOfBoundsException');
+      expectThrows(() => r.add(9, 1), 'IndexOutOfBoundsException');
+      expectThrows(() => r.addAll(9, SimpleList.of(1)), 'IndexOutOfBoundsException');
+      expectThrows(() => r.addAll(null as any), 'NullPointerException');
+    });
+    it('addAll(itself) doubles the view', () => {
+      const l = LinkedList.of(1, 2);
+      const r = l.reversed();
+      r.addAll(r);
+      expect([r.toArray(), l.toArray()]).toEqual([[2, 1, 2, 1], [1, 2, 1, 2]]);
+    });
+    it('sort / replaceAll / removeIf / forEach in view order', () => {
+      const l = LinkedList.of({ k: 1, i: 0 }, { k: 2, i: 1 }, { k: 1, i: 2 }, { k: 2, i: 3 });
+      const r = l.reversed();
+      r.sort((a, b) => a.k - b.k);
+      expect(r.toArray().map((x) => x.i)).toEqual([2, 0, 3, 1]);
+      expect(checkLinks(l).map((x) => x.i)).toEqual([1, 3, 0, 2]);
+      const n = LinkedList.of(1, 2, 3);
+      const rn = n.reversed();
+      const seen: number[] = [];
+      rn.replaceAll((x) => (seen.push(x), x * 10));
+      rn.forEach((x) => seen.push(x));
+      expect(seen).toEqual([3, 2, 1, 30, 20, 10]);
+      expect(rn.removeIf((x) => x === 20)).toBe(true);
+      expect(n.toArray()).toEqual([10, 30]);
+      expectThrows(() => rn.forEach(() => n.add(1)), CME);
+      expectThrows(() => rn.replaceAll((x) => (n.add(1), x)), CME);
+    });
+    it('equals / hashCode / toString agree with the base list in reverse', () => {
+      const l = LinkedList.of(1, 2, 3);
+      const r = l.reversed();
+      const plain = LinkedList.of(3, 2, 1);
+      expect([r.equals(plain), plain.equals(r), r.equals(l), l.equals(r)]).toEqual([true, true, false, false]);
+      expect([r.equals(LinkedList.of(3, 2)), LinkedList.of(3, 2).equals(r), r.equals(r)]).toEqual([false, false, true]);
+      expect(l.reversed().equals(r)).toBe(true);
+      expect(r.hashCode()).toBe(plain.hashCode());
+      expect(r.toString()).toBe('[3, 2, 1]');
+      const self = new LinkedList<unknown>();
+      const rs = self.reversed();
+      self.add(1);
+      self.add(rs);
+      expect(rs.toString()).toBe('[(this Collection), 1]');
+      expect(rs.hashCode()).toBe(31 * 31 + 1 + 31 * 0);
+    });
+    it('iterators and for..of are fail-fast', () => {
+      const l = LinkedList.of(1, 2, 3);
+      const r = l.reversed();
+      const it = r.iterator();
+      const li = r.listIterator();
+      const sub = r.subList(0, 2);
+      it.next();
+      li.next();
+      l.add(4);
+      expectThrows(() => it.next(), CME);
+      expectThrows(() => li.next(), CME);
+      expectThrows(() => sub.size(), CME);
+      expectThrows(() => {
+        for (const _ of r) l.removeFirst();
+      }, CME);
+    });
+    it('subList of the view writes through', () => {
+      const l = LinkedList.of(0, 1, 2, 3, 4);
+      const sub = l.reversed().subList(1, 4);
+      expect(sub.toArray()).toEqual([3, 2, 1]);
+      sub.removeAt(0);
+      sub.add(7);
+      expect(checkLinks(l)).toEqual([0, 7, 1, 2, 4]);
+      sub.clear();
+      expect(checkLinks(l)).toEqual([0, 4]);
+    });
+    it('toArray(generator) is in view order', () => {
+      const lens: number[] = [];
+      const out = LinkedList.of(1, 2, 3).reversed().toArray((n) => (lens.push(n), new Uint8Array(n)));
+      expect(out).toBeInstanceOf(Uint8Array);
+      expect([Array.from(out), lens]).toEqual([[3, 2, 1], [3]]);
+      expectThrows(() => LinkedList.of(1).reversed().toArray(null as any), 'NullPointerException');
+    });
+  });
+
   describe('clone', () => {
+    it('keeps the runtime subclass', () => {
+      class Sub<E> extends LinkedList<E> {
+        tag = 'sub';
+      }
+      const s = new Sub<number>();
+      s.add(1);
+      s.add(2);
+      const c = s.clone();
+      expect(c).toBeInstanceOf(Sub);
+      expect((c as Sub<number>).tag).toBe('sub');
+      expect(checkLinks(c)).toEqual([1, 2]);
+      const rc = s.reversed().clone();
+      expect(rc).toBeInstanceOf(Sub);
+      expect(rc.toArray()).toEqual([2, 1]);
+    });
     it('copies contents', () => expect(LinkedList.of(1, null, 3).clone().toArray()).toEqual([1, null, 3]));
     it('is independent both ways', () => {
       const a = LinkedList.of(1, 2);
@@ -517,6 +674,28 @@ describe('LinkedList · implementation', () => {
     it('removeIf whose filter modifies the list fails fast', () => {
       const l = LinkedList.of(1, 2, 3);
       expectThrows(() => l.removeIf(() => (l.add(9), false)), CME);
+    });
+    it('removeIf whose filter modifies the list removes nothing', () => {
+      const l = LinkedList.of(1, 2, 3, 4);
+      expectThrows(() => l.removeIf((x) => (x === 3 && l.pollLast(), true)), CME);
+      expect(checkLinks(l)).toEqual([1, 2, 3]);
+    });
+    it('removeIf whose filter throws leaves the list unchanged', () => {
+      const l = LinkedList.of(1, 2, 3, 4);
+      expect(() =>
+        l.removeIf((x) => {
+          if (x === 3) throw new Error('boom');
+          return true;
+        })
+      ).toThrow('boom');
+      expect(checkLinks(l)).toEqual([1, 2, 3, 4]);
+    });
+    it('toArray(generator) gets size() and fills a typed array', () => {
+      const lens: number[] = [];
+      const out = LinkedList.of(1, 2, 3).toArray((n) => (lens.push(n), new Float32Array(n)));
+      expect(out).toBeInstanceOf(Float32Array);
+      expect([Array.from(out), lens]).toEqual([[1, 2, 3], [3]]);
+      expectThrows(() => LinkedList.of(1).toArray(null as any), 'NullPointerException');
     });
     it('forEach whose action modifies the list fails fast', () => {
       const l = LinkedList.of(1, 2);

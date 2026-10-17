@@ -27,6 +27,17 @@ export abstract class AbstractMap<K, V> implements Map<K, V> {
     return this.size() === 0;
   }
 
+  /**
+   * Backs clone(): a shallow copy of this object that keeps its runtime class and every field
+   * (subclass fields included), with the cached key/value views reset. The caller must give the
+   * copy fresh storage before using it.
+   */
+  protected cloneShell(): this {
+    const m = Object.assign(Object.create(Object.getPrototypeOf(this)) as object, this) as this;
+    m.keySetView = m.valuesView = undefined;
+    return m;
+  }
+
   /** Returns the entry for key, or undefined. Subclasses override for O(1)/O(log n) lookup. */
   protected findEntry(key: unknown): MapEntry<K, V> | undefined {
     const it = this.entrySet().iterator();
@@ -304,9 +315,17 @@ class ValuesView<K, V> extends AbstractCollection<V> {
   }
 }
 
-/** AbstractMap.SimpleEntry: mutable key/value pair. */
+/** AbstractMap.SimpleEntry: mutable key/value pair. new SimpleEntry(entry) copies an entry's key and value. */
 export class SimpleEntry<K, V> implements MapEntry<K, V> {
-  constructor(private readonly key: K, private value: V) {}
+  private readonly key: K;
+  private value: V;
+  constructor(entry: MapEntry<K, V>);
+  constructor(key: K, value: V);
+  constructor(a: K | MapEntry<K, V>, b?: V) {
+    const copy = arguments.length === 1 && isEntry(a);
+    this.key = copy ? (a as MapEntry<K, V>).getKey() : (a as K);
+    this.value = copy ? (a as MapEntry<K, V>).getValue() : (b as V);
+  }
   getKey(): K {
     return this.key;
   }
@@ -329,9 +348,17 @@ export class SimpleEntry<K, V> implements MapEntry<K, V> {
   }
 }
 
-/** AbstractMap.SimpleImmutableEntry: setValue throws UnsupportedOperationException. */
+/** AbstractMap.SimpleImmutableEntry: setValue throws UnsupportedOperationException. new SimpleImmutableEntry(entry) copies an entry. */
 export class SimpleImmutableEntry<K, V> implements MapEntry<K, V> {
-  constructor(private readonly key: K, private readonly value: V) {}
+  private readonly key: K;
+  private readonly value: V;
+  constructor(entry: MapEntry<K, V>);
+  constructor(key: K, value: V);
+  constructor(a: K | MapEntry<K, V>, b?: V) {
+    const copy = arguments.length === 1 && isEntry(a);
+    this.key = copy ? (a as MapEntry<K, V>).getKey() : (a as K);
+    this.value = copy ? (a as MapEntry<K, V>).getValue() : (b as V);
+  }
   getKey(): K {
     return this.key;
   }

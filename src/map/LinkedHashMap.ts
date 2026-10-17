@@ -12,6 +12,7 @@ import { SequencedCollection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry, SequencedMap } from '../interfaces/Map';
 import { SequencedSet } from '../interfaces/Set';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { SET_BRAND, isEntry } from '../util/guards';
 import { equals, requireNonNull } from '../util/Objects';
 import { HashMap, HashNode, NodeIterator, checkCapacity, isIndexKey, isPlainKey } from './HashMap';
@@ -82,11 +83,30 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return m;
   }
 
+  /**
+   * An empty insertion-ordered map sized for numMappings mappings (a sizing hint only).
+   * @throws IllegalArgumentException if numMappings is negative or NaN
+   */
+  static newLinkedHashMap<K, V>(numMappings: number): LinkedHashMap<K, V> {
+    if (!(numMappings >= 0)) throw new IllegalArgumentException(`Negative number of mappings: ${numMappings}`);
+    return new LinkedHashMap<K, V>();
+  }
+
+  /** Shallow copy of the same runtime class, in the same order and mode; the copy evicts nothing while copying. */
   override clone(): LinkedHashMap<K, V> {
-    const m = new LinkedHashMap<K, V>(0, 0.75, this.accessOrder);
-    m.maxSize = this.maxSize;
-    for (let n = this.head; n !== null; n = n.after) m.put(n.key, n.value);
-    return m;
+    return super.clone() as LinkedHashMap<K, V>;
+  }
+
+  protected override reinitialize(): void {
+    super.reinitialize();
+    this.head = this.tail = null;
+    this.lks = this.lvs = this.les = this.rev = undefined;
+  }
+
+  protected override copyNode(key: K, value: V): HashNode<K, V> {
+    const n = super.copyNode(key, value) as LinkedNode<K, V>;
+    this.linkLast(n);
+    return n;
   }
 
   /**
@@ -105,12 +125,7 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
 
   protected override afterNodeInsertion(node: HashNode<K, V>): void {
     // linked only now: hashing a self-containing key must not see the node yet
-    const n = node as LinkedNode<K, V>;
-    const t = this.tail;
-    n.before = t;
-    if (t === null) this.head = n;
-    else t.after = n;
-    this.tail = n;
+    this.linkLast(node as LinkedNode<K, V>);
     const h = this.head!;
     if (this.size() > this.maxSize || this.removeEldestEntry(h)) this.removeNode(h);
   }
@@ -151,14 +166,18 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     else a.before = b;
   }
 
-  private moveToLast(n: LinkedNode<K, V>): void {
-    this.unlink(n);
+  private linkLast(n: LinkedNode<K, V>): void {
     const t = this.tail;
     n.before = t;
     n.after = null;
     if (t === null) this.head = n;
     else t.after = n;
     this.tail = n;
+  }
+
+  private moveToLast(n: LinkedNode<K, V>): void {
+    this.unlink(n);
+    this.linkLast(n);
   }
 
   private moveToFirst(n: LinkedNode<K, V>): void {
@@ -389,11 +408,13 @@ abstract class LinkedView<K, V, T> extends AbstractCollection<T> implements Sequ
       if (mc !== m.modCount) throw new ConcurrentModificationException();
     }
   }
-  override toArray(): T[] {
+  override toArray(): T[];
+  override toArray<A extends WritableArrayLike<T>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<T>>(generator?: (length: number) => A): T[] | A {
     const out: T[] = [];
     const m = this.map;
     for (let n = this.rev ? m.tail : m.head; n !== null; n = this.rev ? n.before : n.after) out.push(project(this.kind, n) as T);
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
   private end(first: boolean): LinkedNode<K, V> {
     const n = first !== this.rev ? this.map.head : this.map.tail;

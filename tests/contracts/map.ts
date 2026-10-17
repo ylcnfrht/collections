@@ -12,6 +12,8 @@ export interface MapOptions {
   skipScale?: boolean;
   /** access-ordered maps: overwriting a key moves it, so it is a structural change */
   accessOrdered?: boolean;
+  /** computeIfAbsent, computeIfPresent, compute and merge throw ConcurrentModificationException when the callback structurally modifies the map */
+  detectsComodificationInCompute?: boolean;
 }
 
 /** Map contract: lookup by equals/hashCode, live views, default methods, value equality. */
@@ -382,6 +384,46 @@ export function mapContract(name: string, create: () => MapType<any, any>, opts:
         const seen: string[] = [];
         of(['a', 1], ['b', 2]).forEach((k, v) => seen.push(`${k}${v}`));
         expect(seen.sort()).toEqual(['a1', 'b2']);
+      });
+      (opts.detectsComodificationInCompute ? describe : describe.skip)('callbacks that modify the map', () => {
+        const cme = 'ConcurrentModificationException';
+        it('computeIfAbsent throws ConcurrentModificationException', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.computeIfAbsent('b', () => (m.put('c', 3), 2)), cme);
+          expect(m.containsKey('b')).toBe(false);
+        });
+        it('computeIfAbsent with a null result still throws', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.computeIfAbsent('b', () => (m.remove('a'), null)), cme);
+        });
+        it('computeIfPresent throws ConcurrentModificationException', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.computeIfPresent('a', () => (m.put('c', 3), 2)), cme);
+          expect(m.get('a')).toBe(1);
+        });
+        it('compute throws ConcurrentModificationException', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.compute('b', () => (m.put('c', 3), 2)), cme);
+          expect(m.containsKey('b')).toBe(false);
+        });
+        it('compute returning null after a modification throws', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.compute('a', () => (m.put('c', 3), null)), cme);
+          expect(m.get('a')).toBe(1);
+        });
+        it('merge throws ConcurrentModificationException', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.merge('a', 1, (x: number, y: number) => (m.remove('a'), x + y)), cme);
+        });
+        it('merge returning null after a modification throws', () => {
+          const m = of(['a', 1]);
+          expectThrows(() => m.merge('a', 1, () => (m.put('c', 3), null)), cme);
+        });
+        it('a value-only change inside the callback is allowed', () => {
+          const m = of(['a', 1], ['b', 2]);
+          if (!opts.accessOrdered) expect(m.compute('a', (_k, v: number) => (m.put('b', 9), v + 1))).toBe(2);
+          expect(m.computeIfAbsent('z', () => 0)).toBe(0);
+        });
       });
       it('replaceAll', () => {
         const m = of(['a', 1], ['b', 2]);

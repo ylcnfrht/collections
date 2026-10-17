@@ -1,4 +1,5 @@
 import { collectionContract } from './contracts/collection';
+import { SortedSet } from '../src/interfaces/Set';
 import { navigableSetContract } from './contracts/navigableSet';
 import { setContract } from './contracts/set';
 import { AbstractSet } from '../src/abstract/AbstractSet';
@@ -358,4 +359,17 @@ describe('TreeSet · model-based', () => {
     expect(s.toArray()).toEqual(m);
     check(s);
   });
+});
+
+describe('TreeSet SE 27 additions', () => {
+  it('constructor rejects a non-comparator, non-collection argument with IllegalArgumentException', () => {
+    expectThrows(() => new TreeSet({} as never), 'IllegalArgumentException');
+    expectThrows(() => new TreeSet(42 as never), 'IllegalArgumentException');
+  });
+  it('headSet(..).reversed() is a SortedSet at the type level', () => {
+    const r: SortedSet<number> = TreeSet.of(1, 2, 3).headSet(5).reversed();
+    expect(r.toArray()).toEqual([3, 2, 1]);
+  });
+  it('removeAll(smaller list containing null) throws NullPointerException', () =>
+    expectThrows(() => TreeSet.of(1, 2, 3).removeAll(SimpleList.of(null)), 'NullPointerException'));
 });

@@ -223,7 +223,11 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
   private vView: ValuesView<V> | undefined;
   private descView: SubMap<K, V> | undefined;
 
-  /** new TreeMap(), new TreeMap(comparator), or a copy of a map (inheriting a sorted map's comparator). */
+  /**
+   * new TreeMap(), new TreeMap(comparator), or a copy of a map.
+   * A SortedMap source (anything with a comparator() method) keeps its comparator and order;
+   * any other Map source is ordered naturally. (One signature covers both source kinds.)
+   */
   constructor(source?: Comparator<K> | Map<K, V> | null) {
     super();
     let c: Comparator<K> | null = null;
@@ -237,10 +241,13 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     if (source != null && typeof source !== 'function') this.putAll(source);
   }
 
-  /** Shallow copy with the same comparator. */
+  /** Shallow copy of the same runtime class (subclass fields included) with the same comparator. */
   clone(): TreeMap<K, V> {
-    const m = new TreeMap<K, V>(this.cmp);
-    for (let e = this.firstNode(); e !== null; e = successor(e)) m.put(e.key, e.value);
+    const m = this.cloneShell();
+    m.root = m.maxNode = null;
+    m.count = m.modCount = 0;
+    m.esView = m.ksView = m.vView = m.descView = undefined;
+    for (let e = this.firstNode(); e !== null; e = successor(e)) m.insert(e.key, e.value, false);
     return m;
   }
 
@@ -742,9 +749,12 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     requireNonNull(fn);
     const n = this.getNode(key);
     if (n !== null && n.value !== null) return n.value;
+    const mc = this.modCount;
     const v = fn(key);
+    if (this.modCount !== mc) throw new ConcurrentModificationException();
     if (v === null || v === undefined) return null;
-    this.put(key, v);
+    if (n !== null) n.value = v;
+    else this.put(key, v);
     return v;
   }
 
@@ -754,7 +764,8 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     if (n === null || n.value === null) return null;
     const mc = this.modCount;
     const v = fn(key, n.value);
-    return this.settle(key, n, mc, v);
+    if (this.modCount !== mc) throw new ConcurrentModificationException();
+    return this.settle(key, n, v);
   }
 
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
@@ -762,8 +773,8 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     const n = this.getNode(key);
     const mc = this.modCount;
     const v = fn(key, n === null ? null : n.value);
-    if ((v === null || v === undefined) && n === null && this.modCount === mc) return null;
-    return this.settle(key, n, mc, v);
+    if (this.modCount !== mc) throw new ConcurrentModificationException();
+    return this.settle(key, n, v);
   }
 
   override merge(key: K, value: V, fn: (oldValue: V, value: V) => V | null | undefined): V | null {
@@ -772,18 +783,17 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     const n = this.getNode(key);
     const mc = this.modCount;
     const v = n === null || n.value === null ? value : fn(n.value, value);
-    return this.settle(key, n, mc, v);
+    if (this.modCount !== mc) throw new ConcurrentModificationException();
+    return this.settle(key, n, v);
   }
 
-  // store or remove a computed value; reuses n when the callback made no structural change
-  private settle(key: K, n: Node<K, V> | null, mc: number, v: V | null | undefined): V | null {
-    const fresh = n !== null && this.modCount === mc;
+  // store or remove a computed value; n is the node looked up before the callback (which made no structural change)
+  private settle(key: K, n: Node<K, V> | null, v: V | null | undefined): V | null {
     if (v === null || v === undefined) {
-      if (fresh) this.deleteNode(n!);
-      else this.remove(key);
+      if (n !== null) this.deleteNode(n);
       return null;
     }
-    if (fresh) n!.value = v;
+    if (n !== null) n.value = v;
     else this.put(key, v);
     return v;
   }
@@ -1139,6 +1149,45 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
   override put(key: K, value: V): V | null {
     if (!this.inRange(key)) throw new IllegalArgumentException('key out of range');
     return this.m.put(key, value);
+  }
+
+  // the backing map's versions keep its null-value rules and comodification checks
+  override putIfAbsent(key: K, value: V): V | null {
+    if (!this.inRange(key)) throw new IllegalArgumentException('key out of range');
+    return this.m.putIfAbsent(key, value);
+  }
+
+  override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
+    requireNonNull(fn);
+    if (!this.inRange(key)) {
+      // a null result stays a no-op, as with the Map default
+      const v = fn(key);
+      if (v === null || v === undefined) return null;
+      throw new IllegalArgumentException('key out of range');
+    }
+    return this.m.computeIfAbsent(key, fn);
+  }
+
+  override computeIfPresent(key: K, fn: (key: K, value: V) => V | null | undefined): V | null {
+    requireNonNull(fn);
+    return this.inRange(key) ? this.m.computeIfPresent(key, fn) : null;
+  }
+
+  override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
+    requireNonNull(fn);
+    if (!this.inRange(key)) {
+      const v = fn(key, null);
+      if (v === null || v === undefined) return null;
+      throw new IllegalArgumentException('key out of range');
+    }
+    return this.m.compute(key, fn);
+  }
+
+  override merge(key: K, value: V, fn: (oldValue: V, value: V) => V | null | undefined): V | null {
+    requireNonNull(fn);
+    requireNonNull(value);
+    if (!this.inRange(key)) throw new IllegalArgumentException('key out of range');
+    return this.m.merge(key, value, fn);
   }
 
   override remove(key: unknown): V | null;

@@ -1,4 +1,4 @@
-import { NavigableSet } from '../../src/interfaces/Set';
+import { NavigableSet, SortedSet } from '../../src/interfaces/Set';
 import { Comparator } from '../../src/util/Comparator';
 import { expectThrows, Point, rng, timeIt } from '../helpers';
 import { SimpleList, SimpleSet } from '../support';
@@ -15,6 +15,25 @@ export function navigableSetContract(name: string, create: (c?: Comparator<any>)
   const desc = (a: number, b: number) => b - a;
 
   describe(`${name} · NavigableSet`, () => {
+    describe('removeAll null handling', () => {
+      it('throws NullPointerException when c (smaller) contains null', () =>
+        expectThrows(() => of(1, 2, 3).removeAll(SimpleList.of(null)), 'NullPointerException'));
+      it('iterates this when not larger, so a null in c is just not found', () => {
+        const s = of(1, 2);
+        expect(s.removeAll(SimpleList.of(null, 2, 7))).toBe(true);
+        expect(s.toArray()).toEqual([1]);
+      });
+      it('uses this set\'s comparator when c is smaller', () => {
+        const s = create((a: string, b: string) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        ['A', 'b', 'x'].forEach((x) => s.add(x));
+        expect(s.removeAll(SimpleList.of('a', 'B'))).toBe(true);
+        expect(s.toArray()).toEqual(['x']);
+      });
+    });
+    it('reversed() is typed as a SortedSet on sorted views', () => {
+      const r: SortedSet<number> = of(1, 2, 3).headSet(3).reversed();
+      expect(r.toArray()).toEqual([2, 1]);
+    });
     describe('ordering', () => {
       it('iterates in ascending natural order', () => expect([...of(5, 1, 4, 2, 3)]).toEqual([1, 2, 3, 4, 5]));
       it('numbers are numeric, not lexicographic', () => expect(of(10, 9, 100, -5).toArray()).toEqual([-5, 9, 10, 100]));

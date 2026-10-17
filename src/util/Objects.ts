@@ -93,18 +93,32 @@ export function hash(...values: unknown[]): number {
   return h;
 }
 
-/** Throws NullPointerException for null or undefined. */
-export function requireNonNull<T>(o: T, message?: string): NonNullable<T> {
-  if (o === null || o === undefined) throw new NullPointerException(message);
+/** Throws NullPointerException for null or undefined. message may be a supplier, called only on failure. */
+export function requireNonNull<T>(o: T, message?: string | (() => string)): NonNullable<T> {
+  if (o === null || o === undefined) throw new NullPointerException(typeof message === 'function' ? message() : message);
   return o as NonNullable<T>;
+}
+
+/** o, or defaultObj when o is null/undefined. @throws NullPointerException if both are null */
+export function requireNonNullElse<T>(o: T | null | undefined, defaultObj: T): NonNullable<T> {
+  return o != null ? (o as NonNullable<T>) : requireNonNull(defaultObj, 'defaultObj');
+}
+
+/** o, or supplier() when o is null/undefined. @throws NullPointerException if the supplier or its result is null */
+export function requireNonNullElseGet<T>(o: T | null | undefined, supplier: () => T): NonNullable<T> {
+  return o != null ? (o as NonNullable<T>) : requireNonNull(requireNonNull(supplier, 'supplier')(), 'supplier.get()');
 }
 
 export function isNull(o: unknown): o is null | undefined {
   return o === null || o === undefined;
 }
 
-/** String form used by collection toString(): null -> "null". */
-export function toString(o: unknown): string {
+/**
+ * String form used by collection toString(): null -> "null", undefined -> "undefined".
+ * With nullDefault, null and undefined both give nullDefault.
+ */
+export function toString(o: unknown, nullDefault?: string): string {
+  if (arguments.length > 1 && (o === null || o === undefined)) return nullDefault as string;
   if (o === null) return 'null';
   try {
     return String(o);
@@ -127,6 +141,51 @@ export function checkPositionIndex(index: number, length: number): number {
   return index;
 }
 
+function isIndex(n: number): boolean {
+  return Number.isInteger(n) && n >= 0;
+}
+
+/** Checks 0 <= fromIndex <= toIndex <= length. @returns fromIndex. @throws IndexOutOfBoundsException */
+export function checkFromToIndex(fromIndex: number, toIndex: number, length: number): number {
+  if (!isIndex(fromIndex) || !isIndex(toIndex) || !isIndex(length) || fromIndex > toIndex || toIndex > length) {
+    throw new IndexOutOfBoundsException(`Range [${fromIndex}, ${toIndex}) out of bounds for length ${length}`);
+  }
+  return fromIndex;
+}
+
+/** Checks [fromIndex, fromIndex + size) lies within [0, length). @returns fromIndex. @throws IndexOutOfBoundsException */
+export function checkFromIndexSize(fromIndex: number, size: number, length: number): number {
+  if (!isIndex(fromIndex) || !isIndex(size) || !isIndex(length) || size > length - fromIndex) {
+    throw new IndexOutOfBoundsException(`Range [${fromIndex}, ${fromIndex} + ${size}) out of bounds for length ${length}`);
+  }
+  return fromIndex;
+}
+
+/** 0 if a and b are identical (===), else c(a, b); c is not called for identical arguments. */
+export function compare<T>(a: T, b: T, c: (a: T, b: T) => number): number {
+  return a === b ? 0 : c(a, b);
+}
+
+function isArrayValue(o: unknown): o is ArrayLike<unknown> {
+  return Array.isArray(o) || (ArrayBuffer.isView(o) && !(o instanceof DataView));
+}
+
+/** Like equals, but arrays (plain and typed) compare element by element, recursively. */
+export function deepEquals(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!isArrayValue(a) || !isArrayValue(b)) return equals(a, b);
+  if (Array.isArray(a) !== Array.isArray(b) || a.constructor !== b.constructor || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (!deepEquals(a[i], b[i])) return false;
+  return true;
+}
+
+/** `${constructorName}@${hex identity hash}`, ignoring any toString()/hashCode(). @throws NullPointerException for null */
+export function toIdentityString(o: unknown): string {
+  requireNonNull(o);
+  const name = typeof o === 'object' || typeof o === 'function' ? (o as object).constructor?.name || 'Object' : typeof o;
+  return `${name}@${(identityHashCode(o) >>> 0).toString(16)}`;
+}
+
 export const Objects = {
   equals,
   hashCode,
@@ -137,4 +196,11 @@ export const Objects = {
   nonNull: (o: unknown) => !isNull(o),
   toString,
   checkIndex,
+  checkFromToIndex,
+  checkFromIndexSize,
+  requireNonNullElse,
+  requireNonNullElseGet,
+  compare,
+  deepEquals,
+  toIdentityString,
 };

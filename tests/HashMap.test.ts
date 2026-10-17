@@ -1,11 +1,11 @@
-import { SimpleEntry } from '../src/abstract/AbstractMap';
+import { SimpleEntry, SimpleImmutableEntry } from '../src/abstract/AbstractMap';
 import { MapEntry } from '../src/interfaces/Map';
 import { HashMap, HashNode, NodeIterator } from '../src/map/HashMap';
 import { mapContract } from './contracts/map';
-import { Collide, expectThrows, Point, rng } from './helpers';
+import { Collide, expectThrows, Point, rng, timeIt } from './helpers';
 import { SimpleMap } from './support';
 
-mapContract('HashMap', () => new HashMap(), { allowsNullKey: true, allowsNullValue: true });
+mapContract('HashMap', () => new HashMap(), { allowsNullKey: true, allowsNullValue: true, detectsComodificationInCompute: true });
 
 /** Key that claims equality with the primitive 1 (an asymmetric, contract-violating equals). */
 class LikeOne {
@@ -152,9 +152,10 @@ describe('HashMap · implementation', () => {
       const m = new HashMap<string, number>();
       for (let i = 0; i < 50_000; i++) m.put('k' + i, i);
       const ks = m.keySet();
-      const t = Date.now();
-      for (let i = 0; i < 50_000; i += 2) if (!ks.contains('k' + i) || !ks.remove('k' + i)) throw new Error('missing ' + i);
-      expect(Date.now() - t).toBeLessThan(500);
+      const ms = timeIt(() => {
+        for (let i = 0; i < 50_000; i += 2) if (!ks.contains('k' + i) || !ks.remove('k' + i)) throw new Error('missing ' + i);
+      });
+      expect(ms).toBeLessThan(500);
       expect([m.size(), ks.remove('k0')]).toEqual([25_000, false]);
     });
     it('entrySet contains/remove are O(1) and check the value', () => {
@@ -294,15 +295,14 @@ describe('HashMap · implementation', () => {
       expect(m.merge('a', 3, fn)).toBe(6);
     });
     it('merge null fn throws NullPointerException', () => expectThrows(() => new HashMap().merge('a', 1, null as any), 'NullPointerException'));
-    it('compute functions that modify the map still leave a consistent result', () => {
-      const m = HashMap.of<string, number>(['a', 1]);
-      expect(m.computeIfAbsent('b', (k) => (m.put('c', 3), k.length))).toBe(1);
-      expect(m.computeIfPresent('a', () => (m.remove('a'), 7))).toBe(7);
-      expect(m.compute('c', () => (m.put('d', 4), null))).toBeNull();
-      expect(m.merge('d', 1, () => (m.put('e', 5), null))).toBeNull();
-      expect(m.merge('e', 1, (x, y) => (m.put('f', 6), x + y))).toBe(6);
-      expect(sorted(m.keySet().toArray())).toEqual(['a', 'b', 'e', 'f']);
-      expect([m.get('a'), m.get('b'), m.get('e')]).toEqual([7, 1, 6]);
+    it('compute functions that structurally modify the map throw ConcurrentModificationException', () => {
+      const m = HashMap.of<unknown, number>(['a', 1], [new Point(1, 1), 2], [3, 3]);
+      const CME = 'ConcurrentModificationException';
+      expectThrows(() => m.computeIfAbsent('b', (k) => (m.put('c', 3), 1)), CME);
+      expectThrows(() => m.computeIfPresent('a', () => (m.remove('a'), 7)), CME);
+      expectThrows(() => m.compute(new Point(1, 1), () => (m.put(new Point(9, 9), 4), null)), CME);
+      expectThrows(() => m.merge(3, 1, () => (m.clear(), 1)), CME);
+      expect(m.isEmpty()).toBe(true);
     });
     it('compute functions on value keys', () => {
       const m = new HashMap<Point, number>();
@@ -347,6 +347,27 @@ describe('HashMap · implementation', () => {
       m.putAll(SimpleMap.of(['a', 2], ['b', 3]));
       m.putAll(m);
       expect([m.get('a'), m.get('b'), m.size()]).toEqual([2, 3, 2]);
+    });
+    it('clone keeps the runtime subclass, its fields and an overridden put', () => {
+      class Sub<K, V> extends HashMap<K, V> {
+        puts = 0;
+        override put(k: K, v: V): V | null {
+          this.puts++;
+          return super.put(k, v);
+        }
+      }
+      const m = new Sub<unknown, number>();
+      m.put(1, 1);
+      m.put('a', 2);
+      m.put(new Point(1, 1), 3);
+      m.keySet();
+      m.values();
+      m.entrySet();
+      const c = m.clone() as Sub<unknown, number>;
+      expect([c instanceof Sub, c.puts, c.size(), c.get(new Point(1, 1)), c.equals(m)]).toEqual([true, 3, 3, 3, true]);
+      c.put('b', 4);
+      expect([c.puts, m.puts, m.size(), c.keySet().size(), m.keySet().size(), c.values().size(), c.entrySet().size()]).toEqual([4, 3, 3, 4, 3, 4, 4]);
+      expect(new Sub().clone()).toBeInstanceOf(Sub);
     });
     it('clone is independent and a HashMap', () => {
       const m = HashMap.of<unknown, number>([1, 1], ['a', 2], [new Point(1, 1), 3]);
@@ -534,5 +555,53 @@ describe('HashMap · implementation', () => {
       }
       expect(n).toBe(ref.size);
     });
+  });
+});
+
+describe('HashMap · newHashMap', () => {
+  it('returns an empty HashMap', () => {
+    const m = HashMap.newHashMap<string, number>(10);
+    expect([m instanceof HashMap, m.size()]).toEqual([true, 0]);
+    expect(HashMap.newHashMap(0).isEmpty()).toBe(true);
+  });
+  it('negative or NaN throws IllegalArgumentException', () => {
+    expectThrows(() => HashMap.newHashMap(-1), 'IllegalArgumentException');
+    expectThrows(() => HashMap.newHashMap(NaN), 'IllegalArgumentException');
+  });
+});
+
+describe('HashMap · view toArray(generator)', () => {
+  const m = () => HashMap.of<unknown, number>([1, 10], ['a', 20], [new Point(1, 1), 30]);
+  it('keySet / values / entrySet fill the generated array', () => {
+    const lens: number[] = [];
+    const ks = m().keySet().toArray((n) => (lens.push(n), new Array<unknown>(n)));
+    const vs = m().values().toArray((n) => new Float64Array(n));
+    const es = m().entrySet().toArray((n) => new Array<MapEntry<unknown, number>>(n));
+    expect([lens, ks.length, [...vs].sort(), es.map((e) => e.getValue()).sort()]).toEqual([[3], 3, [10, 20, 30], [10, 20, 30]]);
+    expect(vs).toBeInstanceOf(Float64Array);
+  });
+  it('a too-short typed array throws IndexOutOfBoundsException; null generator throws NullPointerException', () => {
+    expectThrows(() => m().values().toArray(() => new Float64Array(1)), 'IndexOutOfBoundsException');
+    expectThrows(() => m().keySet().toArray(null as any), 'NullPointerException');
+  });
+});
+
+describe('AbstractMap.SimpleEntry / SimpleImmutableEntry copy constructors', () => {
+  it('new SimpleEntry(entry) copies key and value', () => {
+    const src = new SimpleEntry('k', 1);
+    const e = new SimpleEntry(src);
+    src.setValue(2);
+    expect([e.getKey(), e.getValue(), e.setValue(5), e.getValue(), src.getValue()]).toEqual(['k', 1, 1, 5, 2]);
+  });
+  it('new SimpleImmutableEntry(entry) copies key and value', () => {
+    const e = new SimpleImmutableEntry(HashMap.of(['k', 1]).entrySet().iterator().next());
+    expect([e.getKey(), e.getValue(), e.equals(new SimpleEntry('k', 1))]).toEqual(['k', 1, true]);
+    expectThrows(() => e.setValue(2), 'UnsupportedOperationException');
+  });
+  it('two arguments still mean (key, value), even when the key is an entry', () => {
+    const k = new SimpleEntry('x', 0);
+    const e = new SimpleEntry(k, 1);
+    expect([e.getKey(), e.getValue()]).toEqual([k, 1]);
+    expect(new SimpleImmutableEntry<string, undefined>('a', undefined).getKey()).toBe('a');
   });
 });

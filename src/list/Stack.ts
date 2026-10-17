@@ -1,7 +1,7 @@
-import { NoSuchElementException } from '../exceptions';
+import { EmptyStackException } from '../exceptions';
 import { Vector } from './Vector';
 
-/** LIFO stack on top of Vector. Empty pop()/peek() throw NoSuchElementException (the EmptyStackException role). */
+/** LIFO stack on top of Vector. Empty pop()/peek() throw EmptyStackException. */
 export class Stack<E> extends Vector<E> {
   static override of<E>(...xs: E[]): Stack<E> {
     return super.of(...xs) as Stack<E>;
@@ -13,18 +13,18 @@ export class Stack<E> extends Vector<E> {
     return e;
   }
 
-  /** @throws NoSuchElementException when empty */
+  /** @throws EmptyStackException when empty */
   pop(): E {
     const a = this.es;
-    if (a.length === 0) throw new NoSuchElementException('Stack is empty');
+    if (a.length === 0) throw new EmptyStackException('Stack is empty');
     this.modCount++;
     return a.pop() as E;
   }
 
-  /** @throws NoSuchElementException when empty */
+  /** @throws EmptyStackException when empty */
   peek(): E {
     const a = this.es;
-    if (a.length === 0) throw new NoSuchElementException('Stack is empty');
+    if (a.length === 0) throw new EmptyStackException('Stack is empty');
     return a[a.length - 1];
   }
 

@@ -38,3 +38,4 @@ export { LinkedHashSet } from './set/LinkedHashSet';
 export { TreeSet } from './set/TreeSet';
 
 export { Collections } from './Collections';
+export type { RandomSource, TypeCheck } from './Collections';

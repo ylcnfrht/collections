@@ -20,11 +20,15 @@ export interface List<E> extends SequencedCollection<E> {
   indexOf(o: unknown): number;
   lastIndexOf(o: unknown): number;
   listIterator(index?: number): ListIterator<E>;
-  /** Live view of [fromIndex, toIndex). */
+  /**
+   * Live view of [fromIndex, toIndex): changes through either side are visible in the other.
+   * A structural change made to this list other than through the view makes the view fail fast
+   * (ConcurrentModificationException). RandomAccess when this list is.
+   */
   subList(fromIndex: number, toIndex: number): List<E>;
   replaceAll(operator: (e: E) => E): void;
   /** null = natural ordering. Stable. */
   sort(c?: Comparator<E> | null): void;
-  /** Live reverse-ordered view. */
+  /** Live reverse-ordered view: changes through either side are visible in the other. RandomAccess when this list is. */
   reversed(): List<E>;
 }

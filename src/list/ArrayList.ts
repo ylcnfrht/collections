@@ -8,6 +8,7 @@ import {
 } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { Comparator, naturalCompare, stableSort } from '../util/Comparator';
 import { isList, RANDOM_ACCESS } from '../util/guards';
 import { checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
@@ -179,8 +180,10 @@ export class ArrayList<E> extends AbstractList<E> {
     return -1;
   }
 
-  override toArray(): E[] {
-    return this.es.slice();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith(this.es, generator as (length: number) => A) : this.es.slice();
   }
 
   override clear(): void {
@@ -258,6 +261,8 @@ export class ArrayList<E> extends AbstractList<E> {
     const n = a.length;
     for (let i = 0; i < n && a.length === n; i++) a[i] = operator(a[i]);
     if (this.modCount !== mc) throw new ConcurrentModificationException();
+    // like the reference: open iterators fail fast after a bulk replace
+    this.modCount++;
   }
 
   override sort(c: Comparator<E> | null = null): void {
@@ -313,7 +318,7 @@ export class ArrayList<E> extends AbstractList<E> {
       }
       return true;
     }
-    const it = o.iterator();
+    const it = o.listIterator();
     for (let i = 0; i < n; i++) {
       if (!it.hasNext()) return false;
       const x = a[i];
@@ -437,7 +442,9 @@ class ArrayListItr<E> implements ListIterator<E> {
 
   add(e: E): void {
     if (this.list.modCount !== this.expectedModCount) throw new ConcurrentModificationException();
-    this.list.add(this.cursor++, e);
+    const i = this.cursor;
+    this.list.add(i, e);
+    this.cursor = i + 1;
     this.lastRet = -1;
     this.expectedModCount = this.list.modCount;
   }
@@ -448,8 +455,11 @@ class ArrayListItr<E> implements ListIterator<E> {
     const mc = this.expectedModCount;
     let i = this.cursor;
     for (const n = a.length; i < n && this.list.modCount === mc; i++) action(a[i]);
-    this.cursor = i;
-    this.lastRet = i - 1;
+    // nothing consumed: keep lastRet, so a following remove()/set() acts as before the call
+    if (i !== this.cursor) {
+      this.cursor = i;
+      this.lastRet = i - 1;
+    }
     if (this.list.modCount !== mc) throw new ConcurrentModificationException();
   }
 }

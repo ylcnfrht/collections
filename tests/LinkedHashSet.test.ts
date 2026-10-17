@@ -325,3 +325,25 @@ describe('LinkedHashSet · model test vs JS Set', () => {
     expect(n).toBe(100_000);
   });
 });
+
+describe('LinkedHashSet SE 27 additions', () => {
+  it('newLinkedHashSet(n) returns an empty LinkedHashSet keeping insertion order', () => {
+    const s = LinkedHashSet.newLinkedHashSet<number>(4);
+    [3, 1, 2].forEach((x) => s.add(x));
+    expect([s instanceof LinkedHashSet, s.toArray()]).toEqual([true, [3, 1, 2]]);
+  });
+  it('newLinkedHashSet rejects negative and NaN', () => {
+    expectThrows(() => LinkedHashSet.newLinkedHashSet(-1), 'IllegalArgumentException');
+    expectThrows(() => LinkedHashSet.newLinkedHashSet(NaN), 'IllegalArgumentException');
+  });
+  it('constructor rejects a non-collection argument with IllegalArgumentException', () => {
+    expectThrows(() => new LinkedHashSet({} as never), 'IllegalArgumentException');
+    expectThrows(() => new LinkedHashSet(null as never), 'NullPointerException');
+  });
+  it('toArray(generator) keeps insertion order, also on reversed()', () => {
+    const s = LinkedHashSet.of(3, 1, 2);
+    expect(Array.from(s.toArray((n) => new Int32Array(n)))).toEqual([3, 1, 2]);
+    expect(s.reversed().toArray((n) => new Array<number>(n))).toEqual([2, 1, 3]);
+    expectThrows(() => s.reversed().toArray(() => new Int32Array(0)), 'IndexOutOfBoundsException');
+  });
+});

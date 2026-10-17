@@ -1,8 +1,9 @@
-import { AbstractSet } from '../abstract/AbstractSet';
-import { ConcurrentModificationException, IllegalStateException, NoSuchElementException } from '../exceptions';
+import { AbstractSet, requireCollection } from '../abstract/AbstractSet';
+import { ConcurrentModificationException, IllegalArgumentException, IllegalStateException, NoSuchElementException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { checkCapacity, fitsIndexTable, isIndexKey, isPlainKey, jsIterator } from '../map/HashMap';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { equals, hashCode, requireNonNull } from '../util/Objects';
 
 /**
@@ -28,10 +29,20 @@ export class HashSet<E> extends AbstractSet<E> {
   constructor();
   constructor(initialCapacity: number, loadFactor?: number);
   constructor(c: Collection<E>);
+  /** @throws IllegalArgumentException for a negative capacity, non-positive load factor, or an argument that is neither a number nor a collection */
   constructor(a?: number | Collection<E>, loadFactor?: number) {
     super();
     if (typeof a === 'number') checkCapacity(a, loadFactor);
-    else if (a !== undefined) this.addAll(requireNonNull(a));
+    else if (a !== undefined) this.addAll(requireCollection<E>(a, 'a capacity or a Collection'));
+  }
+
+  /**
+   * An empty HashSet sized for numElements. Capacity is only a hint here, so this just validates it.
+   * @throws IllegalArgumentException if numElements is negative or NaN
+   */
+  static newHashSet<E>(numElements: number): HashSet<E> {
+    if (!(numElements >= 0)) throw new IllegalArgumentException(`Negative number of elements: ${numElements}`);
+    return new HashSet<E>();
   }
 
   static of<E>(...xs: E[]): HashSet<E> {
@@ -193,7 +204,9 @@ export class HashSet<E> extends AbstractSet<E> {
     }
   }
 
-  override toArray(): E[] {
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     const out: E[] = [];
     if (this.intCount !== 0) {
       const ints = this.ints;
@@ -201,7 +214,7 @@ export class HashSet<E> extends AbstractSet<E> {
     }
     for (const e of this.fast) out.push(e as E);
     if (this.valueCount !== 0) for (const b of this.buckets.values()) for (let i = 0; i < b.length; i++) out.push(b[i]);
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 
   override removeIf(filter: (e: E) => boolean): boolean {

@@ -1,6 +1,8 @@
+import { IllegalArgumentException } from '../exceptions';
+import { Collection } from '../interfaces/Collection';
 import { Set } from '../interfaces/Set';
 import { SET_BRAND, isSet } from '../util/guards';
-import { hashCode } from '../util/Objects';
+import { hashCode, requireNonNull } from '../util/Objects';
 import { AbstractCollection } from './AbstractCollection';
 
 /** Skeleton of AbstractSet: value equality with any Set, hashCode = sum of element hashes. */
@@ -21,10 +23,36 @@ export abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
     }
   }
 
+  /**
+   * Removes every element also in c. Walks the smaller side, sized by size():
+   * when this set is larger, iterates c and calls this.remove(e) for each element (so this set's
+   * equality decides, and remove(null) may throw NullPointerException);
+   * otherwise iterates this set, removing (iterator.remove, via removeIf) each element c.contains().
+   * @throws NullPointerException if c is null, or this set contains null and c does not permit null
+   */
+  override removeAll(c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    if (this.size() > c.size()) {
+      let modified = false;
+      const it = c.iterator();
+      while (it.hasNext()) if (this.remove(it.next())) modified = true;
+      return modified;
+    }
+    return this.removeIf((e) => c.contains(e));
+  }
+
   override hashCode(): number {
     let h = 0;
     const it = this.iterator();
     while (it.hasNext()) h = (h + hashCode(it.next())) | 0;
     return h;
   }
+}
+
+/** Constructor guard: a copy-constructor argument must be a collection (anything with toArray()). @internal */
+export function requireCollection<E>(c: unknown, what: string): Collection<E> {
+  if (typeof (requireNonNull(c) as { toArray?: unknown }).toArray !== 'function') {
+    throw new IllegalArgumentException(`expected ${what}`);
+  }
+  return c as Collection<E>;
 }

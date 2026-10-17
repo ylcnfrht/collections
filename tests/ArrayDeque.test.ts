@@ -46,7 +46,13 @@ describe('ArrayDeque · implementation', () => {
       [1000, 1024],
     ])('capacity hint %p -> %p slots', (n, c) => expect(cap(new ArrayDeque(n))).toBe(c));
     it('hint NaN falls back to minimum', () => expect(cap(new ArrayDeque(NaN))).toBe(8));
-    it('absurd hint throws IllegalArgumentException', () => expectThrows(() => new ArrayDeque(2 ** 31), 'IllegalArgumentException'));
+    it.each([2 ** 30, 2 ** 31, Infinity])('huge hint %p is clamped, not rejected', (n) => {
+      const d = new ArrayDeque<number>(n);
+      expect(cap(d)).toBe(2 ** 30);
+      d.addLast(1);
+      d.addFirst(0);
+      expect([d.toArray(), d.pollLast(), d.pollFirst(), d.isEmpty()]).toEqual([[0, 1], 1, 0, true]);
+    });
     it('hinted deque holds n elements without growing', () => {
       const d = new ArrayDeque<number>(100);
       const a = d.elements;
@@ -334,15 +340,39 @@ describe('ArrayDeque · implementation', () => {
       expect(d.removeIf(() => false)).toBe(false);
       expect(it.next()).toBe(1);
     });
-    it('removeIf whose predicate throws keeps every unremoved element', () => {
+    it('removeIf whose predicate throws leaves the deque unchanged', () => {
       const d = wrapped(7, 3);
+      const it = d.iterator();
       expect(() =>
         d.removeIf((x) => {
           if (x === 4) throw new Error('boom');
           return x % 2 === 0;
         })
       ).toThrow('boom');
-      expect(d.toArray()).toEqual([1, 3, 4, 5, 6]);
+      expect(d.toArray()).toEqual(range(7));
+      expect(it.next()).toBe(0); // no modCount bump either
+    });
+    it('removeIf whose predicate calls pollLast(): ConcurrentModificationException, no free slot leaks in', () => {
+      const d = wrapped(4, 2, 7, (i) => i + 1);
+      expectThrows(() => d.removeIf((x) => (x === 1 && d.pollLast(), x === 1)), 'ConcurrentModificationException');
+      expect(d.toArray()).toEqual([1, 2, 3]);
+      expect(vacatedClear(d)).toBe(true);
+    });
+    it('removeIf whose predicate calls addLast(9): ConcurrentModificationException, nothing lost', () => {
+      const d = wrapped(4, 2, 7, (i) => i + 1);
+      expectThrows(() => d.removeIf((x) => (x === 2 && d.addLast(9), x <= 2)), 'ConcurrentModificationException');
+      expect(d.toArray()).toEqual([1, 2, 3, 4, 9]);
+    });
+    it('removeIf on the reversed view whose predicate modifies the deque', () => {
+      const d = ArrayDeque.of(1, 2, 3, 4);
+      expectThrows(() => d.reversed().removeIf((x) => (x === 4 && d.pollLast(), true)), 'ConcurrentModificationException');
+      expect(d.toArray()).toEqual([1, 2, 3]);
+    });
+    it('removeIf that removes clears vacated slots of a wrapped buffer', () => {
+      const d = wrapped(7, 3, 7, box);
+      expect(d.removeIf((b) => b.i % 2 === 1)).toBe(true);
+      expect(d.toArray().map((b) => b.i)).toEqual([0, 2, 4, 6]);
+      expect(vacatedClear(d)).toBe(true);
     });
     it('removeAll / retainAll on a wrapped buffer', () => {
       const a = wrapped(7, 2);
@@ -505,6 +535,22 @@ describe('ArrayDeque · implementation', () => {
     });
   });
 
+  describe('toArray(generator)', () => {
+    it('wrapped buffer into a generated typed array of exactly size()', () => {
+      const d = wrapped(6, 2);
+      const lens: number[] = [];
+      const out = d.toArray((n) => (lens.push(n), new Int16Array(n)));
+      expect(out).toBeInstanceOf(Int16Array);
+      expect(Array.from(out)).toEqual(range(6));
+      expect(lens).toEqual([6]);
+    });
+    it('reversed view of a wrapped buffer', () => {
+      expect(wrapped(6, 2).reversed().toArray((n) => new Array<number>(n))).toEqual(range(6).reverse());
+    });
+    it('a too-short fixed-size result throws IndexOutOfBoundsException', () =>
+      expectThrows(() => ArrayDeque.of(1, 2).toArray(() => new Int8Array(1)), 'IndexOutOfBoundsException'));
+  });
+
   describe('clone', () => {
     it('copies contents and order', () => expect(wrapped(6, 2).clone().toArray()).toEqual(range(6)));
     it('is independent of the original', () => {
@@ -516,6 +562,18 @@ describe('ArrayDeque · implementation', () => {
       expect(d.toArray()).toEqual([-1, ...range(6)]);
       expect(c.toArray()).toEqual([...range(6).slice(1), 100]);
       expect(c.elements).not.toBe(d.elements);
+    });
+    it('keeps the runtime subclass', () => {
+      class Sub<E> extends ArrayDeque<E> {
+        tag = 'sub';
+      }
+      const s = new Sub<number>();
+      s.addLast(1);
+      s.addLast(2);
+      const c = s.clone();
+      expect(c).toBeInstanceOf(Sub);
+      expect((c as Sub<number>).tag).toBe('sub');
+      expect(c.toArray()).toEqual([1, 2]);
     });
     it('clone of empty is empty and usable', () => {
       const c = new ArrayDeque<number>().clone();

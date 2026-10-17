@@ -5,9 +5,14 @@ import { mapContract } from './contracts/map';
 import { Collide, expectThrows, Point, rng } from './helpers';
 import { SimpleMap } from './support';
 
-mapContract('LinkedHashMap', () => new LinkedHashMap(), { allowsNullKey: true, allowsNullValue: true });
-mapContract('LinkedHashMap (access order)', () => new LinkedHashMap(16, 0.75, true), { allowsNullKey: true, allowsNullValue: true, accessOrdered: true });
-mapContract('LinkedHashMap.reversed()', () => new LinkedHashMap().reversed(), { allowsNullKey: true, allowsNullValue: true });
+mapContract('LinkedHashMap', () => new LinkedHashMap(), { allowsNullKey: true, allowsNullValue: true, detectsComodificationInCompute: true });
+mapContract('LinkedHashMap (access order)', () => new LinkedHashMap(16, 0.75, true), {
+  allowsNullKey: true,
+  allowsNullValue: true,
+  accessOrdered: true,
+  detectsComodificationInCompute: true,
+});
+mapContract('LinkedHashMap.reversed()', () => new LinkedHashMap().reversed(), { allowsNullKey: true, allowsNullValue: true, detectsComodificationInCompute: true });
 
 const keys = (m: { keySet(): { toArray(): unknown[] } }) => m.keySet().toArray();
 const lhm = (...ks: unknown[]) => {
@@ -697,5 +702,99 @@ describe('LinkedHashMap · typing', () => {
     const m: SequencedMap<string, number> = new LinkedHashMap();
     m.putLast('a', 1);
     expect(m.reversed().firstEntry()!.getKey()).toBe('a');
+  });
+});
+
+describe('LinkedHashMap · clone of subclasses', () => {
+  class Lru<K, V> extends LinkedHashMap<K, V> {
+    evictions = 0;
+    constructor(private readonly max: number) {
+      super(16, 0.75, true);
+    }
+    protected override removeEldestEntry(): boolean {
+      const evict = this.size() > this.max;
+      if (evict) this.evictions++;
+      return evict;
+    }
+  }
+  it('keeps the runtime subclass, access order and fields', () => {
+    const m = new Lru<number, string>(3);
+    [1, 2, 3].forEach((k) => m.put(k, `v${k}`));
+    m.get(1);
+    const c = m.clone() as Lru<number, string>;
+    expect([c instanceof Lru, c.accessOrder, keys(c), c.evictions]).toEqual([true, true, [2, 3, 1], 0]);
+    class Plain extends LinkedHashMap<number, number> {}
+    expect(new Plain().clone()).toBeInstanceOf(Plain);
+  });
+  it('copying does not evict, even when removeEldestEntry would; the next put does', () => {
+    const m = new Lru<number, string>(3);
+    [1, 2, 3].forEach((k) => m.put(k, `v${k}`));
+    (m as unknown as { max: number }).max = 1; // the copy would evict on every insertion if the hook ran
+    const c = m.clone() as Lru<number, string>;
+    expect([keys(c), c.evictions]).toEqual([[1, 2, 3], 0]);
+    c.put(4, 'v4');
+    expect([keys(c), c.evictions]).toEqual([[2, 3, 4], 1]);
+    expect(keys(m)).toEqual([1, 2, 3]);
+  });
+  it('the clone has its own list and views', () => {
+    const m = lhm(1, 2, 3);
+    const mk = m.keySet();
+    m.reversed();
+    const c = m.clone();
+    c.putFirst(9, 'x');
+    c.remove(2);
+    expect([keys(c), keys(m), c.keySet() === mk, [...c.reversed().keySet()]]).toEqual([[9, 1, 3], [1, 2, 3], false, [3, 1, 9]]);
+  });
+  it('lru(n) clone keeps the limit', () => {
+    const m = LinkedHashMap.lru<number, number>(2);
+    m.put(1, 1);
+    m.put(2, 2);
+    const c = m.clone();
+    c.put(3, 3);
+    expect([keys(c), keys(m)]).toEqual([[2, 3], [1, 2]]);
+  });
+});
+
+describe('LinkedHashMap · compute callbacks', () => {
+  it('in access order a get() inside the callback is structural', () => {
+    const m = new LinkedHashMap<string, number>(16, 0.75, true);
+    m.put('a', 1);
+    m.put('b', 2);
+    expectThrows(() => m.computeIfPresent('b', (_k, v) => (m.get('a'), v + 1)), 'ConcurrentModificationException');
+    expect(m.get('b')).toBe(2);
+  });
+  it('in insertion order a get() inside the callback is fine', () => {
+    const m = lhm('a', 'b');
+    expect(m.computeIfPresent('b', () => (m.get('a'), 'x'))).toBe('x');
+  });
+});
+
+describe('LinkedHashMap · newLinkedHashMap', () => {
+  it('returns an empty insertion-ordered LinkedHashMap', () => {
+    const m = LinkedHashMap.newLinkedHashMap<number, number>(4);
+    m.put(2, 2);
+    m.put(1, 1);
+    m.get(2);
+    expect([m instanceof LinkedHashMap, m.accessOrder, keys(m)]).toEqual([true, false, [2, 1]]);
+  });
+  it('negative or NaN throws IllegalArgumentException', () => {
+    expectThrows(() => LinkedHashMap.newLinkedHashMap(-1), 'IllegalArgumentException');
+    expectThrows(() => LinkedHashMap.newLinkedHashMap(NaN), 'IllegalArgumentException');
+  });
+});
+
+describe('LinkedHashMap · view toArray(generator)', () => {
+  it('keys / values / entries, forward and reversed', () => {
+    const m = lhm(1, 2, 3);
+    const lens: number[] = [];
+    expect(m.keySet().toArray((n) => (lens.push(n), new Array<unknown>(n)))).toEqual([1, 2, 3]);
+    expect(m.sequencedKeySet().reversed().toArray((n) => new Array<unknown>(n))).toEqual([3, 2, 1]);
+    expect(m.values().toArray((n) => new Array<unknown>(n))).toEqual(['v1', 'v2', 'v3']);
+    expect(m.entrySet().toArray((n) => new Array<MapEntry<unknown, unknown>>(n)).map((e) => e.getKey())).toEqual([1, 2, 3]);
+    expect(lens).toEqual([3]);
+    const nums = new LinkedHashMap<string, number>();
+    nums.put('a', 1.5);
+    expect(nums.values().toArray((n) => new Float64Array(n))).toEqual(new Float64Array([1.5]));
+    expectThrows(() => m.values().toArray(() => new Float64Array(0) as any), 'IndexOutOfBoundsException');
   });
 });

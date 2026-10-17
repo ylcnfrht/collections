@@ -21,6 +21,7 @@ export interface SortedSet<E> extends SequencedSet<E> {
   headSet(toElement: E): SortedSet<E>;
   tailSet(fromElement: E): SortedSet<E>;
   subSet(fromElement: E, toElement: E): SortedSet<E>;
+  reversed(): SortedSet<E>;
 }
 
 /** NavigableSet */

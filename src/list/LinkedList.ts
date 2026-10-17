@@ -6,6 +6,7 @@ import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { List } from '../interfaces/List';
 import { Deque } from '../interfaces/Queue';
 import { Comparator, stableSort } from '../util/Comparator';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { isList } from '../util/guards';
 import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 
@@ -31,9 +32,12 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
   /** @internal */ last: Node<E> | null = null;
   /** @internal */ _size = 0;
 
+  constructor();
+  constructor(c: Collection<E>);
   constructor(c?: Collection<E>) {
     super();
-    if (c !== undefined) this.addAllAt(0, c);
+    // an explicit undefined is a null collection: NullPointerException
+    if (arguments.length > 0) this.addAllAt(0, c as Collection<E>);
   }
 
   static of<E>(...xs: E[]): LinkedList<E> {
@@ -42,9 +46,9 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return l;
   }
 
-  /** Shallow independent copy. */
+  /** Shallow independent copy, of the same runtime class. */
   clone(): LinkedList<E> {
-    const c = new LinkedList<E>();
+    const c = new (this.constructor as new () => LinkedList<E>)();
     for (let x = this.first; x !== null; x = x.next) c.linkLast(x.item);
     return c;
   }
@@ -265,11 +269,13 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return -1;
   }
 
-  override toArray(): E[] {
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     const out = new Array<E>(this._size);
     let i = 0;
     for (let x = this.first; x !== null; x = x.next) out[i++] = x.item;
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 
   override clear(): void {
@@ -297,20 +303,17 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
 
   override removeIf(filter: (e: E) => boolean): boolean {
     requireNonNull(filter);
-    let expected = this.modCount;
-    let removed = false;
-    for (let x = this.first; x !== null; ) {
-      const next = x.next;
+    const mc = this.modCount;
+    // two phases: a throwing or list-modifying predicate leaves every element in place
+    let hits: Node<E>[] | null = null;
+    for (let x = this.first; x !== null; x = x.next) {
       const hit = filter(x.item);
-      if (this.modCount !== expected) throw new ConcurrentModificationException();
-      if (hit) {
-        this.unlink(x);
-        expected++;
-        removed = true;
-      }
-      x = next;
+      if (this.modCount !== mc) throw new ConcurrentModificationException();
+      if (hit) (hits ??= []).push(x);
     }
-    return removed;
+    if (hits === null) return false;
+    for (let i = 0; i < hits.length; i++) this.unlink(hits[i]);
+    return true;
   }
 
   override replaceAll(operator: (e: E) => E): void {
@@ -459,8 +462,9 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return new DescendingItr(this);
   }
 
-  override reversed(): ReversedLinkedList<E> {
-    return new ReversedLinkedList(this);
+  /** Live reverse-ordered view; itself a LinkedList that writes through to this one. */
+  override reversed(): LinkedList<E> {
+    return new ReverseOrderLinkedListView(this);
   }
 
   // Object
@@ -468,7 +472,7 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
   override equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isList(o) || o.size() !== this._size) return false;
-    if (o instanceof LinkedList) {
+    if (o instanceof LinkedList && !(o instanceof ReverseOrderLinkedListView)) {
       let y: Node<unknown> | null = o.first;
       for (let x = this.first; x !== null; x = x.next, y = y!.next) if (!equals(x.item, y!.item)) return false;
       return true;
@@ -545,9 +549,9 @@ class ListItr<E> implements ListIterator<E> {
   }
 
   remove(): void {
+    this.check();
     const r = this.lastReturned;
     if (r === null) throw new IllegalStateException();
-    this.check();
     const after = r.next;
     this.list.unlink(r);
     // after previous() the cursor sat on r; otherwise r was behind the cursor
@@ -638,9 +642,9 @@ class DescendingItr<E> implements Iterator<E> {
   }
 
   remove(): void {
+    this.check();
     const r = this.lastReturned;
     if (r === null) throw new IllegalStateException();
-    this.check();
     this.list.unlink(r);
     this.lastReturned = null;
     this.expectedModCount++;
@@ -656,30 +660,43 @@ class DescendingItr<E> implements Iterator<E> {
   }
 }
 
-/** Live reverse view of a LinkedList: a List (via ReversedList) and a Deque with mirrored ends. */
-export class ReversedLinkedList<E> extends ReversedList<E> implements Deque<E> {
-  constructor(private readonly list: LinkedList<E>) {
-    super(list);
+/**
+ * Live reverse-ordered view of a LinkedList (what reversed() returns). It is a LinkedList so
+ * reversed() keeps its type, but every method mirrors onto `base`: the inherited first/last/_size
+ * of the view itself stay empty and are never read.
+ */
+class ReverseOrderLinkedListView<E> extends LinkedList<E> {
+  private readonly base: LinkedList<E>;
+
+  constructor(base: LinkedList<E>) {
+    super();
+    this.base = base;
+    // views built by inherited code (subList) watch the base's counter, so they stay fail-fast
+    Object.defineProperty(this, 'modCount', { get: () => base.modCount, configurable: true });
   }
 
   override reversed(): LinkedList<E> {
-    return this.list;
+    return this.base;
+  }
+
+  override clone(): LinkedList<E> {
+    const c = new (this.base.constructor as new () => LinkedList<E>)();
+    for (let x = this.base.last; x !== null; x = x.prev) c.addLast(x.item);
+    return c;
+  }
+
+  // Collection / List
+
+  override size(): number {
+    return this.base.size();
   }
 
   override isEmpty(): boolean {
-    return this.list.isEmpty();
+    return this.base.isEmpty();
   }
 
   override contains(o: unknown): boolean {
-    return this.list.contains(o);
-  }
-
-  override toArray(): E[] {
-    return this.list.toArray().reverse();
-  }
-
-  override clear(): void {
-    this.list.clear();
+    return this.base.contains(o);
   }
 
   override add(e: E): boolean;
@@ -689,98 +706,231 @@ export class ReversedLinkedList<E> extends ReversedList<E> implements Deque<E> {
       this.addAtIndex(a as number, b as E);
       return;
     }
-    this.list.linkFirst(a as E);
+    this.base.addFirst(a as E);
     return true;
   }
 
+  protected override addAtIndex(index: number, e: E): void {
+    const n = this.base.size();
+    checkPositionIndex(index, n);
+    this.base.add(n - index, e);
+  }
+
+  protected override addAllAt(index: number, c: Collection<E>): boolean {
+    const n = this.base.size();
+    checkPositionIndex(index, n);
+    const a = requireNonNull(c).toArray();
+    const rev = new LinkedList<E>();
+    for (let i = 0; i < a.length; i++) rev.linkFirst(a[i]);
+    return this.base.addAll(n - index, rev);
+  }
+
+  override get(index: number): E {
+    const n = this.base.size();
+    checkIndex(index, n);
+    return this.base.get(n - 1 - index);
+  }
+
+  override set(index: number, e: E): E {
+    const n = this.base.size();
+    checkIndex(index, n);
+    return this.base.set(n - 1 - index, e);
+  }
+
+  override removeAt(index: number): E {
+    const n = this.base.size();
+    checkIndex(index, n);
+    return this.base.removeAt(n - 1 - index);
+  }
+
+  override indexOf(o: unknown): number {
+    const i = this.base.lastIndexOf(o);
+    return i < 0 ? -1 : this.base.size() - 1 - i;
+  }
+
+  override lastIndexOf(o: unknown): number {
+    const i = this.base.indexOf(o);
+    return i < 0 ? -1 : this.base.size() - 1 - i;
+  }
+
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    const out = this.base.toArray().reverse();
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
+  }
+
+  override clear(): void {
+    this.base.clear();
+  }
+
+  override forEach(action: (e: E) => void): void {
+    requireNonNull(action);
+    const base = this.base;
+    const mc = base.modCount;
+    for (let x = base.last; x !== null; x = x.prev) {
+      action(x.item);
+      if (base.modCount !== mc) throw new ConcurrentModificationException();
+    }
+  }
+
+  override removeIf(filter: (e: E) => boolean): boolean {
+    return this.base.removeIf(filter);
+  }
+
+  override replaceAll(operator: (e: E) => E): void {
+    requireNonNull(operator);
+    const base = this.base;
+    const mc = base.modCount;
+    for (let x = base.last; x !== null; x = x.prev) {
+      x.item = operator(x.item);
+      if (base.modCount !== mc) throw new ConcurrentModificationException();
+    }
+  }
+
+  override sort(c: Comparator<E> | null = null): void {
+    const a = stableSort(this.toArray(), c);
+    let i = 0;
+    for (let x = this.base.last; x !== null; x = x.prev) x.item = a[i++];
+  }
+
+  override iterator(): Iterator<E> {
+    return this.base.descendingIterator();
+  }
+
+  override listIterator(index = 0): ListIterator<E> {
+    return new ReversedList(this.base).listIterator(index);
+  }
+
+  override [Symbol.iterator](): Generator<E> {
+    const it = this.base.descendingIterator();
+    const js: IterableIterator<E> = {
+      next: (): IteratorResult<E> => (it.hasNext() ? { value: it.next(), done: false } : { value: undefined, done: true }),
+      [Symbol.iterator]() {
+        return this;
+      },
+    };
+    return js as unknown as Generator<E>;
+  }
+
+  // SequencedCollection / Deque, ends swapped
+
   override addFirst(e: E): void {
-    this.list.linkLast(e);
+    this.base.addLast(e);
   }
 
   override addLast(e: E): void {
-    this.list.linkFirst(e);
+    this.base.addFirst(e);
   }
 
   override getFirst(): E {
-    return this.list.getLast();
+    return this.base.getLast();
   }
 
   override getLast(): E {
-    return this.list.getFirst();
+    return this.base.getFirst();
   }
 
   override removeFirst(): E {
-    return this.list.removeLast();
+    return this.base.removeLast();
   }
 
   override removeLast(): E {
-    return this.list.removeFirst();
+    return this.base.removeFirst();
   }
 
-  offer(e: E): boolean {
-    return this.list.offerFirst(e);
+  override offer(e: E): boolean {
+    return this.base.offerFirst(e);
   }
 
-  offerFirst(e: E): boolean {
-    return this.list.offerLast(e);
+  override offerFirst(e: E): boolean {
+    return this.base.offerLast(e);
   }
 
-  offerLast(e: E): boolean {
-    return this.list.offerFirst(e);
+  override offerLast(e: E): boolean {
+    return this.base.offerFirst(e);
   }
 
-  poll(): E | null {
-    return this.list.pollLast();
+  override poll(): E | null {
+    return this.base.pollLast();
   }
 
-  pollFirst(): E | null {
-    return this.list.pollLast();
+  override pollFirst(): E | null {
+    return this.base.pollLast();
   }
 
-  pollLast(): E | null {
-    return this.list.pollFirst();
+  override pollLast(): E | null {
+    return this.base.pollFirst();
   }
 
-  peek(): E | null {
-    return this.list.peekLast();
+  override peek(): E | null {
+    return this.base.peekLast();
   }
 
-  peekFirst(): E | null {
-    return this.list.peekLast();
+  override peekFirst(): E | null {
+    return this.base.peekLast();
   }
 
-  peekLast(): E | null {
-    return this.list.peekFirst();
+  override peekLast(): E | null {
+    return this.base.peekFirst();
   }
 
-  element(): E {
-    return this.list.getLast();
+  override element(): E {
+    return this.base.getLast();
   }
 
-  push(e: E): void {
-    this.list.addLast(e);
+  override push(e: E): void {
+    this.base.addLast(e);
   }
 
-  pop(): E {
-    return this.list.removeLast();
+  override pop(): E {
+    return this.base.removeLast();
   }
 
   override remove(): E;
   override remove(o: unknown): boolean;
   override remove(o?: unknown): E | boolean {
-    if (arguments.length === 0) return this.list.removeLast();
-    return this.list.removeLastOccurrence(o);
+    if (arguments.length === 0) return this.base.removeLast();
+    return this.base.removeLastOccurrence(o);
   }
 
-  removeFirstOccurrence(o: unknown): boolean {
-    return this.list.removeLastOccurrence(o);
+  override removeFirstOccurrence(o: unknown): boolean {
+    return this.base.removeLastOccurrence(o);
   }
 
-  removeLastOccurrence(o: unknown): boolean {
-    return this.list.removeFirstOccurrence(o);
+  override removeLastOccurrence(o: unknown): boolean {
+    return this.base.removeFirstOccurrence(o);
   }
 
-  descendingIterator(): Iterator<E> {
-    return this.list.iterator();
+  override descendingIterator(): Iterator<E> {
+    return this.base.iterator();
+  }
+
+  // Object
+
+  override equals(o: unknown): boolean {
+    if (o === this) return true;
+    if (!isList(o) || o.size() !== this.base.size()) return false;
+    const it = o.iterator();
+    for (let x = this.base.last; x !== null; x = x.prev) if (!it.hasNext() || !equals(x.item, it.next())) return false;
+    return !it.hasNext();
+  }
+
+  override hashCode(): number {
+    let h = 1;
+    for (let x = this.base.last; x !== null; x = x.prev) {
+      const e = x.item as unknown;
+      h = (Math.imul(31, h) + (e === this ? 0 : hashCode(e))) | 0;
+    }
+    return h;
+  }
+
+  override toString(): string {
+    let s = '[';
+    for (let x = this.base.last; x !== null; x = x.prev) {
+      if (x !== this.base.last) s += ', ';
+      s += (x.item as unknown) === this ? '(this Collection)' : toString(x.item);
+    }
+    return s + ']';
   }
 }

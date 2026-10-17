@@ -99,6 +99,52 @@ export function queueContract(name: string, create: () => Queue<any>, opts: Queu
       });
     });
 
+    describe('removeIf is all-or-nothing', () => {
+      const sorted = (q: Queue<any>) => q.toArray().sort((x: number, y: number) => x - y);
+      it('predicate that polls throws ConcurrentModificationException and removes nothing else', () => {
+        const q = of(1, 2, 3, 4);
+        let first = true;
+        expectThrows(
+          () =>
+            q.removeIf(() => {
+              if (first) {
+                first = false;
+                q.poll();
+              }
+              return true;
+            }),
+          'ConcurrentModificationException'
+        );
+        expect(sorted(q)).toEqual([2, 3, 4]);
+      });
+      it('predicate that offers throws ConcurrentModificationException and removes nothing', () => {
+        const q = of(1, 2, 3, 4);
+        let first = true;
+        expectThrows(
+          () =>
+            q.removeIf(() => {
+              if (first) {
+                first = false;
+                q.offer(9);
+              }
+              return true;
+            }),
+          'ConcurrentModificationException'
+        );
+        expect(sorted(q)).toEqual([1, 2, 3, 4, 9]);
+      });
+      it('throwing predicate leaves the queue unchanged', () => {
+        const q = of(1, 2, 3, 4);
+        expect(() =>
+          q.removeIf((x: number) => {
+            if (x === 3) throw new Error('boom');
+            return true;
+          })
+        ).toThrow('boom');
+        expect(sorted(q)).toEqual([1, 2, 3, 4]);
+      });
+    });
+
     if (opts.fifo) {
       describe('FIFO order', () => {
         it('poll in insertion order', () => {

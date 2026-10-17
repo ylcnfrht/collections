@@ -8,6 +8,7 @@ import {
 } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { Comparator, naturalCompare } from '../util/Comparator';
 import { equals, requireNonNull } from '../util/Objects';
 
@@ -319,8 +320,10 @@ export class PriorityQueue<E> extends AbstractQueue<E> {
     this.nums = this.cmp === null;
   }
 
-  override toArray(): E[] {
-    return this.queue.slice();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith(this.queue, generator as (length: number) => A) : this.queue.slice();
   }
 
   override removeIf(filter: (e: E) => boolean): boolean {
@@ -330,8 +333,13 @@ export class PriorityQueue<E> extends AbstractQueue<E> {
     const mc = this.modCount;
     // filter into a fresh array: a throwing or reentrant predicate sees the queue unchanged
     const kept: E[] = [];
-    for (let i = 0; i < n; i++) if (!filter(q[i])) kept.push(q[i]);
-    if (mc !== this.modCount) throw new ConcurrentModificationException();
+    for (let i = 0; i < n; i++) {
+      const e = q[i];
+      const hit = filter(e);
+      // stop at once: a modified heap may no longer hold n elements
+      if (mc !== this.modCount) throw new ConcurrentModificationException();
+      if (!hit) kept.push(e);
+    }
     if (kept.length === n) return false;
     this.modCount++;
     heapify(kept, this.cmp);

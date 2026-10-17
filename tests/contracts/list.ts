@@ -1,4 +1,5 @@
 import { List } from '../../src/interfaces/List';
+import { isRandomAccess } from '../../src/util/guards';
 import { expectThrows, refStringHash, Point, rng, timeIt } from '../helpers';
 import { SimpleList, SimpleSeqList } from '../support';
 
@@ -497,6 +498,22 @@ export function listContract(name: string, create: () => List<any>) {
       it('from > to throws IllegalArgumentException', () => expectThrows(() => of(1, 2).subList(2, 1), 'IllegalArgumentException'));
       it('equals a list with the same elements', () => expect(of(0, 1, 2).subList(1, 3).equals(sl(1, 2))).toBe(true));
       it('toString', () => expect(of(0, 1, 2).subList(0, 2).toString()).toBe('[0, 1]'));
+      it('is RandomAccess exactly when the list is', () => {
+        const l = of(0, 1, 2);
+        expect(isRandomAccess(l.subList(0, 2))).toBe(isRandomAccess(l));
+        expect(isRandomAccess(l.subList(0, 2).subList(0, 1))).toBe(isRandomAccess(l));
+      });
+      it('removeRange is bounded by the view', () => {
+        const l = of(0, 1, 2, 3);
+        const s = l.subList(1, 3) as any;
+        if (typeof s.removeRange !== 'function') return;
+        expectThrows(() => s.removeRange(0, 3), IOOBE);
+        expectThrows(() => s.removeRange(-1, 1), IOOBE);
+        expectThrows(() => s.removeRange(2, 1), IOOBE);
+        expect(l.toArray()).toEqual([0, 1, 2, 3]);
+        s.removeRange(0, 1);
+        expect([l.toArray(), s.size()]).toEqual([[0, 2, 3], 1]);
+      });
     });
 
     describe('ListIterator', () => {
@@ -698,6 +715,56 @@ export function listContract(name: string, create: () => List<any>) {
       });
       it('reversed().reversed() equals the original', () => expect(of(1, 2).reversed().reversed().equals(sl(1, 2))).toBe(true));
       it('reversed() equals a reversed list', () => expect(of(1, 2).reversed().equals(sl(2, 1))).toBe(true));
+      it('reversed() listIterator: set/remove after add throw IllegalStateException', () => {
+        const l = of(1, 2, 3);
+        const it = l.reversed().listIterator();
+        expect(it.next()).toBe(3);
+        it.add(9);
+        expectThrows(() => it.set(7), 'IllegalStateException');
+        expectThrows(() => it.remove(), 'IllegalStateException');
+        expect(l.toArray()).toEqual([1, 2, 9, 3]);
+        expect(it.next()).toBe(2);
+        it.set(7);
+        expect(l.toArray()).toEqual([1, 7, 9, 3]);
+      });
+      it('reversed() listIterator: set/remove before next and after remove throw IllegalStateException', () => {
+        const l = of(1, 2);
+        const it = l.reversed().listIterator();
+        expectThrows(() => it.set(0), 'IllegalStateException');
+        expectThrows(() => it.remove(), 'IllegalStateException');
+        it.next();
+        it.remove();
+        expectThrows(() => it.set(0), 'IllegalStateException');
+        expectThrows(() => it.remove(), 'IllegalStateException');
+        expect([it.hasPrevious(), it.nextIndex()]).toEqual([false, 0]);
+        expect(l.toArray()).toEqual([1]);
+      });
+      it('reversed() is RandomAccess exactly when the list is', () => {
+        const l = of(1, 2);
+        expect(isRandomAccess(l.reversed())).toBe(isRandomAccess(l));
+      });
+      it('reversed().subList is a live reversed range', () => {
+        const l = of(1, 2, 3);
+        const s = l.reversed().subList(0, 2);
+        expect(s.toArray()).toEqual([3, 2]);
+        expect(of(1, 2, 3, 4).reversed().subList(1, 3).toArray()).toEqual([3, 2]);
+        s.set(0, 30);
+        expect(l.toArray()).toEqual([1, 2, 30]);
+        s.removeAt(1);
+        expect([l.toArray(), s.toArray()]).toEqual([[1, 30], [30]]);
+      });
+      it('reversed().subList range checks', () => {
+        const r = of(1, 2).reversed();
+        expectThrows(() => r.subList(-1, 1), IOOBE);
+        expectThrows(() => r.subList(0, 3), IOOBE);
+        expectThrows(() => r.subList(2, 1), 'IllegalArgumentException');
+      });
+      it('reversed().subList fails fast after a structural change to the list', () => {
+        const l = of(1, 2, 3);
+        const s = l.reversed().subList(0, 2);
+        l.add(4);
+        expectThrows(() => s.size(), 'ConcurrentModificationException');
+      });
     });
 
     describe('equals / hashCode', () => {

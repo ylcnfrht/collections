@@ -1,4 +1,5 @@
 import { NavigableKeySet, TreeMap } from '../map/TreeMap';
+import { requireCollection } from '../abstract/AbstractSet';
 import { Collection } from '../interfaces/Collection';
 import { NavigableSet } from '../interfaces/Set';
 import { Comparator } from '../util/Comparator';
@@ -13,8 +14,15 @@ const PRESENT = true;
  * Inherits AbstractSet through NavigableKeySet, the key-set machinery it shares with TreeMap.
  */
 export class TreeSet<E> extends NavigableKeySet<E> implements NavigableSet<E> {
-  /** new TreeSet(), new TreeSet(comparator), or a copy of a collection (inheriting a sorted set's comparator). */
+  /**
+   * new TreeSet(), new TreeSet(comparator), or a copy of a collection.
+   * Copying a SortedSet (anything with a comparator() method) keeps the source's comparator and order,
+   * like the TreeSet(SortedSet) constructor; any other collection is ordered naturally. The type system
+   * cannot tell the two overloads apart, so the choice is made at run time.
+   * @throws IllegalArgumentException if source is neither a comparator nor a collection
+   */
   constructor(source?: Comparator<E> | Collection<E> | null) {
+    if (source != null && typeof source !== 'function') requireCollection(source, 'a Comparator or a Collection');
     super(new TreeMap<E, unknown>(comparatorOf(source)), PRESENT);
     if (source != null && typeof source !== 'function') this.addAll(source);
   }

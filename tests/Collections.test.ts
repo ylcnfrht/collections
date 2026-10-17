@@ -45,7 +45,7 @@ import { HashSet } from '../src/set/HashSet';
 import { TreeSet } from '../src/set/TreeSet';
 import { naturalCompare } from '../src/util/Comparator';
 import { isRandomAccess } from '../src/util/guards';
-import { expectThrows, Point, rng } from './helpers';
+import { expectThrows, Point, rng, timeIt } from './helpers';
 
 const UOE = 'UnsupportedOperationException';
 const NPE = 'NullPointerException';
@@ -335,15 +335,16 @@ describe('algorithms stay linear on LinkedList', () => {
     const n = 200_000;
     const l = new LinkedList<number>();
     for (let i = 0; i < n; i++) l.add(i);
-    const t = Date.now();
-    reverse(l);
-    reverse(l);
-    expect(binarySearch(l, 123_456)).toBe(123_456);
-    rotate(l, 12_345);
-    shuffle(l, seeded(3));
-    replaceAll(l, 5, 6);
-    fill(l, 0);
-    expect(Date.now() - t).toBeLessThan(3000);
+    const ms = timeIt(() => {
+      reverse(l);
+      reverse(l);
+      expect(binarySearch(l, 123_456)).toBe(123_456);
+      rotate(l, 12_345);
+      shuffle(l, seeded(3));
+      replaceAll(l, 5, 6);
+      fill(l, 0);
+    });
+    expect(ms).toBeLessThan(3000);
   });
 });
 
@@ -837,7 +838,7 @@ describe('unmodifiableMap / SortedMap / NavigableMap', () => {
 
 describe('Collections object', () => {
   it('exposes every function', () => {
-    for (const [k, f] of Object.entries(Collections)) expect(typeof f).toBe('function');
+    for (const [k, f] of Object.entries(Collections)) if (!k.startsWith('EMPTY_')) expect(typeof f).toBe('function');
     expect(Collections.sort).toBe(sort);
     expect(Object.keys(Collections).length).toBeGreaterThanOrEqual(33);
   });

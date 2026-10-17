@@ -1,3 +1,4 @@
+import { IndexOutOfBoundsException } from '../src/exceptions';
 import { ArrayList } from '../src/list/ArrayList';
 import { Stack } from '../src/list/Stack';
 import { Vector } from '../src/list/Vector';
@@ -14,6 +15,8 @@ listContract('Stack', () => new Stack());
 
 const NSEE = 'NoSuchElementException';
 const IOOBE = 'IndexOutOfBoundsException';
+const AIOOBE = 'ArrayIndexOutOfBoundsException';
+const ESE = 'EmptyStackException';
 
 describe('Vector · implementation', () => {
   describe('constructors and capacity', () => {
@@ -50,6 +53,36 @@ describe('Vector · implementation', () => {
       expect([v.capacity(), v.toArray()]).toEqual([3, [1, 2, 3]]);
     });
     it('of() returns a Vector', () => expect(Vector.of(1)).toBeInstanceOf(Vector));
+    it('copying a collection sets capacity to its size', () => {
+      expect(new Vector(SimpleList.of(1, 2, 3)).capacity()).toBe(3);
+      expect(new Vector(new Vector()).capacity()).toBe(0);
+    });
+    it('(initialCapacity, capacityIncrement) grows by the increment', () => {
+      const v = new Vector<number>(2, 3);
+      expect([v.capacity(), v.capacityIncrement]).toEqual([2, 3]);
+      for (let i = 0; i < 3; i++) v.add(i);
+      expect(v.capacity()).toBe(5);
+      for (let i = 0; i < 3; i++) v.add(i);
+      expect(v.capacity()).toBe(8);
+    });
+    it('capacityIncrement <= 0 doubles; default is 0', () => {
+      expect(new Vector().capacityIncrement).toBe(0);
+      const v = new Vector<number>(4, 0);
+      for (let i = 0; i < 5; i++) v.add(i);
+      expect(v.capacity()).toBe(8);
+      const w = new Vector<number>(4, -2);
+      for (let i = 0; i < 5; i++) w.add(i);
+      expect(w.capacity()).toBe(8);
+    });
+    it('ensureCapacity never grows below the required minimum', () => {
+      const v = new Vector<number>(4, 2);
+      v.ensureCapacity(5);
+      expect(v.capacity()).toBe(6);
+      v.ensureCapacity(50);
+      expect(v.capacity()).toBe(50);
+    });
+    it('(negative, increment) throws IllegalArgumentException', () => expectThrows(() => new Vector(-1, 5), 'IllegalArgumentException'));
+    it('clone keeps capacityIncrement', () => expect(new Vector(3, 7).clone().capacityIncrement).toBe(7));
     it('is an ArrayList and RandomAccess', () => {
       expect(new Vector()).toBeInstanceOf(ArrayList);
       expect(isRandomAccess(new Vector())).toBe(true);
@@ -73,7 +106,7 @@ describe('Vector · implementation', () => {
 
   describe('legacy methods', () => {
     it('elementAt', () => expect(Vector.of('a', 'b').elementAt(1)).toBe('b'));
-    it('elementAt out of range throws', () => expectThrows(() => Vector.of('a').elementAt(1), IOOBE));
+    it('elementAt out of range throws', () => expectThrows(() => Vector.of('a').elementAt(1), AIOOBE));
     it('firstElement / lastElement', () => {
       const v = Vector.of(1, 2, 3);
       expect([v.firstElement(), v.lastElement()]).toEqual([1, 3]);
@@ -97,14 +130,14 @@ describe('Vector · implementation', () => {
       v.removeElementAt(1);
       expect(v.toArray()).toEqual([1, 3]);
     });
-    it('removeElementAt out of range throws', () => expectThrows(() => Vector.of(1).removeElementAt(1), IOOBE));
+    it('removeElementAt out of range throws', () => expectThrows(() => Vector.of(1).removeElementAt(1), AIOOBE));
     it('insertElementAt takes (element, index)', () => {
       const v = Vector.of(1, 3);
       v.insertElementAt(2, 1);
       v.insertElementAt(4, 3);
       expect(v.toArray()).toEqual([1, 2, 3, 4]);
     });
-    it('insertElementAt past the end throws', () => expectThrows(() => Vector.of(1).insertElementAt(2, 3), IOOBE));
+    it('insertElementAt past the end throws', () => expectThrows(() => Vector.of(1).insertElementAt(2, 3), AIOOBE));
     it('setElementAt takes (element, index)', () => {
       const v = Vector.of(1, 2);
       v.setElementAt(9, 0);
@@ -112,7 +145,7 @@ describe('Vector · implementation', () => {
     });
     it('setElementAt out of range throws and does not grow', () => {
       const v = Vector.of(1);
-      expectThrows(() => v.setElementAt(9, 5), IOOBE);
+      expectThrows(() => v.setElementAt(9, 5), AIOOBE);
       expect(v.size()).toBe(1);
     });
     it('removeAllElements empties', () => {
@@ -131,6 +164,111 @@ describe('Vector · implementation', () => {
       v.addElement(null);
       expect([v.firstElement(), v.indexOf(null)]).toEqual([null, 0]);
     });
+  });
+
+  describe('legacy index exceptions are ArrayIndexOutOfBoundsException (an IndexOutOfBoundsException)', () => {
+    const cases: [string, (v: Vector<number>) => unknown][] = [
+      ['elementAt(-1)', (v) => v.elementAt(-1)],
+      ['elementAt(size)', (v) => v.elementAt(2)],
+      ['insertElementAt(e, -1)', (v) => v.insertElementAt(0, -1)],
+      ['insertElementAt(e, size + 1)', (v) => v.insertElementAt(0, 3)],
+      ['removeElementAt(-1)', (v) => v.removeElementAt(-1)],
+      ['removeElementAt(size)', (v) => v.removeElementAt(2)],
+      ['setElementAt(e, -1)', (v) => v.setElementAt(0, -1)],
+      ['setElementAt(e, size)', (v) => v.setElementAt(0, 2)],
+      ['setSize(-1)', (v) => v.setSize(-1)],
+    ];
+    it.each(cases)('%s', (_name, fn) => {
+      const v = Vector.of(1, 2);
+      expectThrows(() => fn(v), AIOOBE);
+      try {
+        fn(v);
+      } catch (e) {
+        expect(e).toBeInstanceOf(IndexOutOfBoundsException);
+      }
+      expect(v.toArray()).toEqual([1, 2]);
+    });
+  });
+
+  describe('indexOf(o, index) / lastIndexOf(o, index)', () => {
+    const v = Vector.of<unknown>(1, 2, 1, new Point(1, 1), NaN, null, 1);
+    it('indexOf searches forward from index', () => {
+      expect([v.indexOf(1, 0), v.indexOf(1, 1), v.indexOf(1, 3), v.indexOf(1, 7), v.indexOf(1, 100)]).toEqual([0, 2, 6, -1, -1]);
+      expect([v.indexOf(new Point(1, 1), 0), v.indexOf(NaN, 0), v.indexOf(null, 0)]).toEqual([3, 4, 5]);
+    });
+    it('indexOf with negative index throws IndexOutOfBoundsException', () => expectThrows(() => v.indexOf(1, -1), IOOBE));
+    it('lastIndexOf searches backward from index', () => {
+      expect([v.lastIndexOf(1, 6), v.lastIndexOf(1, 5), v.lastIndexOf(1, 1), v.lastIndexOf(2, 0), v.lastIndexOf(1, -1)]).toEqual([6, 2, 0, -1, -1]);
+      expect([v.lastIndexOf(new Point(1, 1), 6), v.lastIndexOf(NaN, 6), v.lastIndexOf(null, 6)]).toEqual([3, 4, 5]);
+    });
+    it('lastIndexOf with index >= size throws IndexOutOfBoundsException', () => expectThrows(() => v.lastIndexOf(1, 7), IOOBE));
+    it('one-argument forms are unchanged', () => expect([v.indexOf(1), v.lastIndexOf(1), v.indexOf(9)]).toEqual([0, 6, -1]));
+  });
+
+  describe('setSize', () => {
+    it('grows with null elements', () => {
+      const v = Vector.of(1);
+      v.setSize(3);
+      expect(v.toArray()).toEqual([1, null, null]);
+      expect(v.capacity()).toBeGreaterThanOrEqual(3);
+    });
+    it('truncates', () => {
+      const v = Vector.of(1, 2, 3);
+      v.setSize(1);
+      expect(v.toArray()).toEqual([1]);
+      v.setSize(0);
+      expect(v.isEmpty()).toBe(true);
+    });
+    it('is structural (fail-fast)', () => {
+      const v = Vector.of(1, 2);
+      const it = v.iterator();
+      v.setSize(2);
+      expectThrows(() => it.next(), 'ConcurrentModificationException');
+    });
+  });
+
+  describe('copyInto', () => {
+    it('copies into a plain array (which may grow)', () => {
+      const a: number[] = [9, 9, 9, 9];
+      Vector.of(1, 2).copyInto(a);
+      expect(a).toEqual([1, 2, 9, 9]);
+      const b: number[] = [];
+      Vector.of(1, 2).copyInto(b);
+      expect(b).toEqual([1, 2]);
+    });
+    it('copies into a large enough typed array', () => {
+      const a = new Float64Array(3);
+      Vector.of(1, 2).copyInto(a);
+      expect([...a]).toEqual([1, 2, 0]);
+    });
+    it('too-short typed array throws IndexOutOfBoundsException', () => expectThrows(() => Vector.of(1, 2).copyInto(new Int8Array(1)), IOOBE));
+    it('null throws NullPointerException', () => expectThrows(() => Vector.of(1).copyInto(null as any), 'NullPointerException'));
+  });
+
+  describe('elements()', () => {
+    it('enumerates in index order', () => {
+      const e = Vector.of(1, 2).elements();
+      expect([e.hasMoreElements(), e.nextElement(), e.nextElement(), e.hasMoreElements()]).toEqual([true, 1, 2, false]);
+      expectThrows(() => e.nextElement(), NSEE);
+    });
+    it('is not fail-fast (index based)', () => {
+      const v = Vector.of(1, 2);
+      const e = v.elements();
+      e.nextElement();
+      v.add(3);
+      expect([e.nextElement(), e.nextElement()]).toEqual([2, 3]);
+    });
+    it('asIterator() iterates and refuses remove()', () => {
+      const it = Vector.of(1, 2, 3).elements().asIterator();
+      expect(it.next()).toBe(1);
+      expectThrows(() => it.remove(), 'UnsupportedOperationException');
+      const rest: number[] = [];
+      it.forEachRemaining((x) => rest.push(x));
+      expect([rest, it.hasNext()]).toEqual([[2, 3], false]);
+      expectThrows(() => it.next(), NSEE);
+    });
+    it('is JS-iterable', () => expect([...Vector.of(1, 2).elements()]).toEqual([1, 2]));
+    it('empty Vector has no elements', () => expect(new Vector().elements().hasMoreElements()).toBe(false));
   });
 
   describe('interop', () => {
@@ -170,8 +308,8 @@ describe('Stack · implementation', () => {
     s.push(3);
     expect([s.pop(), s.pop(), s.pop()]).toEqual([3, 2, 1]);
   });
-  it('pop on empty throws NoSuchElementException', () => expectThrows(() => new Stack().pop(), NSEE));
-  it('peek on empty throws NoSuchElementException', () => expectThrows(() => new Stack().peek(), NSEE));
+  it('pop on empty throws EmptyStackException', () => expectThrows(() => new Stack().pop(), ESE));
+  it('peek on empty throws EmptyStackException', () => expectThrows(() => new Stack().peek(), ESE));
   it('peek does not remove', () => {
     const s = Stack.of(1, 2);
     expect([s.peek(), s.peek(), s.size()]).toEqual([2, 2, 2]);
@@ -233,7 +371,7 @@ describe('Stack · implementation', () => {
       switch (r(6)) {
         case 0:
         case 1: expect(s.push(v)).toBe(v); m.push(v); break;
-        case 2: if (m.length) expect(s.pop()).toBe(m.pop()); else expectThrows(() => s.pop(), NSEE); break;
+        case 2: if (m.length) expect(s.pop()).toBe(m.pop()); else expectThrows(() => s.pop(), ESE); break;
         case 3: if (m.length) expect(s.peek()).toBe(m[m.length - 1]); break;
         case 4: { const i = m.lastIndexOf(v); expect(s.search(v)).toBe(i < 0 ? -1 : m.length - i); break; }
         case 5: { const i = r(m.length + 1); s.insertElementAt(v, i); m.splice(i, 0, v); break; }

@@ -1,6 +1,31 @@
 import { Set as SetType } from '../../src/interfaces/Set';
 import { Collide, expectThrows, refStringHash, Point, rng, timeIt } from '../helpers';
+import { Iterator } from '../../src/interfaces/Iterator';
 import { SimpleList, SimpleSet } from '../support';
+
+/** List that counts contains() and iterator() calls; `eq` overrides element equality for contains(). */
+export class SpyList<E> extends SimpleList<E> {
+  containsCalls = 0;
+  iteratorCalls = 0;
+  eq: ((a: unknown, b: E) => boolean) | null = null;
+  static spy<E>(xs: E[], eq: ((a: unknown, b: E) => boolean) | null = null): SpyList<E> {
+    const l = new SpyList<E>();
+    for (const x of xs) l.add(x);
+    l.eq = eq;
+    l.containsCalls = l.iteratorCalls = 0;
+    return l;
+  }
+  override contains(o: unknown): boolean {
+    this.containsCalls++;
+    if (this.eq === null) return super.contains(o);
+    for (let i = 0; i < this.size(); i++) if (this.eq(o, this.get(i))) return true;
+    return false;
+  }
+  override iterator(): Iterator<E> {
+    this.iteratorCalls++;
+    return super.iterator();
+  }
+}
 
 /** Set contract: uniqueness by equals/hashCode, value equality with any Set. */
 export function setContract(name: string, create: () => SetType<any>, opts: { skipScale?: boolean } = {}) {
@@ -106,6 +131,64 @@ export function setContract(name: string, create: () => SetType<any>, opts: { sk
         expect(s.removeAll(ss(2, 4, 6))).toBe(true);
         expect(sorted(s)).toEqual([1, 3]);
       });
+      describe('removeAll walks the smaller side (AbstractSet algorithm)', () => {
+        const ci = (a: unknown, b: string) => typeof a === 'string' && a.toLowerCase() === b.toLowerCase();
+        it('this larger: iterates c and calls this.remove, never c.contains', () => {
+          const s = of(1, 2, 3);
+          const c = SpyList.spy([2, 9]);
+          expect(s.removeAll(c)).toBe(true);
+          expect([c.containsCalls, c.iteratorCalls > 0]).toEqual([0, true]);
+          expect(sorted(s)).toEqual([1, 3]);
+        });
+        it('this smaller: iterates this and asks c.contains for each element', () => {
+          const s = of(1, 2);
+          const c = SpyList.spy([2, 3, 4]);
+          expect(s.removeAll(c)).toBe(true);
+          expect(c.containsCalls).toBe(2);
+          expect(sorted(s)).toEqual([1]);
+        });
+        it('equal sizes iterate this', () => {
+          const s = of(1, 2);
+          const c = SpyList.spy([2, 3]);
+          expect(s.removeAll(c)).toBe(true);
+          expect(c.containsCalls).toBe(2);
+          expect(sorted(s)).toEqual([1]);
+        });
+        it('this larger: this set\'s equality decides (case-insensitive c is ignored)', () => {
+          const s = of('A', 'b', 'x');
+          expect(s.removeAll(SpyList.spy(['a', 'B'], ci))).toBe(false);
+          expect(s.size()).toBe(3);
+        });
+        it('this smaller: c\'s equality decides (case-insensitive c is honoured)', () => {
+          const s = of('A', 'b');
+          expect(s.removeAll(SpyList.spy(['a', 'B', 'z'], ci))).toBe(true);
+          expect(s.isEmpty()).toBe(true);
+        });
+        it('removeAll(empty) is false and leaves the set alone', () => {
+          const s = of(1, 2);
+          expect(s.removeAll(SpyList.spy([]))).toBe(false);
+          expect(s.size()).toBe(2);
+        });
+        it('removeAll(null) throws NullPointerException', () => expectThrows(() => of(1).removeAll(null as never), 'NullPointerException'));
+        it('removeAll(c with duplicates) counts each removal once', () => {
+          const s = of(1, 2, 3, 4);
+          expect(s.removeAll(SpyList.spy([2, 2]))).toBe(true);
+          expect(sorted(s)).toEqual([1, 3, 4]);
+        });
+      });
+      it('toArray(generator) fills the generated array', () => {
+        const s = of(3, 1, 2);
+        const out = s.toArray((n) => new Array<number>(n));
+        expect(out.length).toBe(3);
+        expect([...out].sort()).toEqual(sorted(s));
+        expect(s.toArray((n) => new Float64Array(n))).toBeInstanceOf(Float64Array);
+      });
+      it('toArray(generator) keeps iteration order', () => {
+        const s = of(3, 1, 2);
+        expect(Array.from(s.toArray((n) => new Int32Array(n)))).toEqual(s.toArray());
+      });
+      it('toArray(too-short typed array) throws IndexOutOfBoundsException', () =>
+        expectThrows(() => of(1, 2).toArray(() => new Int32Array(1)), 'IndexOutOfBoundsException'));
       it('retainAll', () => {
         const s = of(1, 2, 3, 4);
         expect(s.retainAll(ss(2, 4, 6))).toBe(true);

@@ -1,5 +1,11 @@
 import { entryEquals, entryHash, entryToString, mapIterator, SimpleImmutableEntry } from './abstract/AbstractMap';
-import { IllegalArgumentException, IndexOutOfBoundsException, NoSuchElementException } from './exceptions';
+import {
+  IllegalArgumentException,
+  IllegalStateException,
+  IndexOutOfBoundsException,
+  NoSuchElementException,
+  UnsupportedOperationException,
+} from './exceptions';
 import {
   buildMap,
   buildSet,
@@ -13,25 +19,54 @@ import {
   uoe,
 } from './immutable/ImmutableCollections';
 import { Collection, SequencedCollection } from './interfaces/Collection';
-import { Iterator, ListIterator } from './interfaces/Iterator';
+import { Deque, Queue } from './interfaces/Queue';
+import { Enumeration, Iterator, ListIterator } from './interfaces/Iterator';
 import { List } from './interfaces/List';
-import { Map, MapEntry, NavigableMap, SortedMap } from './interfaces/Map';
+import { Map, MapEntry, NavigableMap, SequencedMap, SortedMap } from './interfaces/Map';
 import { NavigableSet, SequencedSet, Set, SortedSet } from './interfaces/Set';
-import { Comparator, naturalCompare } from './util/Comparator';
+import { Comparator, naturalCompare, reverseOrder } from './util/Comparator';
+import { toArrayWith, WritableArrayLike } from './util/arrays';
 import { isRandomAccess, isSet, RANDOM_ACCESS, SET_BRAND } from './util/guards';
-import { equals, requireNonNull } from './util/Objects';
+import { checkPositionIndex, equals, requireNonNull } from './util/Objects';
+import {
+  checkedCollection,
+  checkedList,
+  checkedMap,
+  checkedNavigableMap,
+  checkedNavigableSet,
+  checkedQueue,
+  checkedSet,
+  checkedSortedMap,
+  checkedSortedSet,
+  delegate,
+  identityEquality,
+  synchronizedCollection,
+  synchronizedList,
+  synchronizedMap,
+  synchronizedNavigableMap,
+  synchronizedNavigableSet,
+  synchronizedSet,
+  synchronizedSortedMap,
+  synchronizedSortedSet,
+} from './legacy/Wrappers';
+import type { TypeCheck } from './legacy/Wrappers';
+import { ArrayList } from './list/ArrayList';
 import { jsIterator } from './map/HashMap';
+import { TreeMap } from './map/TreeMap';
+import { TreeSet } from './set/TreeSet';
 
 // ---- algorithms
 // RandomAccess lists use get/set; other lists use list iterators (or one array copy) so everything stays O(n) on a LinkedList.
 
+// Every algorithm throws NullPointerException for a null/undefined collection argument.
+
 /** Stable sort; null/omitted comparator = natural ordering. */
 export function sort<E>(list: List<E>, c?: Comparator<E> | null): void {
-  list.sort(c ?? null);
+  requireNonNull(list).sort(c ?? null);
 }
 
 export function reverse(list: List<unknown>): void {
-  const n = list.size();
+  const n = requireNonNull(list).size();
   if (isRandomAccess(list)) {
     for (let i = 0, j = n - 1; i < j; i++, j--) list.set(i, list.set(j, list.get(i)));
     return;
@@ -45,19 +80,29 @@ export function reverse(list: List<unknown>): void {
   }
 }
 
-/** Fisher–Yates shuffle; random() must return a number in [0, 1). */
-export function shuffle(list: List<unknown>, random: () => number = Math.random): void {
-  requireNonNull(random);
+/** Random source for shuffle: a function returning a number in [0, 1) (like Math.random), or a generator with nextInt(bound) in [0, bound). */
+export type RandomSource = (() => number) | { nextInt(bound: number): number };
+
+/**
+ * Fisher–Yates shuffle. rnd is a `() => number` in [0, 1) (default Math.random) or an object with
+ * `nextInt(bound)` returning an integer in [0, bound), like a RandomGenerator.
+ * @throws NullPointerException if list or an explicit rnd is null
+ */
+export function shuffle(list: List<unknown>, rnd: RandomSource = Math.random): void {
+  requireNonNull(list);
+  requireNonNull(rnd);
+  const f = typeof rnd === 'function' ? rnd : null;
+  const pick = (bound: number) => (f !== null ? Math.floor(f() * bound) : (rnd as { nextInt(bound: number): number }).nextInt(bound));
   if (isRandomAccess(list)) {
     for (let i = list.size() - 1; i > 0; i--) {
-      const j = Math.floor(random() * (i + 1));
+      const j = pick(i + 1);
       list.set(i, list.set(j, list.get(i)));
     }
     return;
   }
   const a = list.toArray();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
+    const j = pick(i + 1);
     const t = a[i];
     a[i] = a[j];
     a[j] = t;
@@ -75,10 +120,11 @@ function writeBack<E>(list: List<E>, a: E[]): void {
 
 /** @throws IndexOutOfBoundsException */
 export function swap(list: List<unknown>, i: number, j: number): void {
-  list.set(i, list.set(j, list.get(i)));
+  requireNonNull(list).set(i, list.set(j, list.get(i)));
 }
 
 export function fill<E>(list: List<E>, v: E): void {
+  requireNonNull(list);
   if (isRandomAccess(list)) {
     for (let i = 0, n = list.size(); i < n; i++) list.set(i, v);
     return;
@@ -92,7 +138,8 @@ export function fill<E>(list: List<E>, v: E): void {
 
 /** Copies src over the first src.size() elements of dest. @throws IndexOutOfBoundsException if dest is shorter */
 export function copy<E>(dest: List<E>, src: List<E>): void {
-  const n = src.size();
+  requireNonNull(dest);
+  const n = requireNonNull(src).size();
   if (n > dest.size()) throw new IndexOutOfBoundsException('Source does not fit in dest');
   if (isRandomAccess(dest) && isRandomAccess(src)) {
     for (let i = 0; i < n; i++) dest.set(i, src.get(i));
@@ -117,7 +164,7 @@ export function max<E>(coll: Collection<E>, c?: Comparator<E> | null): E {
 }
 
 function extreme<E>(coll: Collection<E>, cmp: Comparator<E>, sign: number): E {
-  const it = coll.iterator();
+  const it = requireNonNull(coll).iterator();
   if (!it.hasNext()) throw new NoSuchElementException();
   let best = it.next();
   while (it.hasNext()) {
@@ -130,7 +177,7 @@ function extreme<E>(coll: Collection<E>, cmp: Comparator<E>, sign: number): E {
 /** Number of elements equal (Objects.equals) to o. */
 export function frequency(coll: Collection<unknown>, o: unknown): number {
   let n = 0;
-  const it = coll.iterator();
+  const it = requireNonNull(coll).iterator();
   while (it.hasNext()) if (equals(o, it.next())) n++;
   return n;
 }
@@ -159,7 +206,7 @@ export function disjoint(c1: Collection<unknown>, c2: Collection<unknown>): bool
 export function binarySearch<E>(list: List<E>, key: E, c?: Comparator<E> | null): number {
   const cmp = c ?? naturalCompare;
   let lo = 0;
-  let hi = list.size() - 1;
+  let hi = requireNonNull(list).size() - 1;
   if (isRandomAccess(list)) {
     while (lo <= hi) {
       const mid = (lo + hi) >>> 1;
@@ -195,8 +242,13 @@ function moveTo<E>(it: ListIterator<E>, index: number): E {
   return e;
 }
 
-/** Moves the element at i to (i + distance) mod size. Any distance (negative, larger than size) is fine. */
+/**
+ * Moves the element at i to (i + distance) mod size. Any integer distance (negative, larger than size) is fine.
+ * @throws IllegalArgumentException if distance is not an integer (NaN, fractions, infinities)
+ */
 export function rotate(list: List<unknown>, distance: number): void {
+  requireNonNull(list);
+  if (!Number.isInteger(distance)) throw new IllegalArgumentException(`distance: ${distance}`);
   const n = list.size();
   if (n === 0) return;
   let d = distance % n;
@@ -220,9 +272,9 @@ export function rotate(list: List<unknown>, distance: number): void {
   writeBack(list, a.slice(n - d).concat(a.slice(0, n - d)));
 }
 
-/** Immutable list of n copies of o (o may be null). @throws IllegalArgumentException when n < 0 */
+/** Immutable list of n copies of o (o may be null). @throws IllegalArgumentException when n is negative or not an integer */
 export function nCopies<E>(n: number, o: E): List<E> {
-  if (!(n >= 0)) throw new IllegalArgumentException(`List length = ${n}`);
+  if (!(Number.isInteger(n) && n >= 0)) throw new IllegalArgumentException(`List length = ${n}`);
   // shortcut: materializes n slots (O(n) memory); switch to a computed list if huge counts show up
   return new ImmutableList(new Array<E>(n).fill(o), o != null);
 }
@@ -236,7 +288,7 @@ export function addAll<E>(coll: Collection<E>, ...elements: E[]): boolean {
 }
 
 function indexed<E>(l: List<E>): List<E> {
-  return isRandomAccess(l) ? l : new ImmutableList(l.toArray(), false);
+  return isRandomAccess(requireNonNull(l)) ? l : new ImmutableList(l.toArray(), false);
 }
 
 /** First index where target occurs as a contiguous run in source, or -1. */
@@ -266,6 +318,7 @@ export function lastIndexOfSubList(source: List<unknown>, target: List<unknown>)
 
 /** Replaces every element equal to oldVal with newVal; true if any was replaced. */
 export function replaceAll<E>(list: List<E>, oldVal: E, newVal: E): boolean {
+  requireNonNull(list);
   let found = false;
   if (isRandomAccess(list)) {
     for (let i = 0, n = list.size(); i < n; i++) {
@@ -286,27 +339,77 @@ export function replaceAll<E>(list: List<E>, oldVal: E, newVal: E): boolean {
   return found;
 }
 
-const REVERSED_FROM: unique symbol = Symbol('reversedFrom');
-type Reversed<T> = Comparator<T> & { [REVERSED_FROM]?: Comparator<T> };
+/** Reverse of c (or of natural ordering); shared with Comparator.reverseOrder/reversed. */
+export { reverseOrder };
 
-const REVERSE_NATURAL: Reversed<unknown> = (a, b) => naturalCompare(b, a);
-REVERSE_NATURAL[REVERSED_FROM] = naturalCompare;
+// ---- empty iterators
 
-/** Reverse of c (or of natural ordering); reversing a reversed comparator gives back the original. */
-export function reverseOrder<T>(c?: Comparator<T> | null): Comparator<T> {
-  if (c == null) return REVERSE_NATURAL;
-  const from = (c as Reversed<T>)[REVERSED_FROM];
-  if (from !== undefined) return from;
-  const r: Reversed<T> = (a, b) => c(b, a);
-  r[REVERSED_FROM] = c;
-  return r;
+/** Shared cursor over nothing: next/previous throw NoSuchElementException, remove/set IllegalStateException, add UnsupportedOperationException. */
+const EMPTY_ITERATOR: ListIterator<never> = Object.freeze({
+  hasNext: () => false,
+  next(): never {
+    throw new NoSuchElementException();
+  },
+  hasPrevious: () => false,
+  previous(): never {
+    throw new NoSuchElementException();
+  },
+  nextIndex: () => 0,
+  previousIndex: () => -1,
+  remove(): void {
+    throw new IllegalStateException();
+  },
+  set(): void {
+    throw new IllegalStateException();
+  },
+  add(): void {
+    throw new UnsupportedOperationException();
+  },
+  forEachRemaining(action: (e: never) => void): void {
+    requireNonNull(action);
+  },
+});
+
+export function emptyIterator<E>(): Iterator<E> {
+  return EMPTY_ITERATOR;
+}
+
+export function emptyListIterator<E>(): ListIterator<E> {
+  return EMPTY_ITERATOR;
+}
+
+const EMPTY_ENUMERATION: Enumeration<never> = Object.freeze({
+  hasMoreElements: () => false,
+  nextElement(): never {
+    throw new NoSuchElementException();
+  },
+  asIterator: () => EMPTY_ITERATOR,
+});
+
+export function emptyEnumeration<E>(): Enumeration<E> {
+  return EMPTY_ENUMERATION;
 }
 
 // ---- empty and singleton collections (null elements allowed)
 
-const EMPTY_LIST = new ImmutableList<never>([], true);
-const EMPTY_SET = buildSet<never>([], false, true);
-const EMPTY_MAP = buildMap<never, never>([], true);
+/** emptyList(): iterators are the empty iterators, sort is a no-op. */
+class EmptyList<E> extends ImmutableList<E> {
+  override iterator(): Iterator<E> {
+    return EMPTY_ITERATOR;
+  }
+  override listIterator(index = 0): ListIterator<E> {
+    checkPositionIndex(index, 0);
+    return EMPTY_ITERATOR;
+  }
+  override sort(_c?: Comparator<E> | null): void {}
+}
+
+/** Shared immutable empty list, same instance as emptyList(). */
+export const EMPTY_LIST: List<never> = new EmptyList<never>([], true);
+/** Shared immutable empty set, same instance as emptySet(). */
+export const EMPTY_SET: Set<never> = buildSet<never>([], false, true);
+/** Shared immutable empty map, same instance as emptyMap(). */
+export const EMPTY_MAP: Map<never, never> = buildMap<never, never>([], true);
 
 export function emptyList<E>(): List<E> {
   return EMPTY_LIST;
@@ -396,8 +499,10 @@ class UnmodifiableCollection<E> extends ImmutableCollectionBase<E> {
   override containsAll(c: Collection<unknown>): boolean {
     return this.c.containsAll(c);
   }
-  override toArray(): E[] {
-    return this.c.toArray();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? this.c.toArray(generator as (length: number) => A) : this.c.toArray();
   }
   override forEach(action: (e: E) => void): void {
     this.c.forEach(action);
@@ -439,8 +544,25 @@ class UnmodifiableSet<E> extends UnmodifiableCollection<E> implements Set<E> {
   }
 }
 
-/** Serves SortedSet, NavigableSet and SequencedSet views; methods the backing set lacks fail when called. */
-class UnmodifiableNavigableSet<E> extends UnmodifiableSet<E> implements NavigableSet<E> {
+class UnmodifiableSequencedSet<E> extends UnmodifiableSet<E> implements SequencedSet<E> {
+  getFirst(): E {
+    return (this.c as SequencedSet<E>).getFirst();
+  }
+  getLast(): E {
+    return (this.c as SequencedSet<E>).getLast();
+  }
+  reversed(): SequencedSet<E> {
+    return new UnmodifiableSequencedSet((this.c as SequencedSet<E>).reversed());
+  }
+  declare addFirst: (e: E) => void;
+  declare addLast: (e: E) => void;
+  declare removeFirst: () => E;
+  declare removeLast: () => E;
+}
+lock(UnmodifiableSequencedSet, SEQUENCED_MUTATORS);
+
+/** Serves SortedSet and NavigableSet views; methods the backing set lacks fail when called. */
+class UnmodifiableNavigableSet<E> extends UnmodifiableSequencedSet<E> implements NavigableSet<E> {
   private get s(): NavigableSet<E> {
     return this.c as NavigableSet<E>;
   }
@@ -452,12 +574,6 @@ class UnmodifiableNavigableSet<E> extends UnmodifiableSet<E> implements Navigabl
   }
   last(): E {
     return this.s.last();
-  }
-  getFirst(): E {
-    return this.s.getFirst();
-  }
-  getLast(): E {
-    return this.s.getLast();
   }
   lower(e: E): E | null {
     return this.s.lower(e);
@@ -488,17 +604,13 @@ class UnmodifiableNavigableSet<E> extends UnmodifiableSet<E> implements Navigabl
   descendingIterator(): Iterator<E> {
     return readOnly(this.s.descendingIterator());
   }
-  reversed(): NavigableSet<E> {
+  override reversed(): NavigableSet<E> {
     return wrapNavSet(this.s.reversed());
   }
   declare pollFirst: () => E | null;
   declare pollLast: () => E | null;
-  declare addFirst: (e: E) => void;
-  declare addLast: (e: E) => void;
-  declare removeFirst: () => E;
-  declare removeLast: () => E;
 }
-lock(UnmodifiableNavigableSet, [...SEQUENCED_MUTATORS, 'pollFirst', 'pollLast']);
+lock(UnmodifiableNavigableSet, ['pollFirst', 'pollLast']);
 
 function wrapNavSet<E>(s: SortedSet<E>): NavigableSet<E> {
   return new UnmodifiableNavigableSet(s);
@@ -538,8 +650,10 @@ class UnmodifiableList<E> extends ImmutableListBase<E> {
   override containsAll(c: Collection<unknown>): boolean {
     return this.l.containsAll(c);
   }
-  override toArray(): E[] {
-    return this.l.toArray();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? this.l.toArray(generator as (length: number) => A) : this.l.toArray();
   }
   override forEach(action: (e: E) => void): void {
     this.l.forEach(action);
@@ -607,8 +721,11 @@ class UnmodifiableEntrySet<K, V> extends UnmodifiableSet<MapEntry<K, V>> impleme
   override [Symbol.iterator](): Generator<MapEntry<K, V>> {
     return jsIterator(this.iterator()) as unknown as Generator<MapEntry<K, V>>;
   }
-  override toArray(): MapEntry<K, V>[] {
-    return this.c.toArray().map((e) => new UnmodifiableEntry(e));
+  override toArray(): MapEntry<K, V>[];
+  override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator?: (length: number) => A): MapEntry<K, V>[] | A {
+    const a: MapEntry<K, V>[] = this.c.toArray().map((e) => new UnmodifiableEntry(e));
+    return arguments.length > 0 ? toArrayWith(a, generator as (length: number) => A) : a;
   }
   override forEach(action: (e: MapEntry<K, V>) => void): void {
     requireNonNull(action);
@@ -686,8 +803,37 @@ class UnmodifiableMap<K, V> extends ImmutableMapBase<K, V> {
   }
 }
 
+class UnmodifiableSequencedMap<K, V> extends UnmodifiableMap<K, V> implements SequencedMap<K, V> {
+  private get q(): SequencedMap<K, V> {
+    return this.m as SequencedMap<K, V>;
+  }
+  reversed(): SequencedMap<K, V> {
+    return new UnmodifiableSequencedMap(this.q.reversed());
+  }
+  firstEntry(): MapEntry<K, V> | null {
+    return wrapEntry(this.q.firstEntry());
+  }
+  lastEntry(): MapEntry<K, V> | null {
+    return wrapEntry(this.q.lastEntry());
+  }
+  sequencedKeySet(): SequencedSet<K> {
+    return new UnmodifiableSequencedSet(this.q.sequencedKeySet());
+  }
+  sequencedValues(): SequencedCollection<V> {
+    return new UnmodifiableSequencedCollection(this.q.sequencedValues());
+  }
+  sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
+    return new UnmodifiableEntrySet(this.q.sequencedEntrySet());
+  }
+  declare pollFirstEntry: () => MapEntry<K, V> | null;
+  declare pollLastEntry: () => MapEntry<K, V> | null;
+  declare putFirst: (key: K, value: V) => V | null;
+  declare putLast: (key: K, value: V) => V | null;
+}
+lock(UnmodifiableSequencedMap, ['pollFirstEntry', 'pollLastEntry', 'putFirst', 'putLast']);
+
 /** Serves SortedMap and NavigableMap views; methods the backing map lacks fail when called. */
-class UnmodifiableNavigableMap<K, V> extends UnmodifiableMap<K, V> implements NavigableMap<K, V> {
+class UnmodifiableNavigableMap<K, V> extends UnmodifiableSequencedMap<K, V> implements NavigableMap<K, V> {
   private get n(): NavigableMap<K, V> {
     return this.m as NavigableMap<K, V>;
   }
@@ -699,12 +845,6 @@ class UnmodifiableNavigableMap<K, V> extends UnmodifiableMap<K, V> implements Na
   }
   lastKey(): K {
     return this.n.lastKey();
-  }
-  firstEntry(): MapEntry<K, V> | null {
-    return wrapEntry(this.n.firstEntry());
-  }
-  lastEntry(): MapEntry<K, V> | null {
-    return wrapEntry(this.n.lastEntry());
   }
   lowerEntry(key: K): MapEntry<K, V> | null {
     return wrapEntry(this.n.lowerEntry(key));
@@ -742,7 +882,7 @@ class UnmodifiableNavigableMap<K, V> extends UnmodifiableMap<K, V> implements Na
   descendingMap(): NavigableMap<K, V> {
     return wrapNavMap(this.n.descendingMap());
   }
-  reversed(): NavigableMap<K, V> {
+  override reversed(): NavigableMap<K, V> {
     return wrapNavMap(this.n.reversed());
   }
   navigableKeySet(): NavigableSet<K> {
@@ -751,21 +891,10 @@ class UnmodifiableNavigableMap<K, V> extends UnmodifiableMap<K, V> implements Na
   descendingKeySet(): NavigableSet<K> {
     return wrapNavSet(this.n.descendingKeySet());
   }
-  sequencedKeySet(): SequencedSet<K> {
+  override sequencedKeySet(): SequencedSet<K> {
     return wrapNavSet(this.n.sequencedKeySet() as SortedSet<K>);
   }
-  sequencedValues(): SequencedCollection<V> {
-    return new UnmodifiableSequencedCollection(this.n.sequencedValues());
-  }
-  sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
-    return new UnmodifiableEntrySet(this.n.sequencedEntrySet());
-  }
-  declare pollFirstEntry: () => MapEntry<K, V> | null;
-  declare pollLastEntry: () => MapEntry<K, V> | null;
-  declare putFirst: (key: K, value: V) => V | null;
-  declare putLast: (key: K, value: V) => V | null;
 }
-lock(UnmodifiableNavigableMap, ['pollFirstEntry', 'pollLastEntry', 'putFirst', 'putLast']);
 
 function wrapNavMap<K, V>(m: SortedMap<K, V>): NavigableMap<K, V> {
   return new UnmodifiableNavigableMap(m);
@@ -791,6 +920,12 @@ export function unmodifiableSet<E>(s: Set<E>): Set<E> {
   return s instanceof ImmutableSetBase || s instanceof UnmodifiableSet ? s : new UnmodifiableSet(s);
 }
 
+/** Unmodifiable view with set equality; wrapping an unmodifiable sequenced (or sorted) set returns it. */
+export function unmodifiableSequencedSet<E>(s: SequencedSet<E>): SequencedSet<E> {
+  requireNonNull(s);
+  return s instanceof UnmodifiableSequencedSet ? s : new UnmodifiableSequencedSet(s);
+}
+
 export function unmodifiableSortedSet<E>(s: SortedSet<E>): SortedSet<E> {
   requireNonNull(s);
   return s instanceof UnmodifiableNavigableSet ? s : new UnmodifiableNavigableSet(s);
@@ -806,6 +941,12 @@ export function unmodifiableMap<K, V>(m: Map<K, V>): Map<K, V> {
   return m instanceof ImmutableMapBase ? m : new UnmodifiableMap(m);
 }
 
+/** Unmodifiable view with map equality; wrapping an unmodifiable sequenced (or sorted) map returns it. */
+export function unmodifiableSequencedMap<K, V>(m: SequencedMap<K, V>): SequencedMap<K, V> {
+  requireNonNull(m);
+  return m instanceof UnmodifiableSequencedMap ? m : new UnmodifiableSequencedMap(m);
+}
+
 export function unmodifiableSortedMap<K, V>(m: SortedMap<K, V>): SortedMap<K, V> {
   requireNonNull(m);
   return m instanceof UnmodifiableNavigableMap ? m : new UnmodifiableNavigableMap(m);
@@ -815,6 +956,141 @@ export function unmodifiableNavigableMap<K, V>(m: NavigableMap<K, V>): Navigable
   requireNonNull(m);
   return m instanceof UnmodifiableNavigableMap ? m : new UnmodifiableNavigableMap(m);
 }
+
+// ---- empty sorted collections: shared unmodifiable views of empty tree collections
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- one shared instance serves every element type (comparator() and methods are variance-sensitive)
+const EMPTY_NAVIGABLE_SET: NavigableSet<any> = new UnmodifiableNavigableSet(new TreeSet());
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const EMPTY_NAVIGABLE_MAP: NavigableMap<any, any> = new UnmodifiableNavigableMap(new TreeMap());
+
+export function emptySortedSet<E>(): SortedSet<E> {
+  return EMPTY_NAVIGABLE_SET;
+}
+export function emptyNavigableSet<E>(): NavigableSet<E> {
+  return EMPTY_NAVIGABLE_SET;
+}
+export function emptySortedMap<K, V>(): SortedMap<K, V> {
+  return EMPTY_NAVIGABLE_MAP;
+}
+export function emptyNavigableMap<K, V>(): NavigableMap<K, V> {
+  return EMPTY_NAVIGABLE_MAP;
+}
+
+// ---- sets backed by maps, LIFO queue view
+
+function setFromMap<E>(map: Map<E, boolean>, keys: Set<E>, sequenced: boolean): Set<E> {
+  const m = map as SequencedMap<E, boolean>;
+  return delegate(keys, (view) => {
+    const add = (e: E) => map.put(e, true) === null;
+    const o: Record<string, unknown> = {
+      add,
+      addAll(c: Collection<E>): boolean {
+        let changed = false;
+        for (const e of requireNonNull(c).toArray()) if (add(e)) changed = true;
+        return changed;
+      },
+      equals: (x: unknown) => x === view || keys.equals(x),
+    };
+    if (sequenced) {
+      o.addFirst = (e: E) => void m.putFirst(e, true);
+      o.addLast = (e: E) => void m.putLast(e, true);
+      o.reversed = () => setFromMap(m.reversed(), m.reversed().sequencedKeySet(), true);
+    }
+    return o;
+  });
+}
+
+/**
+ * Set view of an empty map: add(e) is map.put(e, true) === null, everything else goes through map.keySet().
+ * @throws IllegalArgumentException if map is not empty
+ */
+export function newSetFromMap<E>(map: Map<E, boolean>): Set<E> {
+  if (!requireNonNull(map).isEmpty()) throw new IllegalArgumentException('Map is non-empty');
+  return setFromMap(map, map.keySet(), false);
+}
+
+/**
+ * Sequenced set view of an empty sequenced map: addFirst/addLast use putFirst/putLast, the rest goes
+ * through map.sequencedKeySet(). @throws IllegalArgumentException if map is not empty
+ */
+export function newSequencedSetFromMap<E>(map: SequencedMap<E, boolean>): SequencedSet<E> {
+  if (!requireNonNull(map).isEmpty()) throw new IllegalArgumentException('Map is non-empty');
+  return setFromMap(map, map.sequencedKeySet(), true) as SequencedSet<E>;
+}
+
+/**
+ * Last-in-first-out Queue view of a deque: add/offer push at the front, remove/poll/element/peek
+ * read the front, addAll adds each element in turn at the front. equals/hashCode are by identity.
+ */
+export function asLifoQueue<E>(deque: Deque<E>): Queue<E> {
+  const d = requireNonNull(deque);
+  return delegate(d, (view) => ({
+    ...identityEquality(view),
+    add: (e: E) => (d.addFirst(e), true),
+    offer: (e: E) => d.offerFirst(e),
+    remove: (...a: unknown[]) => (a.length > 0 ? d.remove(a[0]) : d.removeFirst()),
+    poll: () => d.pollFirst(),
+    element: () => d.getFirst(),
+    peek: () => d.peekFirst(),
+    addAll(c: Collection<E>): boolean {
+      const a = requireNonNull(c).toArray();
+      for (const e of a) d.addFirst(e);
+      return a.length > 0;
+    },
+  }));
+}
+
+// ---- legacy enumerations
+
+/** Enumeration over c's iterator. */
+export function enumeration<E>(c: Collection<E>): Enumeration<E> {
+  const it = requireNonNull(c).iterator();
+  return {
+    hasMoreElements: () => it.hasNext(),
+    nextElement: () => it.next(),
+    asIterator: () => ({
+      hasNext: () => it.hasNext(),
+      next: () => it.next(),
+      remove(): void {
+        throw new UnsupportedOperationException('remove');
+      },
+      forEachRemaining(action: (e: E) => void): void {
+        requireNonNull(action);
+        while (it.hasNext()) action(it.next());
+      },
+    }),
+  };
+}
+
+/** The remaining elements of e, in order, in a new ArrayList. */
+export function list<E>(e: Enumeration<E>): ArrayList<E> {
+  requireNonNull(e);
+  const out = new ArrayList<E>();
+  while (e.hasMoreElements()) out.add(e.nextElement());
+  return out;
+}
+
+export {
+  checkedCollection,
+  checkedList,
+  checkedMap,
+  checkedNavigableMap,
+  checkedNavigableSet,
+  checkedQueue,
+  checkedSet,
+  checkedSortedMap,
+  checkedSortedSet,
+  synchronizedCollection,
+  synchronizedList,
+  synchronizedMap,
+  synchronizedNavigableMap,
+  synchronizedNavigableSet,
+  synchronizedSet,
+  synchronizedSortedMap,
+  synchronizedSortedSet,
+};
+export type { TypeCheck };
 
 export const Collections = {
   sort,
@@ -838,6 +1114,13 @@ export const Collections = {
   emptyList,
   emptySet,
   emptyMap,
+  emptySortedSet,
+  emptyNavigableSet,
+  emptySortedMap,
+  emptyNavigableMap,
+  emptyIterator,
+  emptyListIterator,
+  emptyEnumeration,
   singletonList,
   singleton,
   singletonMap,
@@ -845,9 +1128,36 @@ export const Collections = {
   unmodifiableSequencedCollection,
   unmodifiableList,
   unmodifiableSet,
+  unmodifiableSequencedSet,
   unmodifiableSortedSet,
   unmodifiableNavigableSet,
   unmodifiableMap,
+  unmodifiableSequencedMap,
   unmodifiableSortedMap,
   unmodifiableNavigableMap,
+  newSetFromMap,
+  newSequencedSetFromMap,
+  asLifoQueue,
+  enumeration,
+  list,
+  checkedCollection,
+  checkedList,
+  checkedSet,
+  checkedSortedSet,
+  checkedNavigableSet,
+  checkedQueue,
+  checkedMap,
+  checkedSortedMap,
+  checkedNavigableMap,
+  synchronizedCollection,
+  synchronizedList,
+  synchronizedSet,
+  synchronizedSortedSet,
+  synchronizedNavigableSet,
+  synchronizedMap,
+  synchronizedSortedMap,
+  synchronizedNavigableMap,
+  EMPTY_LIST,
+  EMPTY_SET,
+  EMPTY_MAP,
 };

@@ -77,6 +77,7 @@ export interface SortedMap<K, V> extends SequencedMap<K, V> {
   headMap(toKey: K): SortedMap<K, V>;
   tailMap(fromKey: K): SortedMap<K, V>;
   subMap(fromKey: K, toKey: K): SortedMap<K, V>;
+  reversed(): SortedMap<K, V>;
 }
 
 /** NavigableMap. Entries returned by navigation methods are immutable snapshots. */

@@ -10,7 +10,7 @@ import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { List } from '../interfaces/List';
 import { Comparator, stableSort } from '../util/Comparator';
-import { isList } from '../util/guards';
+import { isList, isRandomAccess, RANDOM_ACCESS } from '../util/guards';
 import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from '../util/Objects';
 import { AbstractCollection } from './AbstractCollection';
 
@@ -261,7 +261,10 @@ class ListItr<E> extends Itr<E> implements ListIterator<E> {
 
   add(e: E): void {
     this.checkForComodification();
-    this.list.add(this.cursor++, e);
+    const i = this.cursor;
+    this.list.add(i, e);
+    // advance only once the add succeeded, so a refused add leaves the cursor put
+    this.cursor = i + 1;
     this.lastRet = -1;
     this.expectedModCount = this.list.modCount;
   }
@@ -283,6 +286,10 @@ class SubList<E> extends AbstractList<E> {
     this.offset = parentOffset + fromIndex;
     this._size = toIndex - fromIndex;
     this.modCount = root.modCount;
+  }
+
+  get [RANDOM_ACCESS](): boolean {
+    return isRandomAccess(this.root);
   }
 
   size(): number {
@@ -318,6 +325,9 @@ class SubList<E> extends AbstractList<E> {
   }
 
   override removeRange(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || toIndex > this._size || fromIndex > toIndex) {
+      throw new IndexOutOfBoundsException(`From Index: ${fromIndex} To Index: ${toIndex}, Size: ${this._size}`);
+    }
     this.checkForComodification();
     this.root.removeRange(this.offset + fromIndex, this.offset + toIndex);
     this.updateSizeAndModCount(fromIndex - toIndex);
@@ -396,6 +406,10 @@ export class ReversedList<E> extends AbstractList<E> {
     super();
   }
 
+  get [RANDOM_ACCESS](): boolean {
+    return isRandomAccess(this.base);
+  }
+
   size(): number {
     return this.base.size();
   }
@@ -429,24 +443,37 @@ export class ReversedList<E> extends AbstractList<E> {
     return new ReverseListItr(this.base, this.base.listIterator(this.size() - index));
   }
 
+  override subList(fromIndex: number, toIndex: number): List<E> {
+    const n = this.size();
+    subListRangeCheck(fromIndex, toIndex, n);
+    return this.base.subList(n - toIndex, n - fromIndex).reversed();
+  }
+
   override reversed(): List<E> {
     return this.base;
   }
 }
 
 class ReverseListItr<E> implements ListIterator<E> {
+  // true only between next()/previous() and the following add()/remove(); the base
+  // iterator can't track this because add() steps it back with previous()
+  private canModify = false;
   constructor(private readonly base: List<E>, private readonly it: ListIterator<E>) {}
   hasNext(): boolean {
     return this.it.hasPrevious();
   }
   next(): E {
-    return this.it.previous();
+    const e = this.it.previous();
+    this.canModify = true;
+    return e;
   }
   hasPrevious(): boolean {
     return this.it.hasNext();
   }
   previous(): E {
-    return this.it.next();
+    const e = this.it.next();
+    this.canModify = true;
+    return e;
   }
   nextIndex(): number {
     return this.base.size() - this.it.nextIndex();
@@ -455,15 +482,19 @@ class ReverseListItr<E> implements ListIterator<E> {
     return this.nextIndex() - 1;
   }
   remove(): void {
+    if (!this.canModify) throw new IllegalStateException();
     this.it.remove();
+    this.canModify = false;
   }
   set(e: E): void {
+    if (!this.canModify) throw new IllegalStateException();
     this.it.set(e);
   }
   add(e: E): void {
     // base add() leaves the new element behind the base cursor; step back so it sits behind ours
     this.it.add(e);
     this.it.previous();
+    this.canModify = false;
   }
   forEachRemaining(action: (e: E) => void): void {
     requireNonNull(action);

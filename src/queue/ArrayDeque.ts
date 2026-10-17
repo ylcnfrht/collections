@@ -1,7 +1,6 @@
 import { AbstractCollection } from '../abstract/AbstractCollection';
 import {
   ConcurrentModificationException,
-  IllegalArgumentException,
   IllegalStateException,
   NoSuchElementException,
   NullPointerException,
@@ -9,6 +8,7 @@ import {
 import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Deque } from '../interfaces/Queue';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { equals, requireNonNull, toString } from '../util/Objects';
 
 const MIN_CAPACITY = 8;
@@ -27,10 +27,11 @@ function slots(n: number): unknown[] {
   return new Array(n);
 }
 
-/** Smallest power of two strictly greater than n (one slot always stays empty). */
+/** Smallest power of two strictly greater than n (one slot always stays empty), at most MAX_CAPACITY. */
 function capacityFor(n: number): number {
   if (!(n >= MIN_CAPACITY)) return MIN_CAPACITY;
-  if (n >= MAX_CAPACITY) throw new IllegalArgumentException('Deque too big');
+  // the size argument is only a hint: clamp instead of rejecting
+  if (n >= MAX_CAPACITY) return MAX_CAPACITY;
   let c = MIN_CAPACITY;
   while (c <= n) c *= 2;
   return c;
@@ -77,8 +78,9 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return d;
   }
 
+  /** Shallow independent copy, of the same runtime class. */
   clone(): ArrayDeque<E> {
-    const d = new ArrayDeque<E>(0);
+    const d = new (this.constructor as new () => ArrayDeque<E>)();
     d.elements = this.elements.slice();
     d.head = this.head;
     d.tail = this.tail;
@@ -219,26 +221,26 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     const mask = a.length - 1;
     const h = this.head;
     const n = this.size();
-    let r = 0;
+    const mc = this.modCount;
+    // two phases: test everything first, so a throwing or deque-modifying predicate changes nothing
+    let dead: Uint8Array | null = null;
+    for (let r = 0; r < n; r++) {
+      const hit = filter(a[(h + r) & mask] as E);
+      if (this.modCount !== mc) throw new ConcurrentModificationException();
+      if (hit) (dead ??= new Uint8Array(n))[r] = 1;
+    }
+    if (dead === null) return false;
     let w = 0;
-    try {
-      for (; r < n; r++) {
-        const e = a[(h + r) & mask] as E;
-        if (!filter(e)) {
-          if (w !== r) a[(h + w) & mask] = e;
-          w++;
-        }
-      }
-    } finally {
-      // also runs when the filter throws: keep the unvisited tail, compact, clear vacated slots
-      if (w !== r) {
-        for (; r < n; r++, w++) a[(h + w) & mask] = a[(h + r) & mask];
-        for (let i = w; i < n; i++) a[(h + i) & mask] = FREE;
-        this.tail = (h + w) & mask;
-        this.modCount++;
+    for (let r = 0; r < n; r++) {
+      if (dead[r] === 0) {
+        if (w !== r) a[(h + w) & mask] = a[(h + r) & mask];
+        w++;
       }
     }
-    return w !== n;
+    for (let i = w; i < n; i++) a[(h + i) & mask] = FREE;
+    this.tail = (h + w) & mask;
+    this.modCount++;
+    return true;
   }
 
   override clear(): void {
@@ -287,7 +289,10 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
 
   // ---- bulk / views ----
 
-  override toArray(): E[] {
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    if (arguments.length > 0) return toArrayWith(this.toArray(), generator as (length: number) => A);
     const a = this.elements;
     const h = this.head;
     const t = this.tail;
@@ -594,8 +599,11 @@ class ReversedDeque<E> extends AbstractCollection<E> implements Deque<E> {
   override contains(o: unknown): boolean {
     return this.d.contains(o);
   }
-  override toArray(): E[] {
-    return this.d.toArray().reverse();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    const out = this.d.toArray().reverse();
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
   override clear(): void {
     this.d.clear();

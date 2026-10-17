@@ -1,9 +1,10 @@
 import { ArrayList } from '../src/list/ArrayList';
+import { LinkedList } from '../src/list/LinkedList';
 import { isRandomAccess, RANDOM_ACCESS } from '../src/util/guards';
 import { equals } from '../src/util/Objects';
 import { collectionContract } from './contracts/collection';
 import { listContract } from './contracts/list';
-import { expectThrows, Point, rng } from './helpers';
+import { expectThrows, Point, rng, timeIt } from './helpers';
 import { SimpleList, SimpleSeqList } from './support';
 
 collectionContract('ArrayList', () => new ArrayList(), { allowsNull: true, allowsDuplicates: true });
@@ -187,9 +188,10 @@ describe('ArrayList · implementation', () => {
       for (let i = 0; i < 100_000; i++) l.add(i);
       const odd = new Set<number>();
       for (let i = 1; i < 100_000; i += 2) odd.add(i);
-      const t = Date.now();
-      l.removeAll({ contains: (x: number) => odd.has(x) } as any);
-      expect(Date.now() - t).toBeLessThan(1000);
+      const ms = timeIt(() => {
+        l.removeAll({ contains: (x: number) => odd.has(x) } as any);
+      });
+      expect(ms).toBeLessThan(1000);
       expect([l.size(), l.get(1)]).toEqual([50_000, 2]);
       l.retainAll(ArrayList.of(0, 2));
       expect(l.toArray()).toEqual([0, 2]);
@@ -339,6 +341,37 @@ describe('ArrayList · implementation', () => {
       it.remove();
       expect(l.toArray()).toEqual([1, 2]);
     });
+    it('forEachRemaining with nothing left does not arm remove()', () => {
+      const l = ArrayList.of(1, 2, 3);
+      const it = l.listIterator(3);
+      it.forEachRemaining(() => {});
+      expectThrows(() => it.remove(), 'IllegalStateException');
+      expectThrows(() => it.set(0), 'IllegalStateException');
+      expect([l.size(), it.nextIndex()]).toEqual([3, 3]);
+    });
+    it('forEachRemaining with nothing left keeps the previous lastRet', () => {
+      const l = ArrayList.of(1, 2);
+      const it = l.listIterator();
+      it.next();
+      it.next();
+      it.forEachRemaining(() => {});
+      it.remove();
+      expect(l.toArray()).toEqual([1]);
+    });
+    it('listIterator add() advances past the new element', () => {
+      const l = ArrayList.of(1, 3);
+      const it = l.listIterator(1);
+      it.add(2);
+      expect([it.nextIndex(), it.next(), l.toArray()]).toEqual([2, 3, [1, 2, 3]]);
+    });
+    it('replaceAll is structural for open iterators (ConcurrentModificationException)', () => {
+      const l = ArrayList.of(1, 2, 3);
+      const it = l.iterator();
+      it.next();
+      l.replaceAll((x) => x * 2);
+      expect(l.toArray()).toEqual([2, 4, 6]);
+      expectThrows(() => it.next(), CME);
+    });
     it('set() via iterator keeps it valid', () => {
       const l = ArrayList.of(1, 2);
       const it = l.listIterator();
@@ -362,6 +395,30 @@ describe('ArrayList · implementation', () => {
       const l = ArrayList.of(0, 1, 2, 3);
       l.subList(1, 3).addAll(1, SimpleList.of(7, 8));
       expect(l.toArray()).toEqual([0, 1, 7, 8, 2, 3]);
+    });
+    it('subList and reversed() are RandomAccess; LinkedList views are not', () => {
+      const l = ArrayList.of(0, 1, 2);
+      expect([isRandomAccess(l.subList(0, 2)), isRandomAccess(l.subList(0, 2).subList(0, 1)), isRandomAccess(l.reversed())]).toEqual([true, true, true]);
+      expect(isRandomAccess(LinkedList.of(0, 1, 2).subList(0, 2))).toBe(false);
+    });
+    it('toArray(generator) copies into the generated array', () => {
+      const l = ArrayList.of(1, 2, 3);
+      const out = l.toArray((n) => new Int32Array(n + 1));
+      expect([...out]).toEqual([1, 2, 3, 0]);
+      expect(l.toArray((n) => new Array<number>(n))).toEqual([1, 2, 3]);
+    });
+    it('equals walks a duck-typed list by listIterator() and never throws', () => {
+      const src = ArrayList.of(1, 2);
+      const duck = {
+        get: (i: number) => src.get(i),
+        listIterator: () => src.listIterator(),
+        iterator: () => {
+          throw new TypeError('not used');
+        },
+      };
+      expect(ArrayList.of(1, 2).equals(duck)).toBe(true);
+      expect(ArrayList.of(1, 3).equals(duck)).toBe(false);
+      expect(ArrayList.of(1).equals({ get: () => 1, listIterator: () => src.listIterator() })).toBe(false);
     });
     it('getFirst / getLast on empty throw', () => {
       expectThrows(() => new ArrayList().getFirst(), 'NoSuchElementException');

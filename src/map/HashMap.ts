@@ -11,6 +11,7 @@ import { Collection } from '../interfaces/Collection';
 import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry } from '../interfaces/Map';
 import { Set } from '../interfaces/Set';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { isEntry } from '../util/guards';
 import { equals, hashCode, requireNonNull } from '../util/Objects';
 
@@ -122,9 +123,9 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   /** @internal number of nodes in ints */
   intCount = 0;
   /** @internal other SameValueZero keys */
-  readonly fast = new globalThis.Map<unknown, HashNode<K, V>>();
+  fast = new globalThis.Map<unknown, HashNode<K, V>>();
   /** @internal hashCode -> node(s) for keys with equals() and Dates */
-  readonly buckets = new globalThis.Map<number, Bucket<K, V>>();
+  buckets = new globalThis.Map<number, Bucket<K, V>>();
   /** @internal number of nodes in buckets */
   valueCount = 0;
   /** Structural modification count (new key, removal, clear); iterators compare against it. */
@@ -148,8 +149,39 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return m;
   }
 
+  /**
+   * An empty map sized for numMappings mappings (a sizing hint only).
+   * @throws IllegalArgumentException if numMappings is negative or NaN
+   */
+  static newHashMap<K, V>(numMappings: number): HashMap<K, V> {
+    if (!(numMappings >= 0)) throw new IllegalArgumentException(`Negative number of mappings: ${numMappings}`);
+    return new HashMap<K, V>();
+  }
+
+  /** Shallow copy (keys and values are not cloned) of the same runtime class, subclass fields included. */
   clone(): HashMap<K, V> {
-    return new HashMap<K, V>(this);
+    const m = this.cloneShell();
+    m.reinitialize();
+    this.forEachNode((n) => m.copyNode(n.key, n.value));
+    return m;
+  }
+
+  /** clone(): gives a shell fresh, empty storage and views. */
+  protected reinitialize(): void {
+    this.ints = [];
+    this.intCount = 0;
+    this.fast = new globalThis.Map();
+    this.buckets = new globalThis.Map();
+    this.valueCount = 0;
+    this.modCount = 0;
+    this.ks = this.vs = this.es = undefined;
+  }
+
+  /** clone(): adds a mapping for an absent key without firing afterNodeInsertion (so nothing is evicted). */
+  protected copyNode(key: K, value: V): HashNode<K, V> {
+    const n = this.newNode(key, value);
+    this.insertNode(n);
+    return n;
   }
 
   // hooks
@@ -226,6 +258,15 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   /** Inserts a mapping for a key known to be absent. */
   private addNode(key: K, value: V): HashNode<K, V> {
     const n = this.newNode(key, value);
+    this.insertNode(n);
+    this.modCount++;
+    this.afterNodeInsertion(n);
+    return n;
+  }
+
+  /** Puts a node for an absent key into storage; no modCount bump, no hook. */
+  private insertNode(n: HashNode<K, V>): void {
+    const key = n.key;
     if (isIndexKey(key) && fitsIndexTable(key, this.ints.length, this.intCount)) {
       this.ints[key] = n;
       this.intCount++;
@@ -239,9 +280,6 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
       else this.buckets.set(h, [b, n]);
       this.valueCount++;
     }
-    this.modCount++;
-    this.afterNodeInsertion(n);
-    return n;
   }
 
   /** Removes exactly this node (by identity). */
@@ -502,8 +540,9 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     }
     const mc = this.modCount;
     const v = fn(key);
+    if (mc !== this.modCount) throw new ConcurrentModificationException();
     if (v === null || v === undefined) return null;
-    this.store(key, v, n, mc);
+    this.store(key, v, n);
     return v;
   }
 
@@ -513,11 +552,12 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     if (n === undefined || n.value === null) return null;
     const mc = this.modCount;
     const v = fn(key, n.value);
+    if (mc !== this.modCount) throw new ConcurrentModificationException();
     if (v === null || v === undefined) {
-      this.drop(key, n, mc);
+      this.removeNode(n);
       return null;
     }
-    this.store(key, v, n, mc);
+    this.store(key, v, n);
     return v;
   }
 
@@ -526,11 +566,12 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     const n = this.getNode(key);
     const mc = this.modCount;
     const v = fn(key, n === undefined ? null : n.value);
+    if (mc !== this.modCount) throw new ConcurrentModificationException();
     if (v === null || v === undefined) {
-      this.drop(key, n, mc);
+      if (n !== undefined) this.removeNode(n);
       return null;
     }
-    this.store(key, v, n, mc);
+    this.store(key, v, n);
     return v;
   }
 
@@ -540,27 +581,22 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     const n = this.getNode(key);
     const mc = this.modCount;
     const v = n === undefined || n.value === null ? value : fn(n.value, value);
+    if (mc !== this.modCount) throw new ConcurrentModificationException();
     if (v === null || v === undefined) {
-      this.drop(key, n, mc);
+      this.removeNode(n!); // only fn can return null, and fn runs only on an existing node
       return null;
     }
-    this.store(key, v, n, mc);
+    this.store(key, v, n);
     return v;
   }
 
-  /** Writes a computed value; n is the node looked up before fn ran (re-looked up if fn modified the map). */
-  private store(key: K, v: V, n: HashNode<K, V> | undefined, mc: number): void {
-    if (mc !== this.modCount) this.put(key, v);
-    else if (n === undefined) this.addNode(key, v);
+  /** Writes a computed value; n is the node looked up before fn ran (fn made no structural change). */
+  private store(key: K, v: V, n: HashNode<K, V> | undefined): void {
+    if (n === undefined) this.addNode(key, v);
     else {
       n.value = v;
       this.afterNodeAccess(n);
     }
-  }
-
-  private drop(key: K, n: HashNode<K, V> | undefined, mc: number): void {
-    if (mc !== this.modCount) this.removeKey(key);
-    else if (n !== undefined) this.removeNode(n);
   }
 }
 
@@ -705,10 +741,12 @@ class KeySet<K, V> extends AbstractSet<K> {
     requireNonNull(action);
     this.map.eachNode((n) => action(n.key));
   }
-  override toArray(): K[] {
+  override toArray(): K[];
+  override toArray<A extends WritableArrayLike<K>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<K>>(generator?: (length: number) => A): K[] | A {
     const out: K[] = [];
     this.map.eachNode((n) => out.push(n.key));
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 }
 
@@ -738,10 +776,12 @@ class Values<K, V> extends AbstractCollection<V> {
     requireNonNull(action);
     this.map.eachNode((n) => action(n.value));
   }
-  override toArray(): V[] {
+  override toArray(): V[];
+  override toArray<A extends WritableArrayLike<V>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<V>>(generator?: (length: number) => A): V[] | A {
     const out: V[] = [];
     this.map.eachNode((n) => out.push(n.value));
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 }
 
@@ -782,9 +822,11 @@ class EntrySet<K, V> extends AbstractSet<MapEntry<K, V>> {
     requireNonNull(action);
     this.map.eachNode(action);
   }
-  override toArray(): MapEntry<K, V>[] {
+  override toArray(): MapEntry<K, V>[];
+  override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator?: (length: number) => A): MapEntry<K, V>[] | A {
     const out: MapEntry<K, V>[] = [];
     this.map.eachNode((n) => out.push(n));
-    return out;
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 }

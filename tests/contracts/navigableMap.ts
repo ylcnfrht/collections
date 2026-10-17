@@ -175,6 +175,42 @@ export function navigableMapContract(name: string, create: (c?: Comparator<any>)
       it('nested view may end exactly at an exclusive parent bound', () => expect(keys(base().headMap(4).subMap(2, 4))).toEqual([2, 3]));
       it('inclusive bound on an exclusive parent edge throws', () => expectThrows(() => base().headMap(4, false).headMap(4, true), IAE));
       it('view equals a map with the same mappings', () => expect(base().headMap(2).equals(SimpleMap.of([1, 'v1']))).toBe(true));
+      it('view compute*/merge/putIfAbsent: callbacks that modify the map throw ConcurrentModificationException', () => {
+        const CME = 'ConcurrentModificationException';
+        const b = base();
+        const v = b.headMap(3, true);
+        expectThrows(() => v.computeIfAbsent(0, () => (b.put(9, 'x'), 'n')), CME);
+        expectThrows(() => v.computeIfPresent(1, () => (b.remove(9), 'n')), CME);
+        expectThrows(() => v.compute(2, () => (b.put(9, 'x'), null)), CME);
+        expectThrows(() => v.merge(3, 'm', () => (b.remove(9), 'n')), CME);
+        expectThrows(() => b.descendingMap().compute(0, () => (b.put(8, 'x'), 'n')), CME);
+        expect([b.containsKey(0), b.get(1), b.get(2), b.get(3)]).toEqual([false, 'v1', 'v2', 'v3']);
+      });
+      it('view compute*/merge/putIfAbsent outside the range', () => {
+        const v = base().headMap(3);
+        expectThrows(() => v.putIfAbsent(5, 'x'), IAE);
+        expectThrows(() => v.merge(5, 'x', (a) => a), IAE);
+        expectThrows(() => v.computeIfAbsent(5, () => 'x'), IAE);
+        expectThrows(() => v.compute(5, () => 'x'), IAE);
+        const fn = jest.fn(() => 'x');
+        expect([v.computeIfAbsent(5, () => null), v.compute(5, () => null), v.computeIfPresent(4, fn)]).toEqual([null, null, null]);
+        expect(fn).not.toHaveBeenCalled();
+        expectThrows(() => v.computeIfAbsent(1, null as any), 'NullPointerException');
+        expectThrows(() => v.merge(1, null, (a) => a), 'NullPointerException');
+      });
+      it('view compute*/merge/putIfAbsent inside the range write through', () => {
+        const b = base();
+        const v = b.subMap(0, true, 3, true);
+        b.put(2, null);
+        expect([v.putIfAbsent(2, 'p'), v.computeIfAbsent(0, () => 'n'), v.computeIfPresent(1, (_k, x) => x + '!'), v.compute(3, () => null), v.merge(1, '?', (a, c) => a + c)]).toEqual([
+          null,
+          'n',
+          'v1!',
+          null,
+          'v1!?',
+        ]);
+        expect([b.get(2), b.containsKey(3), b.get(1)]).toEqual(['p', false, 'v1!?']);
+      });
     });
 
     describe('descending', () => {

@@ -1,7 +1,8 @@
 import { HashSet } from '../src/set/HashSet';
+import { TreeSet } from '../src/set/TreeSet';
 import { collectionContract } from './contracts/collection';
 import { setContract } from './contracts/set';
-import { Collide, expectThrows, Point, rng } from './helpers';
+import { Collide, expectThrows, Point, rng, timeIt } from './helpers';
 import { SimpleList, SimpleSet } from './support';
 
 collectionContract('HashSet', () => new HashSet(), { allowsNull: true, allowsDuplicates: false });
@@ -286,9 +287,10 @@ describe('HashSet · implementation', () => {
     it('100k-element removeIf is linear', () => {
       const s = new HashSet<string>();
       for (let i = 0; i < 100_000; i++) s.add('k' + i);
-      const t = Date.now();
-      s.removeIf((x) => x.endsWith('7'));
-      expect(Date.now() - t).toBeLessThan(500);
+      const ms = timeIt(() => {
+        s.removeIf((x) => x.endsWith('7'));
+      });
+      expect(ms).toBeLessThan(500);
       expect(s.size()).toBe(90_000);
     });
   });
@@ -329,5 +331,44 @@ describe('HashSet · implementation', () => {
       expect(s.toArray().length).toBe(ref.size);
       expect(new HashSet(s).equals(s)).toBe(true);
     });
+  });
+});
+
+describe('HashSet SE 27 additions', () => {
+  const ci = (a: string, b: string) => a.toLowerCase().localeCompare(b.toLowerCase());
+  it('newHashSet(n) returns an empty, usable HashSet', () => {
+    const s = HashSet.newHashSet<number>(10);
+    expect([s instanceof HashSet, s.size(), s.add(1), s.contains(1)]).toEqual([true, 0, true, true]);
+    expect(HashSet.newHashSet(0).isEmpty()).toBe(true);
+  });
+  it('newHashSet rejects negative and NaN', () => {
+    expectThrows(() => HashSet.newHashSet(-1), 'IllegalArgumentException');
+    expectThrows(() => HashSet.newHashSet(NaN), 'IllegalArgumentException');
+  });
+  it('constructor rejects a non-collection argument with IllegalArgumentException', () => {
+    expectThrows(() => new HashSet({} as never), 'IllegalArgumentException');
+    expectThrows(() => new HashSet('abc' as never), 'IllegalArgumentException');
+    expectThrows(() => new HashSet(null as never), 'NullPointerException');
+  });
+  it('removeAll(smaller case-insensitive TreeSet) uses HashSet equality', () => {
+    const s = HashSet.of('A', 'b', 'x');
+    const c = new TreeSet<string>(ci);
+    c.add('a');
+    c.add('B');
+    expect(s.removeAll(c)).toBe(false);
+    expect(s.size()).toBe(3);
+  });
+  it('removeAll(larger case-insensitive TreeSet) uses its contains', () => {
+    const s = HashSet.of('A', 'b');
+    const c = new TreeSet<string>(ci);
+    ['a', 'B', 'z'].forEach((x) => c.add(x));
+    expect(s.removeAll(c)).toBe(true);
+    expect(s.isEmpty()).toBe(true);
+  });
+  it('toArray(generator) covers index, native and bucket storage', () => {
+    const s = HashSet.of<unknown>(1, 'a', new Point(1, 2));
+    const out = s.toArray((n) => new Array<unknown>(n));
+    expect(out.length).toBe(3);
+    expect(s.containsAll(SimpleList.of(...out))).toBe(true);
   });
 });

@@ -1,3 +1,6 @@
+import { AbstractQueue } from '../src/abstract/AbstractQueue';
+import { NullPointerException } from '../src/exceptions';
+import { Iterator } from '../src/interfaces/Iterator';
 import { PriorityQueue } from '../src/queue/PriorityQueue';
 import { Comparator, naturalCompare } from '../src/util/Comparator';
 import { collectionContract } from './contracts/collection';
@@ -453,3 +456,86 @@ function sortedIndex(a: number[], v: number): number {
   }
   return lo;
 }
+
+describe('PriorityQueue · SE 27 conformance', () => {
+  it('toArray(generator) gets size() and fills a typed array in heap order', () => {
+    const pq = fill(new PriorityQueue<number>(), [5, 1, 4, 2, 3]);
+    const lens: number[] = [];
+    const out = pq.toArray((n) => (lens.push(n), new Float64Array(n)));
+    expect(out).toBeInstanceOf(Float64Array);
+    expect(Array.from(out)).toEqual(pq.toArray());
+    expect(lens).toEqual([5]);
+    expectThrows(() => pq.toArray(null as any), 'NullPointerException');
+  });
+  it('toArray(generator) result is not the heap array', () => {
+    const pq = fill(new PriorityQueue<number>(), [2, 1]);
+    const out = pq.toArray((n) => new Array<number>(n));
+    out[0] = 99;
+    expect(pq.peek()).toBe(1);
+  });
+  it('removeIf whose predicate clears the queue throws ConcurrentModificationException without seeing undefined', () => {
+    const pq = fill(new PriorityQueue<number>(), [1, 2, 3]);
+    const seen: unknown[] = [];
+    expectThrows(() => pq.removeIf((x) => (seen.push(x), pq.clear(), true)), 'ConcurrentModificationException');
+    expect([seen.length, pq.size()]).toEqual([1, 0]);
+  });
+});
+
+describe('AbstractQueue skeleton (bounded subclass)', () => {
+  class Bounded<E> extends AbstractQueue<E> {
+    readonly items: E[] = [];
+    constructor(private readonly cap: number) {
+      super();
+    }
+    offer(e: E): boolean {
+      if (e === null || e === undefined) throw new NullPointerException();
+      if (this.items.length >= this.cap) return false;
+      this.items.push(e);
+      return true;
+    }
+    poll(): E | null {
+      return this.items.length === 0 ? null : (this.items.shift() as E);
+    }
+    peek(): E | null {
+      return this.items.length === 0 ? null : this.items[0];
+    }
+    size(): number {
+      return this.items.length;
+    }
+    iterator(): Iterator<E> {
+      const a = this.items;
+      let i = 0;
+      return {
+        hasNext: () => i < a.length,
+        next: () => a[i++],
+        remove: () => void a.splice(--i, 1),
+        forEachRemaining: (f: (e: E) => void) => {
+          while (i < a.length) f(a[i++]);
+        },
+      };
+    }
+  }
+  it('add throws IllegalStateException when offer refuses', () => {
+    const q = new Bounded<number>(1);
+    expect(q.add(1)).toBe(true);
+    expectThrows(() => q.add(2), 'IllegalStateException');
+  });
+  it('addAll stops with IllegalStateException when full; null / self rejected', () => {
+    const q = new Bounded<number>(2);
+    expectThrows(() => q.addAll(SimpleList.of(1, 2, 3)), 'IllegalStateException');
+    expect(q.items).toEqual([1, 2]);
+    expectThrows(() => q.addAll(q), 'IllegalArgumentException');
+    expectThrows(() => q.addAll(null as any), 'NullPointerException');
+  });
+  it('remove() / element() / clear()', () => {
+    const q = new Bounded<number>(3);
+    expectThrows(() => q.remove(), 'NoSuchElementException');
+    expectThrows(() => q.element(), 'NoSuchElementException');
+    q.add(1);
+    q.add(2);
+    expect([q.element(), q.remove(), q.remove(2)]).toEqual([1, 1, true]);
+    q.add(3);
+    q.clear();
+    expect([q.size(), q.poll()]).toEqual([0, null]);
+  });
+});

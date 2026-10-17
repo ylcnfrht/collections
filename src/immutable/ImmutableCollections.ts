@@ -2,7 +2,14 @@ import { AbstractCollection } from '../abstract/AbstractCollection';
 import { AbstractList, subListRangeCheck } from '../abstract/AbstractList';
 import { AbstractMap, mapIterator, SimpleImmutableEntry } from '../abstract/AbstractMap';
 import { AbstractSet } from '../abstract/AbstractSet';
-import { IllegalArgumentException, IndexOutOfBoundsException, NoSuchElementException, UnsupportedOperationException } from '../exceptions';
+import {
+  IllegalArgumentException,
+  IllegalStateException,
+  IndexOutOfBoundsException,
+  NoSuchElementException,
+  NullPointerException,
+  UnsupportedOperationException,
+} from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { List as ListType } from '../interfaces/List';
@@ -10,8 +17,10 @@ import { Map as MapType, MapEntry } from '../interfaces/Map';
 import { Set as SetType } from '../interfaces/Set';
 import { HashMap, isPlainKey, jsIterator } from '../map/HashMap';
 import { HashSet } from '../set/HashSet';
+import { toArrayWith, WritableArrayLike } from '../util/arrays';
+import { naturalCompare } from '../util/Comparator';
 import { isEntry, isList, RANDOM_ACCESS } from '../util/guards';
-import { checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
+import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 
 /** Thrown by every mutator of an unmodifiable collection, whether or not the call would change anything. */
 export function uoe(): never {
@@ -105,24 +114,32 @@ export class ArrayItr<E> implements ListIterator<E> {
   }
 }
 
+/** Null query against a collection from List.of/Set.of/Map.of (which reject null queries, as their nulls can never be present). */
+function nullQuery(): never {
+  throw new NullPointerException();
+}
+
 function outOfBounds(index: number, length: number): never {
   throw new IndexOutOfBoundsException(`Index ${index} out of bounds for length ${length}`);
 }
 
 /**
- * Unmodifiable random-access list over a frozen array. Built by List.of/copyOf (nulls rejected)
- * and by Collections.emptyList/singletonList/nCopies (nulls allowed).
+ * Unmodifiable random-access list over a frozen array. Built by List.of/copyOf (null elements and null
+ * queries rejected) and by Collections.emptyList/singletonList/nCopies (nulls allowed).
  */
 export class ImmutableList<E> extends ImmutableListBase<E> {
   /** @internal frozen backing array */
   readonly es: readonly E[];
-  /** @internal true when nulls were rejected at construction, so List.copyOf may return it as-is */
+  /** @internal true when no element is null/undefined */
   readonly nullFree: boolean;
+  /** @internal true for List.of/copyOf lists: null queries throw NullPointerException, and List.copyOf may return it as-is */
+  readonly nullHostile: boolean;
 
-  constructor(es: readonly E[], nullFree: boolean) {
+  constructor(es: readonly E[], nullFree: boolean, nullHostile = false) {
     super();
     this.es = Object.freeze(es);
     this.nullFree = nullFree;
+    this.nullHostile = nullHostile;
   }
 
   get [RANDOM_ACCESS](): true {
@@ -155,6 +172,7 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
   }
 
   override indexOf(o: unknown): number {
+    if (o == null && this.nullHostile) nullQuery();
     const a = this.es;
     // SameValueZero keys match exactly what native indexOf finds (NaN aside)
     if (isPlainKey(o) && o === o) return a.indexOf(o as E);
@@ -163,6 +181,7 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
   }
 
   override lastIndexOf(o: unknown): number {
+    if (o == null && this.nullHostile) nullQuery();
     const a = this.es;
     if (isPlainKey(o) && o === o) return a.lastIndexOf(o as E);
     for (let i = a.length - 1; i >= 0; i--) if (equals(o, a[i])) return i;
@@ -173,8 +192,10 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
     return this.indexOf(o) >= 0;
   }
 
-  override toArray(): E[] {
-    return this.es.slice();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith(this.es, generator as (length: number) => A) : this.es.slice();
   }
 
   override forEach(action: (e: E) => void): void {
@@ -200,11 +221,11 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
   // shortcut: subList/reversed copy (O(k)) instead of viewing; contents can never change, so it is indistinguishable
   override subList(fromIndex: number, toIndex: number): ListType<E> {
     subListRangeCheck(fromIndex, toIndex, this.es.length);
-    return new ImmutableList(this.es.slice(fromIndex, toIndex), this.nullFree);
+    return new ImmutableList(this.es.slice(fromIndex, toIndex), this.nullFree, this.nullHostile);
   }
 
   override reversed(): ListType<E> {
-    return new ImmutableList(this.es.slice().reverse(), this.nullFree);
+    return new ImmutableList(this.es.slice().reverse(), this.nullFree, this.nullHostile);
   }
 
   override equals(o: unknown): boolean {
@@ -249,7 +270,8 @@ export class ImmutableSet<E> extends ImmutableSetBase<E> {
   constructor(
     /** @internal */ readonly es: readonly E[],
     private readonly lookup: HashSet<E>,
-    /** @internal */ readonly nullFree: boolean
+    /** @internal no null elements */ readonly nullFree: boolean,
+    /** @internal Set.of/copyOf: null queries throw */ readonly nullHostile = false
   ) {
     super();
     Object.freeze(es);
@@ -264,11 +286,14 @@ export class ImmutableSet<E> extends ImmutableSetBase<E> {
   }
 
   override contains(o: unknown): boolean {
+    if (o == null && this.nullHostile) nullQuery();
     return this.lookup.contains(o);
   }
 
-  override toArray(): E[] {
-    return this.es.slice();
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith(this.es, generator as (length: number) => A) : this.es.slice();
   }
 
   override forEach(action: (e: E) => void): void {
@@ -292,8 +317,11 @@ export class ImmutableSet<E> extends ImmutableSetBase<E> {
   }
 }
 
-/** @internal Builds a set; rejectDup throws on a repeated element, nullFree throws on null/undefined. */
-export function buildSet<E>(src: readonly E[], rejectDup: boolean, nullFree: boolean): ImmutableSet<E> {
+/**
+ * @internal Builds a set; rejectDup throws on a repeated element, nullFree throws on null/undefined,
+ * nullHostile makes null queries throw.
+ */
+export function buildSet<E>(src: readonly E[], rejectDup: boolean, nullFree: boolean, nullHostile = false): ImmutableSet<E> {
   const lookup = new HashSet<E>();
   const es: E[] = [];
   for (let i = 0; i < src.length; i++) {
@@ -302,7 +330,7 @@ export function buildSet<E>(src: readonly E[], rejectDup: boolean, nullFree: boo
     if (lookup.add(e)) es.push(e);
     else if (rejectDup) throw new IllegalArgumentException(`duplicate element: ${toString(e)}`);
   }
-  return new ImmutableSet(es, lookup, nullFree);
+  return new ImmutableSet(es, lookup, nullFree, nullHostile);
 }
 
 /**
@@ -320,7 +348,8 @@ export class ImmutableMap<K, V> extends ImmutableMapBase<K, V> {
     /** @internal */ readonly entries: readonly MapEntry<K, V>[],
     /** @internal */ readonly plain: globalThis.Map<unknown, V>,
     /** @internal */ readonly other: HashMap<K, V>,
-    /** @internal */ readonly nullFree: boolean
+    /** @internal no null keys/values */ readonly nullFree: boolean,
+    /** @internal Map.of/ofEntries/copyOf: null queries throw */ readonly nullHostile = false
   ) {
     super();
     Object.freeze(entries);
@@ -338,14 +367,19 @@ export class ImmutableMap<K, V> extends ImmutableMapBase<K, V> {
     // primitive test inlined ahead of isPlainKey: keeps the common get to one native lookup
     if ((typeof key === 'object' || typeof key === 'function') && !isPlainKey(key)) return this.other.get(key);
     const v = this.plain.get(key);
-    return v === undefined ? null : v;
+    if (v !== undefined) return v;
+    // null/undefined keys are plain and never stored in a null-hostile map, so only misses pay for the check
+    if (key == null && this.nullHostile) nullQuery();
+    return null;
   }
 
   override containsKey(key: unknown): boolean {
+    if (key == null && this.nullHostile) nullQuery();
     return isPlainKey(key) ? this.plain.has(key) : this.other.containsKey(key);
   }
 
   override containsValue(value: unknown): boolean {
+    if (value == null && this.nullHostile) nullQuery();
     const a = this.entries;
     for (let i = 0; i < a.length; i++) if (equals(value, a[i].getValue())) return true;
     return false;
@@ -398,12 +432,16 @@ class EntrySetView<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
     return this.map.entries.length;
   }
   override contains(o: unknown): boolean {
+    if (o == null && this.map.nullHostile) nullQuery();
     if (!isEntry(o)) return false;
     const k = o.getKey();
+    if (k == null && this.map.nullHostile) return false;
     return this.map.containsKey(k) && equals(this.map.get(k), o.getValue());
   }
-  override toArray(): MapEntry<K, V>[] {
-    return this.map.entries.slice();
+  override toArray(): MapEntry<K, V>[];
+  override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator?: (length: number) => A): MapEntry<K, V>[] | A {
+    return arguments.length > 0 ? toArrayWith(this.map.entries, generator as (length: number) => A) : this.map.entries.slice();
   }
 }
 
@@ -444,7 +482,7 @@ class ValuesView<K, V> extends ImmutableCollectionBase<V> {
 }
 
 /** @internal Builds a map from immutable entries; a repeated key throws IllegalArgumentException. */
-export function buildMap<K, V>(entries: MapEntry<K, V>[], nullFree: boolean): ImmutableMap<K, V> {
+export function buildMap<K, V>(entries: MapEntry<K, V>[], nullFree: boolean, nullHostile = false): ImmutableMap<K, V> {
   const plain = new globalThis.Map<unknown, V>();
   const other = new HashMap<K, V>();
   for (let i = 0; i < entries.length; i++) {
@@ -454,11 +492,14 @@ export function buildMap<K, V>(entries: MapEntry<K, V>[], nullFree: boolean): Im
     if (p) plain.set(k, entries[i].getValue());
     else other.put(k, entries[i].getValue());
   }
-  return new ImmutableMap(entries, plain, other, nullFree);
+  return new ImmutableMap(entries, plain, other, nullFree, nullHostile);
 }
 
+/** Entry made by Map.entry / Map.Entry.copyOf: immutable, key and value never null. */
+class KeyValueHolder<K, V> extends SimpleImmutableEntry<K, V> {}
+
 function immutableEntry<K, V>(k: K, v: V): MapEntry<K, V> {
-  return new SimpleImmutableEntry(requireNonNull(k) as K, requireNonNull(v) as V);
+  return new KeyValueHolder(requireNonNull(k) as K, requireNonNull(v) as V);
 }
 
 function rejectNulls<E>(a: E[]): E[] {
@@ -466,32 +507,265 @@ function rejectNulls<E>(a: E[]): E[] {
   return a;
 }
 
+// ---- lazily computed collections (List.ofLazy, Set.ofLazy, Map.ofLazy)
+
+const UNSET: unique symbol = Symbol('unset');
+const BUSY: unique symbol = Symbol('busy');
+/** Error state of a slot: remembers the failing exception's name. */
+class Failed {
+  constructor(readonly name: string) {}
+}
+
+function withCause<T extends Error>(e: T, cause: unknown): T {
+  (e as { cause?: unknown }).cause = cause;
+  return e;
+}
+
+/**
+ * Slots computed at most once by fn. A throwing fn (or a null result) moves the slot to an error state:
+ * that call throws NoSuchElementException with the exception as cause, later calls throw one naming it.
+ */
+class LazySlots<A, R> {
+  private readonly slots: (R | typeof UNSET | typeof BUSY | Failed)[];
+  private left: number;
+  constructor(n: number, private fn: ((a: A) => R) | null) {
+    this.slots = new Array(n).fill(UNSET);
+    this.left = n;
+    if (n === 0) this.fn = null;
+  }
+
+  get(i: number, arg: A): R {
+    const v = this.slots[i];
+    if (v !== UNSET && v !== BUSY && !(v instanceof Failed)) return v;
+    if (v instanceof Failed) throw new NoSuchElementException(`Unable to access the lazy element: previous computation failed with ${v.name}`);
+    if (v === BUSY) {
+      throw withCause(new NoSuchElementException('Recursive computation of a lazy element'), new IllegalStateException('Recursive invocation'));
+    }
+    this.slots[i] = BUSY;
+    let r: R;
+    try {
+      r = (this.fn as (a: A) => R)(arg);
+      if (r === null || r === undefined) throw new NullPointerException('The computing function returned null');
+    } catch (e) {
+      this.settle(i, new Failed((e as Error)?.name ?? (e as object)?.constructor?.name ?? typeof e));
+      throw withCause(new NoSuchElementException(`Unable to compute the lazy element: ${toString(e)}`), e);
+    }
+    this.settle(i, r);
+    return r;
+  }
+
+  private settle(i: number, v: R | Failed): void {
+    this.slots[i] = v;
+    // the function is no longer needed once every slot is settled
+    if (--this.left === 0) this.fn = null;
+  }
+}
+
+class LazyList<E> extends ImmutableListBase<E> {
+  private readonly slots: LazySlots<number, E>;
+  constructor(private readonly n: number, fn: (i: number) => E) {
+    super();
+    this.slots = new LazySlots(n, fn);
+  }
+  get [RANDOM_ACCESS](): true {
+    return true;
+  }
+  size(): number {
+    return this.n;
+  }
+  get(index: number): E {
+    checkIndex(index, this.n);
+    return this.slots.get(index, index);
+  }
+  override contains(o: unknown): boolean {
+    return this.indexOf(o) >= 0;
+  }
+  override indexOf(o: unknown): number {
+    if (o == null) nullQuery();
+    return super.indexOf(o);
+  }
+  override lastIndexOf(o: unknown): number {
+    if (o == null) nullQuery();
+    return super.lastIndexOf(o);
+  }
+}
+
+/** Index of each key/candidate, with null queries rejected. */
+class KeyIndex<K> {
+  readonly keys: K[];
+  private readonly index = new HashMap<K, number>();
+  constructor(src: SetType<K>) {
+    this.keys = requireNonNull(src).toArray();
+    for (let i = 0; i < this.keys.length; i++) this.index.put(requireNonNull(this.keys[i]) as K, i);
+  }
+  indexOf(o: unknown): number {
+    if (o == null) nullQuery();
+    const i = this.index.get(o);
+    return i === null ? -1 : i;
+  }
+}
+
+class LazySet<E> extends ImmutableSetBase<E> {
+  private readonly slots: LazySlots<E, boolean>;
+  constructor(private readonly candidates: KeyIndex<E>, predicate: (e: E) => boolean) {
+    super();
+    this.slots = new LazySlots(candidates.keys.length, (e) => predicate(e) === true);
+  }
+  override contains(o: unknown): boolean {
+    const i = this.candidates.indexOf(o);
+    return i >= 0 && this.slots.get(i, o as E);
+  }
+  /** Computes every membership status. */
+  private members(): E[] {
+    const ks = this.candidates.keys;
+    const out: E[] = [];
+    for (let i = 0; i < ks.length; i++) if (this.slots.get(i, ks[i])) out.push(ks[i]);
+    return out;
+  }
+  size(): number {
+    return this.members().length;
+  }
+  iterator(): Iterator<E> {
+    const ks = this.candidates.keys;
+    let i = 0;
+    const advance = (): void => {
+      while (i < ks.length && !this.slots.get(i, ks[i])) i++;
+    };
+    return {
+      hasNext: () => (advance(), i < ks.length),
+      next: () => {
+        advance();
+        if (i >= ks.length) throw new NoSuchElementException();
+        return ks[i++];
+      },
+      remove: uoe,
+      forEachRemaining(action: (e: E) => void) {
+        requireNonNull(action);
+        while (this.hasNext()) action(this.next());
+      },
+    };
+  }
+}
+
+class LazyMap<K, V> extends ImmutableMapBase<K, V> {
+  private readonly slots: LazySlots<K, V>;
+  private ks: SetType<K> | undefined;
+  private ens: SetType<MapEntry<K, V>> | undefined;
+  constructor(private readonly keyIndex: KeyIndex<K>, fn: (k: K) => V) {
+    super();
+    this.slots = new LazySlots(keyIndex.keys.length, fn);
+  }
+  override size(): number {
+    return this.keyIndex.keys.length;
+  }
+  override containsKey(key: unknown): boolean {
+    return this.keyIndex.indexOf(key) >= 0;
+  }
+  override get(key: unknown): V | null {
+    const i = this.keyIndex.indexOf(key);
+    return i < 0 ? null : this.slots.get(i, key as K);
+  }
+  override getOrDefault(key: unknown, defaultValue: V): V {
+    const i = this.keyIndex.indexOf(key);
+    return i < 0 ? defaultValue : this.slots.get(i, key as K);
+  }
+  override containsValue(value: unknown): boolean {
+    if (value == null) nullQuery();
+    return super.containsValue(value);
+  }
+  override keySet(): SetType<K> {
+    return (this.ks ??= buildSet(this.keyIndex.keys, false, true, true));
+  }
+  entrySet(): SetType<MapEntry<K, V>> {
+    return (this.ens ??= new LazyEntrySet(this));
+  }
+  /** @internal entry i; its value is computed on first read */
+  entryAt(i: number): MapEntry<K, V> {
+    const k = this.keyIndex.keys[i];
+    return new SimpleImmutableEntry(k, this.slots.get(i, k));
+  }
+}
+
+class LazyEntrySet<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
+  constructor(private readonly map: LazyMap<K, V>) {
+    super();
+  }
+  size(): number {
+    return this.map.size();
+  }
+  override contains(o: unknown): boolean {
+    if (!isEntry(o)) return false;
+    const k = o.getKey();
+    return k != null && this.map.containsKey(k) && equals(this.map.get(k), o.getValue());
+  }
+  iterator(): Iterator<MapEntry<K, V>> {
+    let i = 0;
+    const n = this.map.size();
+    return {
+      hasNext: () => i < n,
+      next: () => {
+        if (i >= n) throw new NoSuchElementException();
+        return this.map.entryAt(i++);
+      },
+      remove: uoe,
+      forEachRemaining: (action: (e: MapEntry<K, V>) => void) => {
+        requireNonNull(action);
+        while (i < n) action(this.map.entryAt(i++));
+      },
+    };
+  }
+}
+
 export type List<E> = ListType<E>;
 export type Set<E> = SetType<E>;
 export type Map<K, V> = MapType<K, V>;
 
-/** Unmodifiable lists: random access, null elements rejected, value equality with any List. */
+/** Unmodifiable lists: random access, null elements and null queries rejected, value equality with any List. */
 export const List = {
   of<E>(...elements: E[]): ListType<E> {
     // the rest array is fresh, so it can be frozen in place
-    return new ImmutableList(rejectNulls(elements), true);
+    return new ImmutableList(rejectNulls(elements), true, true);
   },
   copyOf<E>(c: Collection<E>): ListType<E> {
-    if (c instanceof ImmutableList && c.nullFree) return c;
-    return new ImmutableList(rejectNulls(requireNonNull(c).toArray()), true);
+    if (c instanceof ImmutableList && c.nullHostile) return c;
+    return new ImmutableList(rejectNulls(requireNonNull(c).toArray()), true, true);
+  },
+  /**
+   * @experimental preview. Unmodifiable random-access list of `size` elements, each computed by
+   * computingFunction(index) on first access and at most once. A throwing function, a null/undefined
+   * result or a recursive access for the same index throws NoSuchElementException (with the failure as
+   * `cause`); that index then stays failed and throws NoSuchElementException without calling the function
+   * again. subList/reversed views are lazy too; equals/hashCode/toString compute elements.
+   * @throws IllegalArgumentException if size is negative or not an integer
+   * @throws NullPointerException if computingFunction is null
+   */
+  ofLazy<E>(size: number, computingFunction: (index: number) => E): ListType<E> {
+    if (!(Number.isInteger(size) && size >= 0)) throw new IllegalArgumentException(`size: ${size}`);
+    return new LazyList(size, requireNonNull(computingFunction));
   },
 };
 
-/** Unmodifiable sets: null elements rejected, value equality with any Set; iteration order is unspecified. */
+/** Unmodifiable sets: null elements and null queries rejected, value equality with any Set; iteration order is unspecified. */
 export const Set = {
   /** @throws IllegalArgumentException on a duplicate element */
   of<E>(...elements: E[]): SetType<E> {
-    return buildSet(elements, true, true);
+    return buildSet(elements, true, true, true);
   },
   /** Duplicates are dropped. */
   copyOf<E>(c: Collection<E>): SetType<E> {
-    if (c instanceof ImmutableSet && c.nullFree) return c;
-    return buildSet(requireNonNull(c).toArray(), false, true);
+    if (c instanceof ImmutableSet && c.nullHostile) return c;
+    return buildSet(requireNonNull(c).toArray(), false, true, true);
+  },
+  /**
+   * @experimental preview. Unmodifiable set whose members are the elementCandidates for which
+   * computingFunction returns true, each status computed on first access (contains, iteration, size)
+   * and at most once. Failures behave as in List.ofLazy. Later changes to elementCandidates are not seen.
+   * contains(null) throws NullPointerException; a non-candidate is never a member.
+   * @throws NullPointerException if elementCandidates, one of them, or computingFunction is null
+   */
+  ofLazy<E>(elementCandidates: SetType<E>, computingFunction: (e: E) => boolean): SetType<E> {
+    const candidates = new KeyIndex(elementCandidates);
+    return new LazySet(candidates, requireNonNull(computingFunction));
   },
 };
 
@@ -506,26 +780,61 @@ function mapOf<K, V>(...kvs: unknown[]): MapType<K, V> {
   if (kvs.length % 2 !== 0) throw new IllegalArgumentException('Map.of needs key/value pairs');
   const entries: MapEntry<K, V>[] = [];
   for (let i = 0; i < kvs.length; i += 2) entries.push(immutableEntry(kvs[i] as K, kvs[i + 1] as V));
-  return buildMap(entries, true);
+  return buildMap(entries, true, true);
 }
 
-/** Unmodifiable maps: null keys/values rejected, duplicate keys rejected; iteration order is unspecified. */
+/** Map.Entry statics. */
+const Entry = {
+  /** Orders entries by key in natural order (null keys throw NullPointerException). */
+  comparingByKey<K, V>(cmp?: (a: K, b: K) => number): (a: MapEntry<K, V>, b: MapEntry<K, V>) => number {
+    const c = arguments.length > 0 ? requireNonNull(cmp) : naturalCompare;
+    return (a, b) => c(a.getKey(), b.getKey());
+  },
+  /** Orders entries by value in natural order (null values throw NullPointerException). */
+  comparingByValue<K, V>(cmp?: (a: V, b: V) => number): (a: MapEntry<K, V>, b: MapEntry<K, V>) => number {
+    const c = arguments.length > 0 ? requireNonNull(cmp) : naturalCompare;
+    return (a, b) => c(a.getValue(), b.getValue());
+  },
+  /**
+   * Unmodifiable, null-free copy of e (like Map.entry); returns e itself when it already is one.
+   * @throws NullPointerException if e, its key or its value is null
+   */
+  copyOf<K, V>(e: MapEntry<K, V>): MapEntry<K, V> {
+    if (requireNonNull(e) instanceof KeyValueHolder) return e;
+    return immutableEntry(e.getKey(), e.getValue());
+  },
+};
+
+/** Unmodifiable maps: null keys/values and null queries rejected, duplicate keys rejected; iteration order is unspecified. */
 export const Map = {
   /** Map.of(k1, v1, k2, v2, ...). @throws IllegalArgumentException on an odd argument count or a duplicate key */
   of: mapOf,
   ofEntries<K, V>(...entries: MapEntry<K, V>[]): MapType<K, V> {
     const es: MapEntry<K, V>[] = [];
     for (const e of entries) es.push(immutableEntry(requireNonNull(e).getKey(), e.getValue()));
-    return buildMap(es, true);
+    return buildMap(es, true, true);
   },
   /** Immutable entry; setValue throws UnsupportedOperationException. */
   entry<K, V>(k: K, v: V): MapEntry<K, V> {
     return immutableEntry(k, v);
   },
   copyOf<K, V>(m: MapType<K, V>): MapType<K, V> {
-    if (m instanceof ImmutableMap && m.nullFree) return m;
+    if (m instanceof ImmutableMap && m.nullHostile) return m;
     const es: MapEntry<K, V>[] = [];
     for (const e of requireNonNull(m).entrySet().toArray()) es.push(immutableEntry(e.getKey(), e.getValue()));
-    return buildMap(es, true);
+    return buildMap(es, true, true);
   },
+  /**
+   * @experimental preview. Unmodifiable map with the given keys whose values are computed by
+   * computingFunction(key) on first access (get, getOrDefault, values/entrySet iteration, equals,
+   * hashCode, toString) and at most once per key. Failures behave as in List.ofLazy. Later changes to
+   * keys are not seen. get of a non-key is null; null queries throw NullPointerException.
+   * @throws NullPointerException if keys, one of them, or computingFunction is null
+   */
+  ofLazy<K, V>(keys: SetType<K>, computingFunction: (key: K) => V): MapType<K, V> {
+    const index = new KeyIndex(keys);
+    return new LazyMap(index, requireNonNull(computingFunction));
+  },
+  /** Map.Entry statics: comparingByKey, comparingByValue, copyOf. */
+  Entry,
 };
