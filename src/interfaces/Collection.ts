@@ -1,4 +1,6 @@
 import { WritableArrayLike } from '../util/arrays';
+import type { Spliterator } from '../stream/Spliterator';
+import type { Stream } from '../stream/Stream';
 import { Iterator } from './Iterator';
 
 /**
@@ -25,6 +27,11 @@ export interface Collection<E> extends Iterable<E> {
   equals(o: unknown): boolean;
   hashCode(): number;
   toString(): string;
+  spliterator(): Spliterator<E>;
+  /** Sequential stream over this collection. */
+  stream(): Stream<E>;
+  /** Flagged parallel; evaluated sequentially (single-threaded JS). */
+  parallelStream(): Stream<E>;
 }
 
 /** Collection with a defined order and two ends. */
