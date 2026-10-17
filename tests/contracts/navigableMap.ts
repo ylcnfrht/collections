@@ -166,7 +166,14 @@ export function navigableMapContract(name: string, create: (c?: Comparator<any>)
         expect(entry(m.tailMap(3).pollFirstEntry())).toEqual([3, 'v3']);
         expect(m.containsKey(3)).toBe(false);
       });
-      it('nested views', () => expect(keys(base().headMap(5).tailMap(2).subMap(3, 10))).toEqual([3, 4]));
+      it('nested views', () => expect(keys(base().headMap(5).tailMap(2).subMap(3, 5))).toEqual([3, 4]));
+      it('nested view bound outside the parent range throws IllegalArgumentException', () => {
+        expectThrows(() => base().headMap(5).tailMap(2).subMap(3, 10), IAE);
+        expectThrows(() => base().headMap(3).tailMap(4), IAE);
+        expectThrows(() => base().tailMap(3).headMap(1), IAE);
+      });
+      it('nested view may end exactly at an exclusive parent bound', () => expect(keys(base().headMap(4).subMap(2, 4))).toEqual([2, 3]));
+      it('inclusive bound on an exclusive parent edge throws', () => expectThrows(() => base().headMap(4, false).headMap(4, true), IAE));
       it('view equals a map with the same mappings', () => expect(base().headMap(2).equals(SimpleMap.of([1, 'v1']))).toBe(true));
     });
 

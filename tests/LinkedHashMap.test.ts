@@ -5,24 +5,8 @@ import { mapContract } from './contracts/map';
 import { Collide, expectThrows, Point, rng } from './helpers';
 import { SimpleMap } from './support';
 
-/** Defines tests via fn, turning the named ones into it.skip. */
-function withSkipped(names: string[], fn: () => void): void {
-  const real = global.it;
-  global.it = Object.assign((name: string, ...rest: never[]) => (names.includes(name) ? real.skip(name, ...rest) : real(name, ...rest)), real) as jest.It;
-  try {
-    fn();
-  } finally {
-    global.it = real;
-  }
-}
-
 mapContract('LinkedHashMap', () => new LinkedHashMap(), { allowsNullKey: true, allowsNullValue: true });
-// The contract asserts that overwriting a key is not structural; in access order the overwrite moves the
-// key, which (as in the reference) fails live iterators. That one case is skipped here and the real
-// behavior is tested below.
-withSkipped(['overwriting an existing key is not a structural change'], () =>
-  mapContract('LinkedHashMap (access order)', () => new LinkedHashMap(16, 0.75, true), { allowsNullKey: true, allowsNullValue: true })
-);
+mapContract('LinkedHashMap (access order)', () => new LinkedHashMap(16, 0.75, true), { allowsNullKey: true, allowsNullValue: true, accessOrdered: true });
 mapContract('LinkedHashMap.reversed()', () => new LinkedHashMap().reversed(), { allowsNullKey: true, allowsNullValue: true });
 
 const keys = (m: { keySet(): { toArray(): unknown[] } }) => m.keySet().toArray();

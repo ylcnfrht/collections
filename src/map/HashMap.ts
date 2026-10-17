@@ -154,6 +154,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
 
   // hooks
 
+  /** Runs before the key is hashed into storage: don't make the node reachable from here (link it in afterNodeInsertion). */
   protected newNode(key: K, value: V): HashNode<K, V> {
     return new HashNode(key, value);
   }

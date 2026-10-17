@@ -167,8 +167,10 @@ export function navigableSetContract(name: string, create: (c?: Comparator<any>)
         expect(s.tailSet(3, true).pollFirst()).toBe(3);
         expect(s.toArray()).toEqual([1, 2, 4, 5]);
       });
-      it('nested views intersect', () => expect(base().headSet(5).tailSet(2).subSet(3, 10).toArray()).toEqual([3, 4]));
-      it('nested view outside its parent range throws IllegalArgumentException', () => expectThrows(() => base().headSet(3).tailSet(4), IAE));
+      it('nested views', () => expect(base().headSet(5).tailSet(2).subSet(3, 5).toArray()).toEqual([3, 4]));
+      it('nested view bound outside the parent range throws IllegalArgumentException', () => expectThrows(() => base().headSet(5).tailSet(2).subSet(3, 10), IAE));
+      it('nested view may end exactly at an exclusive parent bound', () => expect(base().headSet(4).subSet(2, 4).toArray()).toEqual([2, 3]));
+      it('nested view starting outside its parent range throws IllegalArgumentException', () => expectThrows(() => base().headSet(3).tailSet(4), IAE));
       it('view iterator.remove writes through', () => {
         const s = base();
         const it = s.tailSet(4).iterator();

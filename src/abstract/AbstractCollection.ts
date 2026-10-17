@@ -96,7 +96,7 @@ export abstract class AbstractCollection<E> implements Collection<E> {
     while (it.hasNext()) action(it.next());
   }
 
-  *[Symbol.iterator](): Generator<E> {
+  *[Symbol.iterator](): IterableIterator<E> {
     const it = this.iterator();
     while (it.hasNext()) yield it.next();
   }

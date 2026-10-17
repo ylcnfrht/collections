@@ -997,26 +997,25 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
     return !this.tooLow(key) && !this.tooHigh(key);
   }
 
-  // nested view: the new bounds are intersected with this view's; an inverted result throws IllegalArgumentException
+  // an exclusive new bound may sit exactly on this view's bound; an inclusive one must be inside the range
+  private inRangeFor(key: unknown, inclusive: boolean): boolean {
+    if (inclusive) return this.inRange(key);
+    return (this.fromStart || this.m.compare(key, this.lo) >= 0) && (this.toEnd || this.m.compare(this.hi, key) >= 0);
+  }
+
+  // nested view: a new bound outside this view throws IllegalArgumentException; an absent one is inherited
   private sub(fromStart: boolean, lo: K | undefined, loInc: boolean, toEnd: boolean, hi: K | undefined, hiInc: boolean, desc: boolean): SubMap<K, V> {
-    const m = this.m;
-    if (fromStart || (!this.fromStart && m.compare(lo, this.lo) <= 0)) {
-      if (!fromStart && m.compare(lo, this.lo) === 0) loInc = loInc && this.loInc;
-      else {
-        fromStart = this.fromStart;
-        lo = this.lo;
-        loInc = this.loInc;
-      }
-    }
-    if (toEnd || (!this.toEnd && m.compare(hi, this.hi) >= 0)) {
-      if (!toEnd && m.compare(hi, this.hi) === 0) hiInc = hiInc && this.hiInc;
-      else {
-        toEnd = this.toEnd;
-        hi = this.hi;
-        hiInc = this.hiInc;
-      }
-    }
-    return new SubMap(m, fromStart, lo, loInc, toEnd, hi, hiInc, desc);
+    if (fromStart) {
+      fromStart = this.fromStart;
+      lo = this.lo;
+      loInc = this.loInc;
+    } else if (!this.inRangeFor(lo, loInc)) throw new IllegalArgumentException('fromKey out of range');
+    if (toEnd) {
+      toEnd = this.toEnd;
+      hi = this.hi;
+      hiInc = this.hiInc;
+    } else if (!this.inRangeFor(hi, hiInc)) throw new IllegalArgumentException('toKey out of range');
+    return new SubMap(this.m, fromStart, lo, loInc, toEnd, hi, hiInc, desc);
   }
 
   private absLowest(): Node<K, V> | null {

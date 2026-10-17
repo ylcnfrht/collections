@@ -306,12 +306,19 @@ describe('TreeMap · range views', () => {
     expectThrows(() => m.headMap(2).tailMap(3), 'IllegalArgumentException');
     expectThrows(() => m.descendingMap().subMap(1, 3), 'IllegalArgumentException');
   });
-  it('a bound equal to an exclusive parent bound gives an empty view', () => {
-    const m = of(1, 2, 3);
-    expect(m.headMap(2).tailMap(2).size()).toBe(0);
+  it('nested bounds: exclusive may sit on the parent edge, inclusive or outside throws', () => {
+    const m = of(1, 2, 3, 4, 5);
+    expect(m.headMap(2, false).tailMap(2, false).size()).toBe(0);
+    expect(keys(m.headMap(4).subMap(2, 4))).toEqual([2, 3]);
     expect(keys(m.headMap(2, true).tailMap(2, true))).toEqual([2]);
-    expect(keys(m.tailMap(2, false).headMap(3, true).subMap(2, true, 3, true))).toEqual([3]);
+    expectThrows(() => m.headMap(2).tailMap(2), 'IllegalArgumentException');
+    expectThrows(() => m.headMap(4, false).headMap(4, true), 'IllegalArgumentException');
+    expectThrows(() => m.headMap(5).tailMap(2).subMap(3, 10), 'IllegalArgumentException');
+    expectThrows(() => m.tailMap(2, false).subMap(2, true, 3, true), 'IllegalArgumentException');
+    expectThrows(() => m.subMap(2, true, 4, true).descendingMap().headMap(5), 'IllegalArgumentException');
+    expect(keys(m.subMap(2, true, 4, true).descendingMap().tailMap(3, false))).toEqual([2]);
   });
+
   it('null bounds with natural ordering throw NullPointerException', () => {
     expectThrows(() => of(1).headMap(null as any), 'NullPointerException');
     expectThrows(() => of(1).subMap(1, null as any), 'NullPointerException');

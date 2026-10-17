@@ -339,6 +339,45 @@ class SubList<E> extends AbstractList<E> {
     return new SubList(this.root, this, this.offset, fromIndex, toIndex);
   }
 
+  override iterator(): Iterator<E> {
+    return this.listIterator();
+  }
+
+  override listIterator(index = 0): ListIterator<E> {
+    this.checkForComodification();
+    checkPositionIndex(index, this._size);
+    const it = this.root.listIterator(this.offset + index);
+    const offset = this.offset;
+    const self = this;
+    return {
+      hasNext: () => it.nextIndex() - offset < self._size,
+      next() {
+        if (it.nextIndex() - offset >= self._size) throw new NoSuchElementException();
+        return it.next();
+      },
+      hasPrevious: () => it.previousIndex() - offset >= 0,
+      previous() {
+        if (it.previousIndex() - offset < 0) throw new NoSuchElementException();
+        return it.previous();
+      },
+      nextIndex: () => it.nextIndex() - offset,
+      previousIndex: () => it.previousIndex() - offset,
+      remove() {
+        it.remove();
+        self.updateSizeAndModCount(-1);
+      },
+      set: (e: E) => it.set(e),
+      add(e: E) {
+        it.add(e);
+        self.updateSizeAndModCount(1);
+      },
+      forEachRemaining(action: (e: E) => void) {
+        requireNonNull(action);
+        while (this.hasNext()) action(this.next());
+      },
+    };
+  }
+
   private checkForComodification(): void {
     if (this.root.modCount !== this.modCount) throw new ConcurrentModificationException();
   }
@@ -353,7 +392,7 @@ class SubList<E> extends AbstractList<E> {
 
 /** Live reverse-ordered view (List.reversed()). Iterators delegate to the base list so they stay fail-fast. */
 export class ReversedList<E> extends AbstractList<E> {
-  constructor(private readonly base: List<E>) {
+  constructor(protected readonly base: List<E>) {
     super();
   }
 

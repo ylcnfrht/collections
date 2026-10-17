@@ -10,6 +10,8 @@ export interface MapOptions {
   requiresComparableKeys?: boolean;
   /** skip 100k-element perf tests (for O(n) test-only implementations) */
   skipScale?: boolean;
+  /** access-ordered maps: overwriting a key moves it, so it is a structural change */
+  accessOrdered?: boolean;
 }
 
 /** Map contract: lookup by equals/hashCode, live views, default methods, value equality. */
@@ -195,7 +197,7 @@ export function mapContract(name: string, create: () => MapType<any, any>, opts:
         m.put('c', 3);
         expectThrows(() => it.next(), 'ConcurrentModificationException');
       });
-      it('overwriting an existing key is not a structural change', () => {
+      (opts.accessOrdered ? it.skip : it)('overwriting an existing key is not a structural change', () => {
         const m = of(['a', 1], ['b', 2]);
         const it = m.keySet().iterator();
         it.next();

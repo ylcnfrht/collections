@@ -86,6 +86,8 @@ export const Comparator = {
  */
 export function stableSort<T>(arr: T[], c: Comparator<T> | null | undefined): T[] {
   const cmp = c ?? naturalCompare;
+  // native sort is stable; it only skips the comparator for undefined, which needs the boxed path
+  if (!arr.includes(undefined as T)) return arr.sort(cmp);
   const boxed = arr.map((v) => ({ v }));
   boxed.sort((x, y) => cmp(x.v, y.v));
   for (let i = 0; i < arr.length; i++) arr[i] = boxed[i].v;

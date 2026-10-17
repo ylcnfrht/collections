@@ -94,7 +94,7 @@ export abstract class AbstractMap<K, V> implements Map<K, V> {
     return (this.valuesView ??= new ValuesView(this));
   }
 
-  *[Symbol.iterator](): Generator<[K, V]> {
+  *[Symbol.iterator](): IterableIterator<[K, V]> {
     const it = this.entrySet().iterator();
     while (it.hasNext()) {
       const e = it.next();
