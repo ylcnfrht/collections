@@ -71,6 +71,16 @@ export function addSuppressed(first: unknown, e: unknown): void {
   }
 }
 
+/** try-with-resources after the body threw `e`: closes c, attaches a close failure to e, rethrows e. */
+export function closeAfterFailure(e: unknown, c: { close(): void }): never {
+  try {
+    c.close();
+  } catch (e2) {
+    addSuppressed(e, e2);
+  }
+  throw e;
+}
+
 // ---------------------------------------------------------------- stateless stages
 
 export class MapSink<T, R> extends ChainedSink<T, R> {

@@ -17,6 +17,7 @@ import { requireNonNull, toString } from '../util/Objects';
 import { DoubleSummaryStatistics, IntSummaryStatistics, LongSummaryStatistics } from '../util/SummaryStatistics';
 import type { Collector as CollectorType, CollectorCharacteristics } from './Collector';
 import { Optional } from './Optional';
+import { closeAfterFailure } from './pipeline/Sink';
 
 export type Collector<T, A, R> = CollectorType<T, A, R>;
 export type { CollectorCharacteristics };
@@ -298,16 +299,10 @@ function flatMapping<T, U, A, R>(mapper: (t: T) => ClosableSource<U> | null | un
   return make<T, A, R>(downstream.supplier(), (r, t) => {
     const result = mapper(t);
     if (result === null || result === undefined) return;
-    // try-with-resources: a close() failure after a body failure is attached as suppressed
     try {
       result.forEach((u) => acc(r, u));
     } catch (e) {
-      try {
-        result.close();
-      } catch (e2) {
-        if (e instanceof Error) ((e as Error & { suppressed?: unknown[] }).suppressed ??= []).push(e2);
-      }
-      throw e;
+      closeAfterFailure(e, result);
     }
     result.close();
   }, downstream.combiner(), downstream.finisher(), downstream.characteristics());

@@ -19,6 +19,7 @@ import type { DoubleStream, IntStream, LongStream, Stream } from '../Stream';
 import {
   ActionSink,
   addSuppressed,
+  closeAfterFailure,
   ArraySink,
   ChainedSink,
   CollectSink,
@@ -454,13 +455,7 @@ export class FlatMapSink<T> extends ChainedSink<T, any> {
       if (inner instanceof AbstractPipeline) inner.pushInto(this.down, this.shortCircuit);
       else drain(inner.spliterator(), this.down, this.shortCircuit);
     } catch (e) {
-      // like try-with-resources: a failing close is suppressed into the primary failure
-      try {
-        inner.close();
-      } catch (e2) {
-        addSuppressed(e, e2);
-      }
-      throw e;
+      closeAfterFailure(e, inner);
     }
     inner.close();
   }
@@ -503,12 +498,7 @@ export class FlatMapSink<T> extends ChainedSink<T, any> {
         while (!down.cancelled && buf.length === 0 && sp.tryAdvance(this.emit));
       } catch (e) {
         this.inner = this.innerSp = null;
-        try {
-          inner.close();
-        } catch (e2) {
-          addSuppressed(e, e2);
-        }
-        throw e;
+        closeAfterFailure(e, inner);
       }
       if (buf.length !== 0 && !down.cancelled) return; // paused: this stream may have more
       this.inner = this.innerSp = null;

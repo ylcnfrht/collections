@@ -388,6 +388,21 @@ describe('flatMapping', () => {
       expect(((e as any).suppressed as Error[])[0].message).toBe('close failed');
     }
   });
+  it('a close that rethrows the body failure does not suppress it into itself; non-Error objects collect suppressed too', () => {
+    const boom = new Error('boom');
+    const same = { forEach: () => { throw boom; }, close: () => { throw boom; } };
+    expect(() => collect([0], flatMapping(() => same as any, toList()))).toThrow(boom);
+    expect((boom as any).suppressed).toBeUndefined();
+    const body = { code: 1 };
+    const c = flatMapping(() => ({ forEach: () => { throw body; }, close: () => { throw new Error('close failed'); } }) as any, toList());
+    try {
+      collect([0], c);
+      fail('expected throw');
+    } catch (e) {
+      expect(e).toBe(body);
+      expect((body as any).suppressed.map((x: Error) => x.message)).toEqual(['close failed']);
+    }
+  });
   it('a failing close alone propagates', () => {
     expect(() => collect([0], flatMapping(() => new FakeStream([1], true), toList()))).toThrow('close failed');
   });
