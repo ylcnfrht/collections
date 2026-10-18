@@ -91,6 +91,8 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   override ensureCapacity(minCapacity: number): void {
+    // like the reference: open iterators fail fast after any positive request
+    if (minCapacity > 0) this.modCount++;
     this.ensure(minCapacity);
   }
 
@@ -99,6 +101,7 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   override trimToSize(): void {
+    super.trimToSize();
     this.cap = this.es.length;
   }
 

@@ -34,6 +34,19 @@ describe('Vector · implementation', () => {
       }
       expect([v.size(), v.indexOf(2, 1), v.lastIndexOf(2, 2)]).toEqual([3, 1, 1]);
     });
+    it('trimToSize and ensureCapacity fail open iterators, as the reference', () => {
+      for (const op of [(v: Vector<number>) => v.trimToSize(), (v: Vector<number>) => v.ensureCapacity(100)]) {
+        const v = Vector.of(1, 2, 3);
+        const it = v.iterator();
+        it.next();
+        op(v);
+        expectThrows(() => it.next(), 'ConcurrentModificationException');
+      }
+      const l = ArrayList.of(1, 2);
+      const it = l.iterator();
+      l.trimToSize();
+      expectThrows(() => it.next(), 'ConcurrentModificationException');
+    });
     it('of() reports a capacity that holds its elements', () => {
       const v = Vector.of(...Array.from({ length: 30 }, (_, i) => i));
       expect([v.size(), v.capacity() >= 30, Vector.of(1, 2).capacity()]).toEqual([30, true, 10]);

@@ -57,7 +57,10 @@ export class ArrayList<E> extends AbstractList<E> {
   /** Capacity hint; the native array manages its own storage. */
   ensureCapacity(_minCapacity: number): void {}
 
-  trimToSize(): void {}
+  /** Capacity is the native array's business, but like the reference this still fails open iterators. */
+  trimToSize(): void {
+    this.modCount++;
+  }
 
   /** Shallow, independent copy of the same class. */
   clone(): this {
