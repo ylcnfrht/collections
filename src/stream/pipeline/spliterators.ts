@@ -270,7 +270,11 @@ export class IterableSpliterator<T> extends EngineSpliterator<T> {
       this.it = DONE;
       return false;
     }
-    action(r.value);
+    try {
+      action(r.value);
+    } catch (e) {
+      closeAfterFailure(e, this);
+    }
     return true;
   }
   drainTo(sink: Sink<T>, shortCircuit: boolean): void {
@@ -371,7 +375,14 @@ export class JsIterator<T> implements IterableIterator<T> {
     return { value: undefined, done: true };
   }
   next(): IteratorResult<T> {
-    if (!this.finished && this.sp.tryAdvance(this.take)) {
+    let more: boolean;
+    try {
+      more = !this.finished && this.sp.tryAdvance(this.take);
+    } catch (e) {
+      // a stage threw: iteration is over, so the stream is closed as on break (for..of won't call return())
+      closeAfterFailure(e, { close: () => this.end() });
+    }
+    if (more!) {
       const v = this.value as T;
       this.value = undefined;
       return { value: v, done: false };

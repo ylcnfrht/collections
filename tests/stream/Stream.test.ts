@@ -311,6 +311,28 @@ describe('Stream · factories', () => {
       s.close();
       expect(finished).toBe(2);
     });
+    it('pull mode: a throwing stage closes the generator and the stream', () => {
+      let closed = 0;
+      const s = Stream.from(gen())
+        .map((x) => {
+          if (x === 2) throw new Error('boom');
+          return x;
+        })
+        .onClose(() => closed++);
+      expect(() => {
+        for (const _ of s);
+      }).toThrow('boom');
+      expect([finished, closed]).toEqual([1, 1]);
+      const it = Stream.from(gen())
+        .map((x) => {
+          if (x === 2) throw new Error('boom');
+          return x;
+        })
+        .iterator();
+      it.next();
+      expect(() => it.next()).toThrow('boom');
+      expect(finished).toBe(2);
+    });
     it('the stream iterator yields nothing after return()', () => {
       const it = Stream.of(1, 2, 3)[Symbol.iterator]();
       it.next();
