@@ -19,7 +19,8 @@ export function compareNumbers(a: number, b: number): number {
   return an === bn ? 0 : an ? 1 : -1;
 }
 
-function describe(x: unknown): string {
+/** A value's type for error messages: its class name, or typeof. @internal */
+export function describeType(x: unknown): string {
   return x === null ? 'null' : typeof x === 'object' ? (x as object).constructor?.name ?? 'Object' : typeof x;
 }
 
@@ -45,7 +46,7 @@ export function naturalCompare(a: unknown, b: unknown): number {
         if (a instanceof Date && b instanceof Date) return compareNumbers(a.getTime(), b.getTime());
     }
   }
-  throw new ClassCastException(`${describe(a)} cannot be compared to ${describe(b)}`);
+  throw new ClassCastException(`${describeType(a)} cannot be compared to ${describeType(b)}`);
 }
 
 const REVERSED_FROM: unique symbol = Symbol('reversedFrom');

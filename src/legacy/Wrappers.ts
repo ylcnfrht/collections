@@ -10,6 +10,7 @@ import { NavigableSet, Set, SortedSet } from '../interfaces/Set';
 import { Spliterator } from '../stream/Spliterator';
 import { Spliterators } from '../stream/Spliterators';
 import { streamFactories } from '../stream/hook';
+import { describeType } from '../util/Comparator';
 import { SET_BRAND } from '../util/guards';
 import { identityHashCode, requireNonNull } from '../util/Objects';
 
@@ -51,15 +52,11 @@ export function identityEquality(view: object): Methods {
 /** Runtime element check standing in for a Class token, e.g. `(x): x is string => typeof x === 'string'`. */
 export type TypeCheck = (o: unknown) => boolean;
 
-function describe(o: unknown): string {
-  return typeof o === 'object' ? (o as object).constructor?.name ?? 'Object' : typeof o;
-}
-
 function checker(type: TypeCheck, what: string): <T>(o: T) => T {
   requireNonNull(type);
   return (o) => {
     // null passes: the backing collection decides whether it permits nulls
-    if (o != null && !type(o)) throw new ClassCastException(`Attempt to insert ${describe(o)} ${what} that fails the type check`);
+    if (o != null && !type(o)) throw new ClassCastException(`Attempt to insert ${describeType(o)} ${what} that fails the type check`);
     return o;
   };
 }
