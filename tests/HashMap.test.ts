@@ -628,6 +628,27 @@ describe('a key whose hash changed after insertion', () => {
     while (it.hasNext()) if (it.next().getValue() === 'mutable') it.remove();
     expect([m.size(), m.values().toArray().sort()]).toEqual([2, ['three', 'two']]);
   });
+  it('a plain key that gained equals() after insertion is removed from where it is stored', () => {
+    const m = new HashMap<any, string>();
+    const o: any = { id: 1 };
+    m.put(o, 'o');
+    m.put('x', 'x');
+    o.equals = (p: unknown) => p === o;
+    o.hashCode = () => 7;
+    const it = m.keySet().iterator();
+    while (it.hasNext()) if (it.next() === o) it.remove();
+    expect([m.size(), m.keySet().toArray()]).toEqual([1, ['x']]);
+  });
+  it('a key that lost equals() after insertion is removed from its bucket', () => {
+    const m = new HashMap<any, string>();
+    const k: any = new MutKey(1, 3);
+    m.put(k, 'k');
+    m.put('x', 'x');
+    k.equals = undefined;
+    const it = m.keySet().iterator();
+    while (it.hasNext()) if (it.next() === k) it.remove();
+    expect([m.size(), m.keySet().toArray()]).toEqual([1, ['x']]);
+  });
   it('removing and re-adding it leaves unrelated keys reachable', () => {
     const m = new LinkedHashMap<MutKey, string>();
     const k = new MutKey(1, 1);

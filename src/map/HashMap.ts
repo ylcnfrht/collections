@@ -310,7 +310,8 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
         while (ints[n - 1] === undefined) n--;
         if (n !== ints.length) ints.length = n;
       }
-    } else if (isPlainKey(k)) {
+    } else if (this.fast.get(k) === node) {
+      // by where the node is, not by isPlainKey: a key object may have gained or lost equals() since insertion
       this.fast.delete(k);
     } else {
       const h = node.hash;
