@@ -1,6 +1,7 @@
 import { RuntimeException, IndexOutOfBoundsException, NoSuchElementException } from '../src/exceptions';
 import { Comparator, naturalCompare, stableSort } from '../src/util/Comparator';
 import { equals, hash, hashCode, identityHashCode, requireNonNull, stringHash, toString } from '../src/util/Objects';
+import { HashSet } from '../src/set/HashSet';
 import { expectThrows, Point, refStringHash } from './helpers';
 
 describe('Objects.equals', () => {
@@ -16,6 +17,12 @@ describe('Objects.equals', () => {
     expect([equals(o, o), equals({}, {})]).toEqual([true, false]);
   });
   it('Dates by time', () => expect([equals(new Date(1), new Date(1)), equals(new Date(1), new Date(2)), equals(new Date(1), 1)]).toEqual([true, false, false]));
+  it('invalid Dates equal each other (time NaN, like NaN itself), so hash sets dedupe them', () => {
+    expect([equals(new Date(NaN), new Date('x')), equals(new Date(NaN), new Date(0))]).toEqual([true, false]);
+    const s = new HashSet<Date>();
+    for (let i = 0; i < 1000; i++) s.add(new Date(NaN));
+    expect([s.size(), s.contains(new Date('not a date'))]).toEqual([1, true]);
+  });
   it('NaN is not equal to a non-number', () => expect(equals(NaN, 'NaN')).toBe(false));
 });
 

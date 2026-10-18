@@ -75,13 +75,13 @@ export function hashCode(o: unknown): number {
 
 /**
  * Value equality. Uses a.equals(b) when defined; otherwise SameValueZero
- * (like JS Map/Set: NaN equals NaN, +0 equals -0). Dates compare by time.
+ * (like JS Map/Set: NaN equals NaN, +0 equals -0). Dates compare by time, so invalid Dates are equal.
  */
 export function equals(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a === null || a === undefined || b === null || b === undefined) return false;
   if (typeof a === 'number') return typeof b === 'number' && a !== a && b !== b;
-  if (a instanceof Date) return b instanceof Date && a.getTime() === b.getTime();
+  if (a instanceof Date) return b instanceof Date && equals(a.getTime(), b.getTime());
   const eq = (a as { equals?: unknown }).equals;
   return typeof eq === 'function' && eq.call(a, b) === true;
 }
