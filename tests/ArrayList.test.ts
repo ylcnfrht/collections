@@ -427,6 +427,15 @@ describe('ArrayList · implementation', () => {
       l.add(5);
       expectThrows(() => s.get(0), CME);
     });
+    it('subList toArray reads the root by index, honours a generator and fails fast', () => {
+      const l = ArrayList.of(0, 1, 2, 3, 4);
+      const sub = l.subList(1, 4);
+      const li = jest.spyOn(l, 'listIterator');
+      expect([sub.toArray(), Array.from(sub.toArray((n) => new Float64Array(n)))]).toEqual([[1, 2, 3], [1, 2, 3]]);
+      expect(li).not.toHaveBeenCalled();
+      l.add(5);
+      expectThrows(() => sub.toArray(), 'ConcurrentModificationException');
+    });
     it('subList removeIf on a random-access root that cannot add loses nothing', () => {
       class RemoveOnly extends AbstractList<number> {
         constructor(private readonly a: number[]) {

@@ -435,6 +435,18 @@ class SubList<E> extends AbstractList<E> {
     return true;
   }
 
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    // by index on an array-backed root: the inherited iterator walk costs a cursor and checks per element
+    if (!isRandomAccess(this.root)) return arguments.length > 0 ? super.toArray(generator as (length: number) => A) : super.toArray();
+    this.checkForComodification();
+    const n = this._size;
+    const out = new Array<E>(n);
+    for (let i = 0; i < n; i++) out[i] = this.root.get(this.offset + i);
+    return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
+  }
+
   override removeRange(fromIndex: number, toIndex: number): void {
     removeRangeCheck(fromIndex, toIndex, this._size);
     this.checkForComodification();
@@ -772,5 +784,11 @@ class ArrayView<E> extends AbstractList<E> {
   }
   size(): number {
     return this.a.length;
+  }
+  // what addAll reads: a copy, not an iterator walk
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith(this.a.slice(), generator as (length: number) => A) : this.a.slice();
   }
 }
