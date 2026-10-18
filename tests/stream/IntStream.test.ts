@@ -204,3 +204,10 @@ describe('distinct and -0', () => {
     expect(DoubleStream.of(0, -0).distinct().count()).toBe(2);
   });
 });
+
+describe('IntStream.sorted with a comparator (from JS)', () => {
+  it('throws IllegalArgumentException instead of ignoring it', () => {
+    expect(() => (IntStream.of(1, 3, 2) as any).sorted((a: number, b: number) => b - a)).toThrow(IllegalArgumentException);
+    expect(IntStream.of(1, 3, 2).boxed().sorted((a, b) => b - a).toList().toArray()).toEqual([3, 2, 1]);
+  });
+});

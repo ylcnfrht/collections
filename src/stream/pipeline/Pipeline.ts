@@ -698,6 +698,8 @@ abstract class NumberPipeline extends AbstractPipeline<number> {
   }
 
   sorted(): any {
+    // there is no sorted(comparator) on number streams; from JS one would be silently ignored
+    if (arguments.length > 0) throw new IllegalArgumentException('number streams sort in natural order only; use boxed().sorted(comparator)');
     // already sorted: a pass-through stage, as in the reference
     return this.chain(this.self(), ORDERED | SORTED, 0, null, (this.flags & SORTED) !== 0 ? null : (d, sc) => new NumberSortedSink(d, sc));
   }
