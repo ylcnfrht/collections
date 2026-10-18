@@ -10,6 +10,8 @@ export default withMermaid(
     cleanUrls: true,
     lastUpdated: true,
     rewrites: { 'README.md': 'index.md' },
+    // pre-bundle mermaid in dev so its CommonJS dependencies (fastdom, ...) get ESM default exports
+    vite: { optimizeDeps: { include: ['mermaid'] } },
     themeConfig: {
       nav: [
         { text: 'Guide', link: '/guide/getting-started' },
