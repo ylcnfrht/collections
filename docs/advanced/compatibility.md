@@ -1,6 +1,6 @@
-# Compatibility with the classic API
+# Compatibility with the Java API
 
-This library aims to behave exactly like the classic collections API: same method names, same results, same
+This library aims to behave exactly like the Java Collections Framework: same method names, same results, same
 exceptions, same edge cases. Where TypeScript or the JS runtime makes an exact copy impossible or harmful, the
 library adapts in a small, documented set of ways. This page lists every adaptation, the stream-specific
 differences, the reference behaviours we deliberately do not copy, the APIs that are newer than the reference
@@ -9,7 +9,7 @@ runtime used for testing, and how all of this is verified.
 - [TypeScript adaptations](#typescript-adaptations)
 - [Stream differences](#stream-differences)
 - [Reference quirks we deliberately do not copy](#reference-quirks-we-deliberately-do-not-copy)
-- [APIs newer than the reference runtime](#apis-newer-than-the-reference-runtime)
+- [APIs newer than the JDK](#apis-newer-than-the-jdk)
 - [How compatibility is verified](#how-compatibility-is-verified)
 
 ## TypeScript adaptations
@@ -99,7 +99,7 @@ console.log(DoubleStream.of(0, -0).distinct().count(), Stream.of(0, -0).distinct
 
 ## Reference quirks we deliberately do not copy
 
-The differential run (below) found a few places where the reference runtime contradicts its *own* documented
+The differential run (below) found a few places where the JDK contradicts its *own* documented
 contract. In each case this library follows the documentation:
 
 | Quirk in the reference | What the contract says / what we do |
@@ -122,9 +122,9 @@ try {
 The full list, with a minimal reproduction script for each, is in the generated
 [compatibility report](../COMPATIBILITY.md#divergences).
 
-## APIs newer than the reference runtime
+## APIs newer than the JDK
 
-A few APIs are newer than the reference runtime version used by the differential tests (the report states the
+A few APIs are newer than the JDK version used by the differential tests (the report states the
 exact version). They are implemented from their specification and covered by unit tests, but are excluded from the
 differential comparison:
 
@@ -157,7 +157,7 @@ flowchart LR
     diff --> report["docs/COMPATIBILITY.md (generated)"]
 ```
 
-1. **Doc audit.** Every interface and class is checked member by member against the reference API
+1. **Doc audit.** Every interface and class is checked member by member against the Java API
    documentation: names, argument handling, return values, thrown exceptions.
 2. **Unit and contract tests.** Over 9,000 tests (about 99% line coverage), including shared contract suites run
    against every implementation of an interface (`tests/contracts`).
@@ -188,7 +188,7 @@ normalisation with its reason, every divergence with a shrunk reproduction, and 
 
 ### Running it yourself
 
-The differential harness needs a reference runtime of version 23 or newer on your `PATH`. Without one, every
+The differential harness needs a real JDK of version 23 or newer on your `PATH`. Without one, every
 entry point prints a message and exits successfully (and the jest smoke test is skipped).
 
 ```sh

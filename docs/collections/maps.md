@@ -524,7 +524,7 @@ console.log(byIdentity.get(a)); // → first
 
 ## Entries
 
-A `MapEntry<K, V>` (the `Map.Entry` of the classic collections API) has `getKey()`, `getValue()`, `setValue(v)`,
+A `MapEntry<K, V>` (the `Map.Entry` of the Java Collections Framework) has `getKey()`, `getValue()`, `setValue(v)`,
 value `equals`/`hashCode` and `toString()` as `key=value`.
 
 | Factory | Mutable? | Nulls |

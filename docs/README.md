@@ -1,6 +1,6 @@
 # ts-collections-framework documentation
 
-`ts-collections-framework` brings the classic collections framework API to TypeScript and JS: `ArrayList`,
+`ts-collections-framework` brings the Java Collections Framework to TypeScript and JS: `ArrayList`,
 `LinkedList`, `ArrayDeque`, `PriorityQueue`, `HashSet`, `TreeSet`, `HashMap`, `LinkedHashMap`, `TreeMap`, lazy
 `Stream`s with `Collectors` and `Gatherers`, `Optional`, the `Collections` utility class and more. It keeps the
 semantics that make that API pleasant for real programs — **value equality** through `equals()`/`hashCode()`,
@@ -42,7 +42,7 @@ a precise specification of how each one behaves.
 
 **ts-collections-framework brings that framework to Node.js, JS and TypeScript.** Think of it as its direct
 equivalent: the same interfaces, the same classes and the same documented behaviour, adapted to TypeScript. It is
-built to production standards: every documented behaviour is tested, it is verified against the reference runtime
+built to production standards: every documented behaviour is tested, it is verified against the JDK
 on over 1.6 million compared operations ([how](./advanced/testing.md)), and it is tuned to match or beat native
 collections and the popular alternatives ([numbers](./advanced/performance.md)).
 
@@ -65,7 +65,7 @@ collections and the popular alternatives ([numbers](./advanced/performance.md)).
 | build comparators, hash fields, null-check | [Comparator and Objects](./utilities/comparator-and-objects.md) |
 | implement my own collection | [Custom collections](./advanced/custom-collections.md) |
 | make it fast | [Performance](./advanced/performance.md) |
-| know exactly where it differs from the classic API | [Compatibility](./advanced/compatibility.md) |
+| know exactly where it differs from the Java API | [Compatibility](./advanced/compatibility.md) |
 
 ## All pages
 
@@ -115,7 +115,7 @@ collections and the popular alternatives ([numbers](./advanced/performance.md)).
 | [Performance](./advanced/performance.md) | complexities, benchmarks, tips |
 | [Testing](./advanced/testing.md) | testing code that uses the library |
 | [Compatibility](./advanced/compatibility.md) | TypeScript adaptations, stream differences, how compatibility is verified |
-| [Compatibility report](./COMPATIBILITY.md) | generated proof run against the reference runtime |
+| [Compatibility report](./COMPATIBILITY.md) | generated proof run against the JDK |
 
 ## The interface hierarchy
 

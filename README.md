@@ -1,6 +1,6 @@
 # ts-collections-framework
 
-The classic collections framework API — `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`,
+The Java Collections Framework — `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`,
 `Stream`, `Collectors` and the rest — for TypeScript and JS, with the same semantics: value
 equality through `equals()`/`hashCode()`, fail-fast iterators, live views, navigable sorted collections
 and lazy streams.
@@ -8,7 +8,7 @@ and lazy streams.
 **Why:** the Node.js / JS / TypeScript world has no production-grade collections framework. `Map` and `Set` compare
 keys by reference and stop there, and npm offers one data structure per package, each with its own API and
 semantics. This library is the equivalent of **Java's Collections Framework** for TypeScript: the same interfaces,
-classes and documented behaviour, tested against every documented contract, verified against the reference runtime,
+classes and documented behaviour, tested against every documented contract, verified against the JDK,
 and tuned for speed. [Read more](docs/README.md#why-this-library-exists).
 
 ```ts
@@ -104,7 +104,7 @@ use `forEach` (on `ArrayList` it is faster than a native array's `forEach`) or a
 
 ## Compatibility evidence
 
-- Every interface is checked against the reference API documentation; each documented behaviour has tests
+- Every interface is checked against the Java API documentation; each documented behaviour has tests
   (over 9,000, ~99% coverage), including a black-box conformance suite written from the documentation alone.
 - `npm run test:diff` runs thousands of random operation sequences on a real reference runtime (if one is
   installed) and on this library, and compares every result.
@@ -132,7 +132,7 @@ Run `npm run bench [name]` to reproduce on your machine.
 | `npm run typecheck` | type-check sources and tests |
 | `npm run build` | ESM + CJS + type definitions into `dist/` |
 | `npm run bench [filter]` | benchmarks |
-| `npm run test:diff` | differential tests against a reference runtime |
+| `npm run test:diff` | differential tests against a real JDK |
 
 ## License
 

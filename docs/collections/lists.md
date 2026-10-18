@@ -91,7 +91,7 @@ try {
 
 ### removeAt(index) vs remove(element)
 
-In the classic collections API, `remove(int)` and `remove(Object)` are overloads. TypeScript cannot tell those apart on a `List<number>` — is `remove(1)` "the element at index 1" or "the element equal to 1"? This library therefore splits them:
+In the Java Collections Framework, `remove(int)` and `remove(Object)` are overloads. TypeScript cannot tell those apart on a `List<number>` — is `remove(1)` "the element at index 1" or "the element equal to 1"? This library therefore splits them:
 
 | Call | Meaning | Returns |
 | --- | --- | --- |
@@ -343,7 +343,7 @@ try {
 
 Fail-fast is a debugging aid, not a guarantee: it is "best effort" detection. `set()` is not a structural change and never trips it. The fix is to remove through the iterator, or with `removeIf` — see [remove while iterating](#remove-while-iterating).
 
-> The `for...of` iterator of `ArrayList` is slightly stricter than the cursor returned by `iterator()`: it fails as soon as the size changes, while `iterator()` reproduces the reference runtime exactly, including its well-known blind spot (removing the second-to-last element ends the loop silently instead of throwing). Either way, do not rely on the exception for correctness.
+> The `for...of` iterator of `ArrayList` is slightly stricter than the cursor returned by `iterator()`: it fails as soon as the size changes, while `iterator()` reproduces the JDK exactly, including its well-known blind spot (removing the second-to-last element ends the loop silently instead of throwing). Either way, do not rely on the exception for correctness.
 
 ---
 
@@ -379,7 +379,7 @@ To build from a JS array, spread it: `ArrayList.of(...array)`.
 
 ### Capacity hints
 
-`new ArrayList(initialCapacity)`, `ensureCapacity(n)` and `trimToSize()` exist for API compatibility, but they are **hints only**: the JS engine manages the array's storage, and preallocating would create holes that make the array slower. A negative capacity still throws `IllegalArgumentException`, as in the reference API. There is no need to call these for performance; see [performance](../advanced/performance.md).
+`new ArrayList(initialCapacity)`, `ensureCapacity(n)` and `trimToSize()` exist for API compatibility, but they are **hints only**: the JS engine manages the array's storage, and preallocating would create holes that make the array slower. A negative capacity still throws `IllegalArgumentException`, as in the Java API. There is no need to call these for performance; see [performance](../advanced/performance.md).
 
 ### clone()
 

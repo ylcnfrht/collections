@@ -445,7 +445,7 @@ own `contains()` (O(n) for a list, so prefer a set argument for large inputs).
 
 `HashSet.newHashSet(n)` and `LinkedHashSet.newLinkedHashSet(n)` create an empty set intended to hold `n` elements.
 The backing stores grow on their own, so the size is only a hint; the factories validate it (a negative or `NaN`
-count throws `IllegalArgumentException`) and exist so code ported from the classic collections API keeps compiling.
+count throws `IllegalArgumentException`) and exist so code ported from the Java Collections Framework keeps compiling.
 
 ```ts
 import { HashSet, LinkedHashSet } from 'ts-collections-framework';

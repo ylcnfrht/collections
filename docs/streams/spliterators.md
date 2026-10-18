@@ -72,7 +72,7 @@ contract, and a custom spliterator may simply return `null`.
 
 ## Characteristic flags
 
-The flags are constants on `Spliterator` (same bit values as the classic API):
+The flags are constants on `Spliterator` (same bit values as the Java API):
 
 | Flag | Value | Promise |
 |---|---|---|

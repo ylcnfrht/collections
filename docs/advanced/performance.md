@@ -1,6 +1,6 @@
 # Performance
 
-The collections have the asymptotic costs the classic collections API documents, and they are tuned for V8. This page covers what each operation costs, how to pick the fastest structure for a workload, and which design choices make the library fast. It also lists the habits that cost speed, and gives measured benchmark results against native `Array`/`Map`/`Set` and against the popular libraries `js-sdsl`, `mnemonist` and `@datastructures-js/priority-queue`. The results include the cases where this library is slower.
+The collections have the asymptotic costs the Java Collections Framework documents, and they are tuned for V8. This page covers what each operation costs, how to pick the fastest structure for a workload, and which design choices make the library fast. It also lists the habits that cost speed, and gives measured benchmark results against native `Array`/`Map`/`Set` and against the popular libraries `js-sdsl`, `mnemonist` and `@datastructures-js/priority-queue`. The results include the cases where this library is slower.
 
 **Contents**
 
@@ -167,7 +167,7 @@ console.log(total); // → 3
 
 **Prefer `ArrayDeque` over `LinkedList` for queues and stacks.** Both are O(1) at the ends, but `LinkedList` allocates a node per element and scatters elements across memory. `ArrayDeque` is a single array. Use `LinkedList` only when you need `null` elements, or O(1) inserts and removes in the middle through a `ListIterator`.
 
-**Use `IntStream`/`DoubleStream` for numeric work.** JS numbers are never boxed, so the gain does not come from avoiding allocation as it would in the reference runtime. It comes from specialised operations: `sum()`, `average()`, `summaryStatistics()`, typed-array `sorted()` and number `distinct()`. In the `distinct + sorted` benchmark, `IntStream` was 2.3× faster than `Stream<number>`. Switch with `mapToInt` and back with `boxed()` or `mapToObj`:
+**Use `IntStream`/`DoubleStream` for numeric work.** JS numbers are never boxed, so the gain does not come from avoiding allocation as it would in the JDK. It comes from specialised operations: `sum()`, `average()`, `summaryStatistics()`, typed-array `sorted()` and number `distinct()`. In the `distinct + sorted` benchmark, `IntStream` was 2.3× faster than `Stream<number>`. Switch with `mapToInt` and back with `boxed()` or `mapToObj`:
 
 ```ts
 import { IntStream, List } from 'ts-collections-framework';
@@ -178,7 +178,7 @@ console.log(orders.stream().mapToInt((o) => o.qty).distinct().sorted().boxed().t
 console.log(IntStream.range(0, 1000).filter((i) => i % 7 === 0).count()); // → 143
 ```
 
-**`count()` may skip your pipeline.** When the size is known from the source, `count()` returns it without traversing, so side effects in `peek` or `map` never run. This matches the reference runtime. Do not rely on `peek` for side effects.
+**`count()` may skip your pipeline.** When the size is known from the source, `count()` returns it without traversing, so side effects in `peek` or `map` never run. This matches the JDK. Do not rely on `peek` for side effects.
 
 ```ts
 import { List } from 'ts-collections-framework';
@@ -296,7 +296,7 @@ Against `@datastructures-js/priority-queue` alone, the ratios were 2.1× (offer)
 | for..of 10k | 38,269 | **0.26×** | 1.47× (mnemonist) |
 | contains (primitive) 10k | 222,809 | 1.01× (`includes`) | 36.6× (js-sdsl) |
 
-**This is the weakest group.** `ArrayDeque` is 6–38% behind the fastest specialised deque on raw add/poll throughput. Every add does work the competitors skip: a `null` check, which the reference API requires, and a `modCount` update for fail-fast iterators. It is still 12× faster than using `Array.shift()` as a queue, and the gap shrinks to 6–21% when the deque is preallocated.
+**This is the weakest group.** `ArrayDeque` is 6–38% behind the fastest specialised deque on raw add/poll throughput. Every add does work the competitors skip: a `null` check, which the Java API requires, and a `modCount` update for fail-fast iterators. It is still 12× faster than using `Array.shift()` as a queue, and the gap shrinks to 6–21% when the deque is preallocated.
 
 ### Streams (vs native Array chains, Iterator helpers, hand-written loops)
 

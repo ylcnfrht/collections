@@ -82,7 +82,7 @@ try {
 `fold` emits its result even for an empty stream (the initial value). Windows are unmodifiable lists; adding to one
 throws `UnsupportedOperationException`.
 
-**`mapConcurrent`** keeps the signature of the classic API, but JS runs it on one thread: the mapper is called
+**`mapConcurrent`** keeps the signature of the Java API, but JS runs it on one thread: the mapper is called
 synchronously, one element at a time, in encounter order; `maxConcurrency` is validated (must be at least 1) and
 otherwise ignored. It does not await promises — map to promises and `Promise.all` the result if you need real
 concurrency. A mapper error that is not a `RuntimeException` is wrapped in one (the original is its `cause`).

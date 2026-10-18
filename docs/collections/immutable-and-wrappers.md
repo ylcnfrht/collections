@@ -311,7 +311,7 @@ console.log(scores.get('ada')); // → 10
 
 `Collections.synchronizedCollection`, `synchronizedList`, `synchronizedSet`, `synchronizedSortedSet`,
 `synchronizedNavigableSet`, `synchronizedMap`, `synchronizedSortedMap` and `synchronizedNavigableMap` exist so code
-ported from the classic collections API keeps working. JS runs your code on a single thread (workers do not share
+ported from the Java Collections Framework keeps working. JS runs your code on a single thread (workers do not share
 these objects), so there is nothing to lock: the wrappers are plain delegating views. They add no safety and no
 measurable cost; in new code just use the collection directly.
 
@@ -356,7 +356,7 @@ try {
 ## Which mutators throw
 
 An unmodifiable collection throws `UnsupportedOperationException` from its mutators. The details — whether a call
-that would change nothing also throws — differ by kind, and follow the reference runtime exactly:
+that would change nothing also throws — differ by kind, and follow the JDK exactly:
 
 | Collection | Mutator that would change something | Mutator call that would change nothing |
 | --- | --- | --- |

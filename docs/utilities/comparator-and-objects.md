@@ -28,7 +28,7 @@ Two small modules define how values are ordered and compared everywhere in the l
 type Comparator<T> = (a: T, b: T) => number; // < 0: a first, 0: tie, > 0: b first
 ```
 
-A comparator is the same kind of function that `Array.prototype.sort` accepts, so you can pass a lambda wherever the library expects one. The reference API puts methods on the comparator, such as `c.reversed()` or `c.thenComparing(d)`. Here those methods are functions that take the comparator as their first argument: `Comparator.reversed(c)` and `Comparator.thenComparing(c, d)`.
+A comparator is the same kind of function that `Array.prototype.sort` accepts, so you can pass a lambda wherever the library expects one. The Java API puts methods on the comparator, such as `c.reversed()` or `c.thenComparing(d)`. Here those methods are functions that take the comparator as their first argument: `Comparator.reversed(c)` and `Comparator.thenComparing(c, d)`.
 
 ```ts
 import { ArrayList, Comparator, TreeSet } from 'ts-collections-framework';
@@ -287,7 +287,7 @@ keepOrder.sort(Comparator.nullsFirst<string>(null));
 console.log(keepOrder); // → [null, b, a]
 ```
 
-When you compose null-friendly comparators, they stay null-friendly. This matches the reference API:
+When you compose null-friendly comparators, they stay null-friendly. This matches the Java API:
 
 - `reversed(nullsFirst(c))` is `nullsLast(reversed(c))`. Reversing moves the nulls to the other end and also reverses the order of the other values.
 - `thenComparing(nullsFirst(c), d)` keeps the nulls first and breaks ties among the other values with `d`. `d` is never called with `null`.
@@ -328,7 +328,7 @@ console.log(tasks.stream().map((t) => t.title).toList()); // → [a, b, later]
 
 ### max and min
 
-`Comparator.max(c, a, b)` and `Comparator.min(c, a, b)` return the greater or lesser of two values. On a tie they return `a`. These two do not exist in the reference API version this library was checked against.
+`Comparator.max(c, a, b)` and `Comparator.min(c, a, b)` return the greater or lesser of two values. On a tie they return `a`. These two do not exist in the Java API version this library was checked against.
 
 ```ts
 import { Comparator } from 'ts-collections-framework';
@@ -425,7 +425,7 @@ Arrays and plain objects have no `equals` method, so they compare by reference. 
 
 ### How hashCode is computed
 
-`Objects.hashCode` always returns an int32, and **values that are `equals` always get the same hash**. That is the property hash-based collections depend on. Numbers, strings, booleans and bigints hash with the same formulas as the reference runtime, so values match it bit for bit.
+`Objects.hashCode` always returns an int32, and **values that are `equals` always get the same hash**. That is the property hash-based collections depend on. Numbers, strings, booleans and bigints hash with the same formulas as the JDK, so values match it bit for bit.
 
 | Value | Hash | Example |
 | --- | --- | --- |

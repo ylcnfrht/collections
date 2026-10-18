@@ -145,7 +145,7 @@ console.log(Optional.of(List.of(1, 2)).toString()); // → Optional[[1, 2]]
 `OptionalInt`, `OptionalLong` and `OptionalDouble` hold a `number`. They have `of`, `empty`, `isPresent`,
 `isEmpty`, `ifPresent`, `ifPresentOrElse`, `orElse`, `orElseGet`, `orElseThrow`, `stream()` (an `IntStream`,
 `LongStream` or `DoubleStream`), `equals`, `hashCode` and `toString`, plus a typed getter: `getAsInt()`,
-`getAsLong()`, `getAsDouble()`. Like the classic API they have **no** `map`, `filter` or `flatMap` — box the
+`getAsLong()`, `getAsDouble()`. Like the Java API they have **no** `map`, `filter` or `flatMap` — box the
 stream first (`boxed()`) if you need an `Optional<number>`.
 
 ```ts
@@ -161,7 +161,7 @@ console.log(OptionalInt.of(4).stream().sum()); // → 4
 
 // different number types never compare equal
 console.log(OptionalDouble.empty().equals(OptionalInt.empty())); // → false
-// OptionalDouble compares like the classic API: NaN equals NaN, 0.0 differs from -0.0
+// OptionalDouble compares like the Java API: NaN equals NaN, 0.0 differs from -0.0
 console.log(OptionalDouble.of(NaN).equals(OptionalDouble.of(NaN)), OptionalDouble.of(0).equals(OptionalDouble.of(-0))); // → true false
 
 try {
@@ -171,7 +171,7 @@ try {
 }
 ```
 
-`OptionalDouble.toString()` formats the number the way the classic API prints doubles (`1.0`, `1.0E21`).
+`OptionalDouble.toString()` formats the number the way the Java API prints doubles (`1.0`, `1.0E21`).
 
 ## Null rules
 

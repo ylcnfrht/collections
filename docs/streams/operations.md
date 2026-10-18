@@ -247,7 +247,7 @@ console.log(Stream.of(1, 2, 3, 4).gather(Gatherers.scan(() => 0, (acc: number, x
 
 ### forEach / forEachOrdered
 
-Run an action for each element. `forEach` makes no ordering promise in the classic API (for parallel streams);
+Run an action for each element. `forEach` makes no ordering promise in the Java API (for parallel streams);
 `forEachOrdered` follows the encounter order. Since evaluation is sequential here, both visit elements in
 encounter order — use `forEachOrdered` when your code depends on it, to state the intent.
 

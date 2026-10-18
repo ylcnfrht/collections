@@ -4,7 +4,7 @@
 `average`, `min`, `max`, `summaryStatistics` — that return plain numbers or number optionals instead of boxed
 results. They have the same laziness, single-use and short-circuit rules as `Stream` (see the
 [overview](overview.md)) and most of its [operations](operations.md). All three carry JS `number`s; the three
-types exist so that code reads like the classic stream API and so that each can apply its own rules (for example
+types exist so that code reads like the Java Stream API and so that each can apply its own rules (for example
 compensated summation for doubles).
 
 - [Creating number streams](#creating-number-streams)
@@ -104,7 +104,7 @@ manual.combine(other);
 console.log(manual.toString()); // → IntSummaryStatistics{count=3, sum=33, min=3, average=11.000000, max=20}
 ```
 
-`toString()` formats the average (and, for doubles, sum/min/max) with six decimals, like the classic API. Empty
+`toString()` formats the average (and, for doubles, sum/min/max) with six decimals, like the Java API. Empty
 statistics report the identity values of min/max:
 
 ```ts

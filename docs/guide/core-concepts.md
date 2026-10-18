@@ -1,7 +1,7 @@
 # Core concepts
 
 JS `Array`, `Map` and `Set` compare objects by identity, let you change a collection while you loop over it, and
-copy when you slice. This library follows the classic collections API instead: **value equality** through
+copy when you slice. This library follows the Java Collections Framework instead: **value equality** through
 `equals()`/`hashCode()`, **natural ordering** through `compareTo()` or comparators, a strict policy for **absent
 values** (`null`), **fail-fast iterators**, **live views** that write through to their backing collection, a
 hierarchy of **typed exceptions**, and **optional operations** on unmodifiable collections. This page explains each
@@ -59,7 +59,7 @@ arrays.add([1, 2]);
 console.log(arrays.contains([1, 2])); // → false
 ```
 
-Hash codes follow the classic formulas, so they are stable across runs and match the reference runtime: a string
+Hash codes follow the classic formulas, so they are stable across runs and match the JDK: a string
 hashes as `s[0]*31^(n-1) + … + s[n-1]`, a list as `31 * h + hash(e)` over its elements, a set as the sum of its
 element hashes, and so on.
 

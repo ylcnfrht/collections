@@ -450,7 +450,7 @@ console.log(recent.reversed()); // → [c, b, a]
 `Collections` also has three families of wrappers:
 
 - `unmodifiable*`: read-only views.
-- `synchronized*`: the same API as the wrapped collection, kept for code ported from the reference API.
+- `synchronized*`: the same API as the wrapped collection, kept for code ported from the Java API.
 - `checked*`: views that check element types at runtime.
 
 They come in versions for `Collection`, `List`, `Set`, `SortedSet`, `NavigableSet`, `Queue`, `Map`, `SortedMap` and `NavigableMap`. They are documented with the immutable collections in [Immutable collections and wrappers](../collections/immutable-and-wrappers.md).

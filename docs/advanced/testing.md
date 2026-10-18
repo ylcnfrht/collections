@@ -1,11 +1,11 @@
 # How the library is tested
 
-The library claims to behave like the classic collections API, down to which exception a call throws and the state a collection is left in. Several layers of tests back that claim:
+The library claims to behave like the Java Collections Framework, down to which exception a call throws and the state a collection is left in. Several layers of tests back that claim:
 
 - **Contract suites** run against every implementation and view.
 - **Model-based random tests** compare each structure with a trivially correct model.
 - **A conformance suite** is written from the reference documentation.
-- **Differential testing** runs hundreds of thousands of random scripts on the reference runtime and on this library, and compares every step.
+- **Differential testing** runs hundreds of thousands of random scripts on the JDK and on this library, and compares every step.
 - **Doctests** run every example in these docs.
 
 The suite has about 10,000 tests and covers about 99% of lines. This page explains each layer for users who want to know how far to trust the library, and for contributors who want to extend it.
@@ -19,7 +19,7 @@ The suite has about 10,000 tests and covers about 99% of lines. This page explai
   - [Conformance suite](#conformance-suite)
   - [Doctests](#doctests)
   - [Coverage](#coverage)
-- [Differential testing against the reference runtime](#differential-testing-against-the-reference-runtime)
+- [Differential testing against the JDK](#differential-testing-against-the-jdk)
   - [How it works](#how-it-works)
   - [Running it](#running-it)
   - [The compatibility report](#the-compatibility-report)
@@ -30,13 +30,13 @@ The suite has about 10,000 tests and covers about 99% of lines. This page explai
 
 | Command | What it does |
 | --- | --- |
-| `npm test` | the whole Jest suite: unit, contract, model-based, conformance, doctests, and the differential smoke test (if a reference runtime is installed) |
+| `npm test` | the whole Jest suite: unit, contract, model-based, conformance, doctests, and the differential smoke test (if a real JDK is installed) |
 | `npm run test:cov` | the same, with coverage. It fails below 95% statements/lines/functions or 90% branches (`jest.config.ts`). |
 | `npx jest tests/docs` | only the doctests of `README.md` and `docs/**/*.md` |
 | `npx jest tests/TreeMap` | one file, or any path pattern |
 | `npm run typecheck` | `tsc --noEmit` over `src`, `tests` and `bench` in strict mode |
 | `npm run build` | `tsup`: CommonJS + ESM bundles with `.d.ts`/`.d.mts` types in `dist/` |
-| `npm run test:diff` | differential run: 20,000 random scripts against the reference runtime |
+| `npm run test:diff` | differential run: 20,000 random scripts against the JDK |
 | `npm run test:diff:proof` | the full proof run: 200,000 scripts plus API coverage. Regenerates `docs/COMPATIBILITY.md`. |
 | `npm run bench` | performance benchmarks (see [Performance](./performance.md#running-the-benchmarks)) |
 | `npm run docs:api` | the TypeDoc API reference |
@@ -48,7 +48,7 @@ The suite has about 10,000 tests and covers about 99% of lines. This page explai
 ```text
 tests/
   contracts/        # reusable behaviour suites: collection, list, set, navigableSet, queue, deque, map, navigableMap
-  conformance/      # streams, collectors, gatherers, spliterators, Optional, statistics, checked against the reference docs
+  conformance/      # streams, collectors, gatherers, spliterators, Optional, statistics, checked against the Java SE documentation
   stream/           # unit tests of the stream engine, number streams, collectors, gatherers, double formatting
   differential/     # Jest smoke test of the differential harness (200 scripts)
   ArrayList.test.ts, HashMap.test.ts, ...   # per-class tests: contracts + specifics + model-based + scale
@@ -119,7 +119,7 @@ The random generator is a seeded LCG (`rng(seed)` in `tests/helpers.ts`), so a f
 
 ### Conformance suite
 
-`tests/conformance/` is written from the reference API documentation, not from the implementation. Many tests quote the sentence they check, for example:
+`tests/conformance/` is written from the Java API documentation, not from the implementation. Many tests quote the sentence they check, for example:
 
 ```ts nocheck
 // package summary: "if the source is a List containing [1, 2, 3], then the result of executing
@@ -150,7 +150,7 @@ Blocks fenced as ` ```ts nocheck ` (signatures, pseudo-code, test excerpts) are 
 
 `npm run test:cov` measures `src/**` (except type-only interfaces and the barrel file). The current figures are about **99.0% of lines, 97.7% of branches and 98.3% of functions**. The thresholds in `jest.config.ts` (95/95/95/90) stop coverage from silently regressing. Most of what remains uncovered is defensive branches that need a misbehaving user callback to reach.
 
-## Differential testing against the reference runtime
+## Differential testing against the JDK
 
 Unit tests can only check what their authors thought to check. The differential harness in `tools/differential/` removes that limit. It generates random operation scripts, runs each one on the **reference runtime** and on this library, and compares the outputs after every single operation.
 
@@ -200,7 +200,7 @@ npx ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts \
 npx ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --script repro.txt
 ```
 
-You need the reference runtime, version 23 or newer, on `PATH`. Without it, every entry point prints a message and exits 0, and the Jest smoke test is skipped, so contributors without it can still run `npm test`. Every script id is `<seed>-<n>`, so `--seed S --count N` regenerates exactly the same scripts.
+You need the JDK, version 23 or newer, on `PATH`. Without it, every entry point prints a message and exits 0, and the Jest smoke test is skipped, so contributors without it can still run `npm test`. Every script id is `<seed>-<n>`, so `--seed S --count N` regenerates exactly the same scripts.
 
 ### The compatibility report
 

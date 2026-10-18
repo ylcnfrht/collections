@@ -184,7 +184,7 @@ All iteration is **fail-fast**: changing a collection structurally inside a `for
 ## Using the generics
 
 Program against the interfaces (`List`, `Set`, `Map`, `Deque`, `NavigableMap`, …) and choose the implementation at
-construction time — the same habit as with the classic API.
+construction time — the same habit as with the Java API.
 
 ```ts
 import { ArrayList, LinkedList, List, Deque, NavigableMap, TreeMap, Collection } from 'ts-collections-framework';
