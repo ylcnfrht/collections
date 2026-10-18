@@ -1,6 +1,6 @@
 // Stream / IntStream / LongStream / DoubleStream: the contract types merged with their static factories.
 // JS extras (not in the reference API): Stream.from(iterable) and X.ofArray(array). ofArray does not copy:
-// the array is the source, read when the terminal operation runs.
+// its length is fixed when the stream is created, element values are read when the terminal operation runs.
 import { IllegalStateException } from '../exceptions';
 import { requireNonNull } from '../util/Objects';
 import { DoublePipeline, IntPipeline, LongPipeline, makeStream, RefPipeline, runAll } from './pipeline/Pipeline';

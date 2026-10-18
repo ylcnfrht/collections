@@ -40,14 +40,15 @@ function blocks(file: string): Block[] {
 /** What console.log prints in a doc: strings as-is, collections via toString(), JS values via inspect. */
 function show(v: unknown): string {
   if (typeof v === 'string') return v;
-  if (v !== null && typeof v === 'object' && !Array.isArray(v) && v.toString !== Object.prototype.toString) return String(v);
+  if (v !== null && typeof v === 'object' && !Array.isArray(v) && !ArrayBuffer.isView(v) && v.toString !== Object.prototype.toString) return String(v);
   return inspect(v, { depth: 4, breakLength: Infinity });
 }
 
 function expectations(code: string): string[] {
   return code
     .split('\n')
-    .map((l) => /console\.log\(.*\);?\s*\/\/\s*→\s?(.*)$/.exec(l))
+    // the arrow comment may follow other code on the line, e.g. `catch (e) { console.log(e.name); } // → …`
+    .map((l) => /console\.log\(.*\/\/\s*→\s?(.*)$/.exec(l))
     .filter((m): m is RegExpExecArray => m !== null)
     .map((m) => m[1].trimEnd());
 }
@@ -121,4 +122,36 @@ describe('docs examples type-check', () => {
       });
     expect(errors).toEqual([]);
   }, 120_000);
+});
+
+describe('docs links', () => {
+  // GitHub-style heading anchors: lowercase, punctuation dropped, spaces to dashes
+  const anchor = (h: string) => h.toLowerCase().replace(/[^\w\- ]+/g, '').trim().replace(/ /g, '-');
+  const anchorsOf = (file: string) =>
+    new Set(
+      readFileSync(file, 'utf8')
+        .replace(/```[\s\S]*?```/g, '')
+        .split('\n')
+        .filter((l) => /^#{1,6}\s/.test(l))
+        .map((l) => anchor(l.replace(/^#+\s+/, '').replace(/`/g, '')))
+    );
+  it.each(files.map((f) => [relative(ROOT, f), f]))('%s: relative links and anchors resolve', (_n, file) => {
+    const text = readFileSync(file, 'utf8').replace(/```[\s\S]*?```/g, '');
+    const broken: string[] = [];
+    for (const m of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+      const href = m[1];
+      if (/^(https?:|mailto:)/.test(href)) continue;
+      const [p, hash] = href.split('#');
+      const target = p ? join(file, '..', p) : file;
+      let exists = false;
+      try {
+        exists = statSync(target).isFile() || statSync(target).isDirectory();
+      } catch {
+        exists = false;
+      }
+      if (!exists) broken.push(href);
+      else if (hash && target.endsWith('.md') && !anchorsOf(target).has(hash)) broken.push(href);
+    }
+    expect(broken).toEqual([]);
+  });
 });

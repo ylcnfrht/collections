@@ -682,7 +682,7 @@ abstract class NumberPipeline extends AbstractPipeline<number> {
 
   /** Reports neither DISTINCT nor SORTED afterwards, like the reference (which distincts boxed values). */
   distinct(): any {
-    return this.chain(this.self(), 0, NOT_SORTED_DISTINCT, UNKNOWN_SIZE, (d) => new NumberDistinctSink(d));
+    return this.chain(this.self(), 0, NOT_SORTED_DISTINCT, UNKNOWN_SIZE, (d) => new NumberDistinctSink(d, this.self() === DoublePipeline));
   }
 
   sorted(): any {

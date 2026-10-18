@@ -198,10 +198,16 @@ export class DistinctSink<T> extends ChainedSink<T, T> {
   }
 }
 
-/** distinct() for number streams. Doubles compare like boxed equality: NaN equals NaN, -0 differs from 0. */
+/**
+ * distinct() for number streams. Doubles compare like boxed equality (NaN equals NaN, -0 differs from 0);
+ * int and long streams have no -0, so there it is the same value as 0.
+ */
 export class NumberDistinctSink extends ChainedSink<number, number> {
   seen: HashSet<number> | null = null;
   negZero = false;
+  constructor(down: Sink<number>, private readonly doubles: boolean) {
+    super(down);
+  }
   override begin(_size: number): void {
     this.seen = new HashSet<number>();
     this.negZero = false;
@@ -213,7 +219,7 @@ export class NumberDistinctSink extends ChainedSink<number, number> {
   }
   accept(t: number): void {
     // HashSet equality is SameValueZero, so -0 needs its own flag
-    if (t === 0 && 1 / t < 0) {
+    if (this.doubles && t === 0 && 1 / t < 0) {
       if (this.negZero) return;
       this.negZero = true;
     } else if (!this.seen!.add(t)) return;

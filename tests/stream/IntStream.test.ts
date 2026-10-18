@@ -1,7 +1,7 @@
 import { IllegalArgumentException, IllegalStateException, NoSuchElementException, NullPointerException } from '../../src/exceptions';
 import { OptionalDouble, OptionalInt } from '../../src/stream/Optional';
 import { Spliterator } from '../../src/stream/Spliterator';
-import { IntStream, Stream } from '../../src/stream/Streams';
+import { DoubleStream, IntStream, LongStream, Stream } from '../../src/stream/Streams';
 import { IntSummaryStatistics } from '../../src/util/SummaryStatistics';
 
 describe('IntStream · factories', () => {
@@ -194,4 +194,13 @@ describe('IntStream · operations', () => {
     expect(() => IntStream.generate(null as unknown as () => number)).toThrow(NullPointerException);
   });
   it('OptionalInt.stream() round trip', () => expect(OptionalInt.of(3).stream().map((x) => x + 1).toArray()).toEqual([4]));
+});
+
+describe('distinct and -0', () => {
+  // int and long streams have no negative zero: -0 is the same value as 0; only doubles keep them apart
+  it('IntStream and LongStream treat -0 as 0, DoubleStream keeps them apart', () => {
+    expect(IntStream.of(0, -0).distinct().count()).toBe(1);
+    expect(LongStream.of(-0, 0).distinct().count()).toBe(1);
+    expect(DoubleStream.of(0, -0).distinct().count()).toBe(2);
+  });
 });

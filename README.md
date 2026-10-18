@@ -25,6 +25,9 @@ words.sort(Comparator.comparing((w: string) => w.length));
 - Zero dependencies, ESM + CommonJS, full type definitions, Node 18+ and browsers.
 - Every collection is iterable (`for..of`, spread, `Array.from`); maps iterate as `[key, value]` pairs, so `new globalThis.Map(myHashMap)` works.
 
+**Documentation:** [docs/README.md](docs/README.md) — guides, every collection, streams, utilities, performance and
+compatibility, with diagrams and runnable examples. API reference: `npm run docs:api`.
+
 ## Install
 
 ```sh
