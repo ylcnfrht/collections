@@ -233,6 +233,12 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
   }
 
   override clear(): void {
+    // unlink every node: a node that is not in the map must have null links (eviction relies on it)
+    for (let n = this.head; n !== null; ) {
+      const next = n.after;
+      n.before = n.after = null;
+      n = next;
+    }
     super.clear();
     this.head = this.tail = null;
   }
