@@ -789,6 +789,6 @@ class ArrayView<E> extends AbstractList<E> {
   override toArray(): E[];
   override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
   override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
-    return arguments.length > 0 ? toArrayWith(this.a.slice(), generator as (length: number) => A) : this.a.slice();
+    return arguments.length > 0 ? toArrayWith(this.a, generator as (length: number) => A) : this.a.slice();
   }
 }
