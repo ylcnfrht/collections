@@ -10,6 +10,7 @@ import { ArrayList } from '../src/list/ArrayList';
 import { LinkedList } from '../src/list/LinkedList';
 import { Vector } from '../src/list/Vector';
 import { HashMap } from '../src/map/HashMap';
+import { IdentityHashMap } from '../src/map/IdentityHashMap';
 import { LinkedHashMap } from '../src/map/LinkedHashMap';
 import { TreeMap } from '../src/map/TreeMap';
 import { ArrayDeque } from '../src/queue/ArrayDeque';
@@ -802,6 +803,15 @@ describe('checked wrappers', () => {
     const base = new HashMap<any, any>();
     C.checkedMap(base, isNum, isNum).putAll(flaky);
     expect([base.toString(), calls]).toEqual(['{1=1}', 1]);
+    // keys equal by equals() but kept apart by the target are not merged on the way
+    const a = new Point(1, 1);
+    const b = new Point(1, 1);
+    const ident = new IdentityHashMap<any, any>();
+    const src = new IdentityHashMap<any, any>();
+    src.put(a, 1);
+    src.put(b, 2);
+    C.checkedMap(ident, () => true, isNum).putAll(src);
+    expect(ident.size()).toBe(2);
   });
   it('checkedMap checks the sequenced entry set extras', () => {
     const base = new LinkedHashMap<any, any>();

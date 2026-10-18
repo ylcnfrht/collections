@@ -4,7 +4,6 @@ import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { List } from '../interfaces/List';
 import { Map, MapEntry, NavigableMap, SortedMap } from '../interfaces/Map';
-import { LinkedHashMap } from '../map/LinkedHashMap';
 import { Queue } from '../interfaces/Queue';
 import { NavigableSet, Set, SortedSet } from '../interfaces/Set';
 import { Spliterator } from '../stream/Spliterator';
@@ -151,11 +150,11 @@ function checkedMapView<M extends Map<K, V>, K, V>(m: M, ck: <T>(o: T) => T, cv:
     for (const n of ['put', 'putFirst', 'putLast', 'putIfAbsent', 'replace']) {
       if (has(n)) o[n] = (...a: unknown[]) => (ck(a[0]), cv(a[a.length - 1]), t[n](...a));
     }
-    // checks a copy and inserts that: reading src twice could insert entries other than the ones checked
+    // checks a snapshot of the pairs, then puts exactly those (reading src again could insert unchecked entries;
+    // collecting them in a map would merge keys the target keeps apart, e.g. in an identity or comparator map)
     o.putAll = (src: Map<K, V>) => {
-      const copy = new LinkedHashMap<K, V>();
-      for (const e of requireNonNull(src).entrySet().toArray()) copy.put(ck(e.getKey()), cv(e.getValue()));
-      return m.putAll(copy);
+      const pairs = requireNonNull(src).entrySet().toArray().map((e) => [ck(e.getKey()), cv(e.getValue())] as const);
+      for (const [k, v] of pairs) m.put(k, v);
     };
     o.replaceAll = (fn: (k: K, v: V) => V) => (requireNonNull(fn), m.replaceAll((k, v) => cv(fn(k, v))));
     o.computeIfAbsent = (k: K, fn: (k: K) => V | null | undefined) => (requireNonNull(fn), m.computeIfAbsent(k, (x) => cv(fn(ck(x)))));
