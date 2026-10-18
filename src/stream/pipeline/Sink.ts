@@ -1,7 +1,7 @@
 // Push-side of the engine: every stage contributes a Sink; a terminal operation is the last one.
 // The source drives the chain with begin(size) / accept(t)* / end(). Cancellation is pushed, not
 // polled: a sink that wants no more elements calls stop(), which flags it and every sink upstream of
-// it (up to a buffering barrier such as sorted()), so a short-circuiting driver only reads the head
+// it, so a short-circuiting driver only reads the head
 // sink's `cancelled` field before each element instead of walking the chain. Every sink class sets
 // all its fields in its constructor so instances of one class share a single hidden shape.
 import { HashSet } from '../../set/HashSet';
@@ -12,12 +12,10 @@ import type { Downstream, Gatherer, Integrator } from '../Gatherer';
 
 /** Receives the elements of one traversal. size is the exact element count, or -1 if unknown. */
 export abstract class Sink<T = any> {
-  /** This sink, or one downstream of it (short of a barrier), wants no more elements. */
+  /** This sink, or one downstream of it, wants no more elements. */
   cancelled = false;
   /** The sink feeding this one; set when an upstream stage wraps it. */
   up: Sink | null = null;
-  /** Buffers until end() (sorted): a downstream stop() doesn't cross it. */
-  barrier = false;
   begin(_size: number): void {}
   abstract accept(t: T): void;
   end(): void {}
@@ -34,13 +32,15 @@ export abstract class Sink<T = any> {
     while (i < hi && !this.cancelled) this.accept(a[i++]);
     return i;
   }
-  /** Requests cancellation for this sink and everything upstream of it, up to a barrier. */
+  /**
+   * Requests cancellation for this sink and everything upstream of it. (A buffering stage such as sorted() emits
+   * only in end(), once its upstream is done, so flags it sets upstream are never read.)
+   */
   stop(): void {
     let s: Sink | null = this;
     while (s !== null && !s.cancelled) {
       s.cancelled = true;
       s = s.up;
-      if (s !== null && s.barrier) return;
     }
   }
 }
@@ -243,7 +243,6 @@ export class SortedSink<T> extends ChainedSink<T, T> {
   buf: T[] = [];
   constructor(down: Sink<T>, readonly cmp: Comparator<T> | null, readonly shortCircuit: boolean) {
     super(down);
-    this.barrier = true;
   }
   override begin(_size: number): void {
     this.buf = [];
@@ -265,7 +264,6 @@ export class NumberSortedSink extends ChainedSink<number, number> {
   buf: number[] = [];
   constructor(down: Sink<number>, readonly shortCircuit: boolean) {
     super(down);
-    this.barrier = true;
   }
   override begin(_size: number): void {
     this.buf = [];

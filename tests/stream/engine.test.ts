@@ -1122,3 +1122,15 @@ describe('engine · pull-mode flatMap after multi-element stages', () => {
     }
   });
 });
+
+describe('engine · cancellation through sorted()', () => {
+  it('a short circuit after sorted, inside flatMap, in push and pull mode', () => {
+    const inner = () => Stream.of(1, 2).flatMap((x) => Stream.of(x * 30, x * 10, x * 20).sorted());
+    expect(inner().limit(4).toList().toArray()).toEqual([10, 20, 30, 20]);
+    expect(inner().takeWhile((x) => x < 30).toList().toArray()).toEqual([10, 20]);
+    const it = inner().iterator();
+    expect([it.next(), it.next(), it.next(), it.next()]).toEqual([10, 20, 30, 20]);
+    expect(Stream.of(5, 3, 4).sorted().flatMap((x) => Stream.of(x, -x)).findFirst().get()).toBe(3);
+    expect(IntStream.of(3, 1, 2).sorted().limit(2).boxed().toList().toArray()).toEqual([1, 2]);
+  });
+});
