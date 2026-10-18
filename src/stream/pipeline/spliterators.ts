@@ -252,8 +252,8 @@ const DONE: globalThis.Iterator<never> = { next: () => ({ done: true, value: und
 
 /**
  * Over a JS iterable; the iterator is requested on first traversal. Size unknown. Like for..of, it calls the
- * iterator's return() once if traversal stops early (a short circuit, a throwing stage, close()), never after the
- * iterator finished, and not when the iterator's own next() threw.
+ * iterator's return() once if traversal stops early (a short circuit, a stage throwing in push mode, close()),
+ * never after the iterator finished, and not when the iterator's own next() threw.
  */
 export class IterableSpliterator<T> extends EngineSpliterator<T> {
   private it: globalThis.Iterator<T> | null = null;
@@ -263,25 +263,32 @@ export class IterableSpliterator<T> extends EngineSpliterator<T> {
   private iter(): globalThis.Iterator<T> {
     return (this.it ??= this.src[Symbol.iterator]());
   }
+  // pull mode leaves the source open when a stage throws, as the reference does (a caller may go on reading);
+  // the stream's close(), or for..of ending, closes it
   tryAdvance(action: (t: T) => void): boolean {
     requireNonNull(action);
-    const r = this.iter().next();
+    const r = this.next(this.iter());
     if (r.done) {
       this.it = DONE;
       return false;
     }
-    try {
-      action(r.value);
-    } catch (e) {
-      closeAfterFailure(e, this);
-    }
+    action(r.value);
     return true;
+  }
+  /** it.next(); an iterator whose own next() threw is finished, so it is never closed (as for..of). */
+  private next(it: globalThis.Iterator<T>): IteratorResult<T> {
+    try {
+      return it.next();
+    } catch (e) {
+      this.it = DONE;
+      throw e;
+    }
   }
   drainTo(sink: Sink<T>, shortCircuit: boolean): void {
     const it = this.iter();
     for (;;) {
       if (shortCircuit && sink.cancelled) return this.close();
-      const r = it.next();
+      const r = this.next(it);
       if (r.done) {
         this.it = DONE;
         return;

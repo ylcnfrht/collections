@@ -323,15 +323,35 @@ describe('Stream · factories', () => {
         for (const _ of s);
       }).toThrow('boom');
       expect([finished, closed]).toEqual([1, 1]);
-      const it = Stream.from(gen())
-        .map((x) => {
-          if (x === 2) throw new Error('boom');
-          return x;
-        })
-        .iterator();
-      it.next();
+    });
+    it('iterator(): a throwing stage leaves the source open and reading can go on, as the reference; close() closes it', () => {
+      const s = Stream.from(gen()).map((x) => {
+        if (x === 2) throw new Error('boom');
+        return x;
+      });
+      const it = s.iterator();
+      expect(it.next()).toBe(1);
       expect(() => it.next()).toThrow('boom');
-      expect(finished).toBe(2);
+      expect([it.next(), finished]).toEqual([3, 0]);
+      s.close();
+      expect(finished).toBe(1);
+    });
+    it('for..of: a source whose own next() throws is not closed with return(), as native for..of', () => {
+      const log: string[] = [];
+      let i = 0;
+      const src = {
+        [Symbol.iterator]: () => ({
+          next: () => {
+            if (++i === 2) throw new Error('src');
+            return { value: i, done: false as const };
+          },
+          return: () => (log.push('return'), { value: undefined, done: true as const }),
+        }),
+      };
+      expect(() => {
+        for (const _ of Stream.from(src).onClose(() => log.push('close')));
+      }).toThrow('src');
+      expect(log).toEqual(['close']);
     });
     it('pull mode without flatMap registers no close work', () => {
       const s = Stream.of(1, 2).map((x) => x * 2);
