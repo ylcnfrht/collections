@@ -14,7 +14,10 @@ export default defineConfig({
   async onSuccess() {
     for (const f of ['dist/index.js', 'dist/index.mjs']) {
       let s = readFileSync(f, 'utf8');
-      for (const [, n] of s.matchAll(/= class _(\w+)\b/g)) s = s.replace(new RegExp(`\\b_${n}\\b`, 'g'), n);
+      for (const [, n] of s.matchAll(/= class _(\w+)\b/g)) {
+        // two source classes with one name share the inner name: renaming would make one shadow the other
+        if (s.split(`= class _${n} `).length === 2) s = s.replace(new RegExp(`\\b_${n}\\b`, 'g'), n);
+      }
       writeFileSync(f, s);
     }
   },
