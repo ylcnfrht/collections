@@ -39,12 +39,55 @@ function doubleHash(x: number): number {
   return i32[0] ^ i32[1];
 }
 
+/** What Optional and the number optionals share: presence, the orElse family, ifPresent. */
+abstract class OptionalBase<T> {
+  protected constructor(protected readonly value: T, protected readonly present: boolean) {}
+
+  isPresent(): boolean {
+    return this.present;
+  }
+
+  isEmpty(): boolean {
+    return !this.present;
+  }
+
+  ifPresent(action: (value: T) => void): void {
+    if (this.present) requireNonNull(action)(this.value);
+  }
+
+  ifPresentOrElse(action: (value: T) => void, emptyAction: () => void): void {
+    if (this.present) requireNonNull(action)(this.value);
+    else requireNonNull(emptyAction)();
+  }
+
+  orElse(other: T): T {
+    return this.present ? this.value : other;
+  }
+
+  orElseGet(supplier: () => T): T {
+    return this.present ? this.value : requireNonNull(supplier)();
+  }
+
+  /** Without an argument throws NoSuchElementException; otherwise throws the supplied error. */
+  orElseThrow(exceptionSupplier?: () => unknown): T {
+    if (this.present) return this.value;
+    if (arguments.length === 0) throw new NoSuchElementException(NO_VALUE);
+    throw requireNonNull(requireNonNull(exceptionSupplier)());
+  }
+
+  [INSPECT](): string {
+    return this.toString();
+  }
+}
+
 /** A container that may or may not hold a non-null value. null and undefined both mean "absent". */
-export class Optional<T> {
+export class Optional<T> extends OptionalBase<T> {
   // any: the single empty instance serves every element type
   private static readonly EMPTY: Optional<any> = new Optional<any>(undefined, false);
 
-  private constructor(private readonly value: T, private readonly present: boolean) {}
+  private constructor(value: T, present: boolean) {
+    super(value, present);
+  }
 
   static empty<T>(): Optional<T> {
     return Optional.EMPTY;
@@ -63,23 +106,6 @@ export class Optional<T> {
   get(): T {
     if (!this.present) throw new NoSuchElementException(NO_VALUE);
     return this.value;
-  }
-
-  isPresent(): boolean {
-    return this.present;
-  }
-
-  isEmpty(): boolean {
-    return !this.present;
-  }
-
-  ifPresent(action: (value: T) => void): void {
-    if (this.present) requireNonNull(action)(this.value);
-  }
-
-  ifPresentOrElse(action: (value: T) => void, emptyAction: () => void): void {
-    if (this.present) requireNonNull(action)(this.value);
-    else requireNonNull(emptyAction)();
   }
 
   filter(predicate: (value: T) => boolean): Optional<T> {
@@ -107,21 +133,6 @@ export class Optional<T> {
     return streamFactories().stream(new SingleSpliterator(this.value, this.present ? 1 : 0), false);
   }
 
-  orElse(other: T): T {
-    return this.present ? this.value : other;
-  }
-
-  orElseGet(supplier: () => T): T {
-    return this.present ? this.value : requireNonNull(supplier)();
-  }
-
-  /** Without an argument throws NoSuchElementException; otherwise throws the supplied error. */
-  orElseThrow(exceptionSupplier?: () => unknown): T {
-    if (this.present) return this.value;
-    if (arguments.length === 0) throw new NoSuchElementException(NO_VALUE);
-    throw requireNonNull(requireNonNull(exceptionSupplier)());
-  }
-
   equals(o: unknown): boolean {
     if (o === this) return true;
     return o instanceof Optional && o.present === this.present && equals(this.value, o.value);
@@ -131,10 +142,7 @@ export class Optional<T> {
     return this.present ? hashCode(this.value) : 0;
   }
 
-  [INSPECT](): string {
-    return this.toString();
-  }
-  toString(): string {
+  override toString(): string {
     return this.present ? `Optional[${toString(this.value)}]` : 'Optional.empty';
   }
 }
@@ -143,8 +151,7 @@ export class Optional<T> {
  * Shared implementation of OptionalInt / OptionalLong / OptionalDouble.
  * `same` decides value equality (doubles compare like Double.compare: NaN equals NaN, -0 differs from 0).
  */
-abstract class NumberOptional {
-  protected constructor(protected readonly value: number, protected readonly present: boolean) {}
+abstract class NumberOptional extends OptionalBase<number> {
 
   protected abstract readonly typeName: string;
   protected abstract streamOf(spliterator: Spliterator<number>): unknown;
@@ -152,37 +159,6 @@ abstract class NumberOptional {
   protected getValue(): number {
     if (!this.present) throw new NoSuchElementException(NO_VALUE);
     return this.value;
-  }
-
-  isPresent(): boolean {
-    return this.present;
-  }
-
-  isEmpty(): boolean {
-    return !this.present;
-  }
-
-  ifPresent(action: (value: number) => void): void {
-    if (this.present) requireNonNull(action)(this.value);
-  }
-
-  ifPresentOrElse(action: (value: number) => void, emptyAction: () => void): void {
-    if (this.present) requireNonNull(action)(this.value);
-    else requireNonNull(emptyAction)();
-  }
-
-  orElse(other: number): number {
-    return this.present ? this.value : other;
-  }
-
-  orElseGet(supplier: () => number): number {
-    return this.present ? this.value : requireNonNull(supplier)();
-  }
-
-  orElseThrow(exceptionSupplier?: () => unknown): number {
-    if (this.present) return this.value;
-    if (arguments.length === 0) throw new NoSuchElementException(NO_VALUE);
-    throw requireNonNull(requireNonNull(exceptionSupplier)());
   }
 
   equals(o: unknown): boolean {
@@ -201,10 +177,7 @@ abstract class NumberOptional {
     return hashCode(v);
   }
 
-  [INSPECT](): string {
-    return this.toString();
-  }
-  toString(): string {
+  override toString(): string {
     if (!this.present) return `${this.typeName}.empty`;
     return `${this.typeName}[${this.typeName === 'OptionalDouble' ? formatDouble(this.value) : String(this.value)}]`;
   }
