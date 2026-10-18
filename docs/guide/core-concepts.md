@@ -356,7 +356,8 @@ Want a copy instead? Use a copy constructor (`new ArrayList(view)`) or `List.cop
 ## Exceptions
 
 All library exceptions extend `RuntimeException`, which extends the built-in `Error`. Each sets `name`
-explicitly, so `e.name` survives minification; `instanceof` works too.
+explicitly, so `e.name` survives minification; `instanceof` works too, as long as one copy of the library is
+loaded (see [Browsers and bundlers](getting-started.md#browsers-and-bundlers)). Checking `e.name` works everywhere.
 
 ```mermaid
 classDiagram

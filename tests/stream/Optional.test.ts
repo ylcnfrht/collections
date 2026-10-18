@@ -283,3 +283,16 @@ describe('null functional arguments: NullPointerException only on the branch use
     });
   });
 });
+
+describe('Optional equality across two loaded copies of the library', () => {
+  it('compares by kind and value, not by class identity', () => {
+    let other: typeof import('../../src') | undefined;
+    jest.isolateModules(() => {
+      other = require('../../src');
+    });
+    const o = other!;
+    expect(o.Optional).not.toBe(Optional);
+    expect([Optional.of(1).equals(o.Optional.of(1)), o.Optional.of(1).equals(Optional.of(1)), Optional.empty().equals(o.Optional.empty())]).toEqual([true, true, true]);
+    expect([OptionalInt.of(1).equals(o.OptionalInt.of(1)), OptionalInt.of(1).equals(o.OptionalLong.of(1)), Optional.of(1).equals(o.OptionalInt.of(1))]).toEqual([true, false, false]);
+  });
+});

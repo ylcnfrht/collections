@@ -236,6 +236,9 @@ console.log(byAge.first().name); // → a
 - When your bundler merges the library with your own code it may rename classes whose names clash (`HashMap2`), and a
   minifier shortens them further. Collections print and compare the same either way; only `constructor.name` and the
   class names quoted in some error messages (`ClassCastException`) change. Exception `name`s are unaffected.
+- Load one copy of the library. If an app ends up with two (say the CommonJS build through `require` and the ESM
+  build through `import`), collections, maps and optionals from both still compare equal and work together, but
+  `instanceof` across the copies is false: check exceptions by `e.name`.
 
 ## Supported runtimes
 

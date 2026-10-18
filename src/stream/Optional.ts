@@ -39,9 +39,23 @@ function doubleHash(x: number): number {
   return i32[0] ^ i32[1];
 }
 
+const OPTIONAL_BRAND: unique symbol = Symbol.for('ts-collections-framework.Optional');
+
+/** o is an optional of the given kind ('Optional', 'OptionalInt', ...), from this or another copy of the library. */
+function isOptional(o: unknown, kind: string): o is { present: boolean; value: any } {
+  return (o as { [OPTIONAL_BRAND]?: string } | null)?.[OPTIONAL_BRAND] === kind;
+}
+
 /** What Optional and the number optionals share: presence, the orElse family, ifPresent. */
 abstract class OptionalBase<T> {
   protected constructor(protected readonly value: T, protected readonly present: boolean) {}
+
+  protected abstract readonly typeName: string;
+
+  /** @internal the kind, shared by every loaded copy of the library */
+  get [OPTIONAL_BRAND](): string {
+    return this.typeName;
+  }
 
   isPresent(): boolean {
     return this.present;
@@ -87,6 +101,10 @@ export class Optional<T> extends OptionalBase<T> {
 
   private constructor(value: T, present: boolean) {
     super(value, present);
+  }
+
+  protected get typeName(): string {
+    return 'Optional';
   }
 
   static empty<T>(): Optional<T> {
@@ -135,7 +153,9 @@ export class Optional<T> extends OptionalBase<T> {
 
   equals(o: unknown): boolean {
     if (o === this) return true;
-    return o instanceof Optional && o.present === this.present && equals(this.value, o.value);
+    // by brand, not instanceof: equal across two loaded copies of the library (CJS and ESM in one process)
+    if (!isOptional(o, 'Optional')) return false;
+    return o.present === this.present && equals(this.value, o.value);
   }
 
   hashCode(): number {
@@ -153,7 +173,6 @@ export class Optional<T> extends OptionalBase<T> {
  */
 abstract class NumberOptional extends OptionalBase<number> {
 
-  protected abstract readonly typeName: string;
   protected abstract streamOf(spliterator: Spliterator<number>): unknown;
 
   protected getValue(): number {
@@ -163,7 +182,7 @@ abstract class NumberOptional extends OptionalBase<number> {
 
   equals(o: unknown): boolean {
     if (o === this) return true;
-    if (!(o instanceof NumberOptional) || o.typeName !== this.typeName || o.present !== this.present) return false;
+    if (!isOptional(o, this.typeName) || o.present !== this.present) return false;
     return !this.present || Object.is(this.value, o.value) || (this.typeName !== 'OptionalDouble' && this.value === o.value);
   }
 
