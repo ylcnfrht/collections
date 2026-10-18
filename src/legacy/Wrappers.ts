@@ -8,6 +8,7 @@ import { Queue } from '../interfaces/Queue';
 import { NavigableSet, Set, SortedSet } from '../interfaces/Set';
 import { Spliterator } from '../stream/Spliterator';
 import { Spliterators } from '../stream/Spliterators';
+import { streamFactories } from '../stream/hook';
 import { identityHashCode, requireNonNull } from '../util/Objects';
 
 type Methods = Record<PropertyKey, unknown>;
@@ -134,7 +135,8 @@ const MAP_VIEW_METHODS = ['headMap', 'tailMap', 'subMap', 'descendingMap', 'reve
 
 /**
  * Checks keys and values on put/putFirst/putLast/putIfAbsent/replace/putAll, results of
- * replaceAll, compute, computeIfAbsent, computeIfPresent and merge, entry.setValue through entrySet()/sequencedEntrySet(), and sub-map views.
+ * replaceAll, compute, computeIfAbsent, computeIfPresent and merge, entry.setValue through entrySet()/sequencedEntrySet()
+ * (iterators, streams, toArray, forEach, getFirst/getLast, reversed), and sub-map views.
  */
 function checkedMapView<M extends Map<K, V>, K, V>(m: M, ck: <T>(o: T) => T, cv: <T>(o: T) => T): M {
   requireNonNull(m);
@@ -171,7 +173,15 @@ function checkedEntry<K, V>(e: MapEntry<K, V>, cv: <T>(o: T) => T): MapEntry<K, 
 
 function checkedEntrySet<K, V>(s: Set<MapEntry<K, V>>, cv: <T>(o: T) => T): Set<MapEntry<K, V>> {
   const wrap = (e: MapEntry<K, V>) => checkedEntry(e, cv);
+  const t = s as unknown as Record<string, (...a: unknown[]) => unknown>;
+  // sequencedEntrySet() extras, only where the backing set has them
+  const seq: Methods = {};
+  for (const n of ['getFirst', 'getLast']) if (typeof t[n] === 'function') seq[n] = () => wrap(t[n]() as MapEntry<K, V>);
+  if (typeof t.reversed === 'function') seq.reversed = () => checkedEntrySet(t.reversed() as Set<MapEntry<K, V>>, cv);
   return delegate(s, (view) => ({
+    ...seq,
+    stream: () => streamFactories().stream(view.spliterator(), false),
+    parallelStream: () => streamFactories().stream(view.spliterator(), true),
     // over the wrapping iterator, so split-off entries are checked too (the reference's default Set spliterator)
     spliterator: () => Spliterators.spliterator(view, Spliterator.DISTINCT),
     iterator: (): Iterator<MapEntry<K, V>> => {

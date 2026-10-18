@@ -21,6 +21,6 @@ export function registerStreamFactories(f: StreamFactories): void {
 }
 
 export function streamFactories(): StreamFactories {
-  if (factories === null) throw new Error('stream engine not loaded');
+  if (factories === null) throw new Error('stream engine not loaded: import the package entry point');
   return factories;
 }

@@ -16,6 +16,7 @@ import { ArrayDeque } from '../src/queue/ArrayDeque';
 import { HashSet } from '../src/set/HashSet';
 import { LinkedHashSet } from '../src/set/LinkedHashSet';
 import { TreeSet } from '../src/set/TreeSet';
+import '../src/stream/StreamSupport'; // the entry point loads the stream engine; deep imports must too
 import { Comparator, naturalCompare } from '../src/util/Comparator';
 import { identityHashCode, Objects } from '../src/util/Objects';
 import { expectThrows, Point } from './helpers';
@@ -761,6 +762,9 @@ describe('checked wrappers', () => {
       () => m.entrySet().toArray((n) => new Array<MapEntry<any, any>>(n))[0].setValue('x'),
       () => [...m.entrySet()][0].setValue('x'),
       () => m.entrySet().forEach((e) => e.setValue('x')),
+      () => m.entrySet().stream().forEach((e) => e.setValue('x')),
+      () => m.entrySet().parallelStream().findFirst().get().setValue('x'),
+      () => m.entrySet().spliterator().tryAdvance((e) => e.setValue('x')),
     ];
     for (const f of bad) expectThrows(f, CCE);
     expect(base.containsKey('z')).toBe(false);
@@ -770,6 +774,17 @@ describe('checked wrappers', () => {
     m.put('n', null);
     expect(m.equals(base)).toBe(true);
     expect(m.entrySet().contains(m.entrySet().iterator().next())).toBe(true);
+  });
+  it('checkedMap checks the sequenced entry set extras', () => {
+    const base = new LinkedHashMap<any, any>();
+    base.put('a', 1);
+    base.put('b', 2);
+    const es = (C.checkedMap(base, isStr, isNum) as unknown as LinkedHashMap<any, any>).sequencedEntrySet();
+    for (const f of [() => es.getFirst().setValue('x'), () => es.getLast().setValue('x'), () => es.reversed().getFirst().setValue('x'), () => es.reversed().stream().findFirst().get().setValue('x')]) {
+      expectThrows(f, CCE);
+    }
+    es.reversed().getFirst().setValue(9);
+    expect(base.get('b')).toBe(9);
   });
   it('checked sorted / navigable maps check sub-map views', () => {
     const base = new TreeMap<any, any>();
