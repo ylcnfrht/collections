@@ -1,5 +1,6 @@
 import {
   ArrayIndexOutOfBoundsException,
+  IllegalArgumentException,
   IndexOutOfBoundsException,
   NoSuchElementException,
   UnsupportedOperationException,
@@ -90,7 +91,9 @@ export class Vector<E> extends ArrayList<E> {
     this.cap = old + Math.max(minCapacity - old, this.capacityIncrement > 0 ? this.capacityIncrement : old);
   }
 
+  /** @throws IllegalArgumentException if minCapacity is not an integer */
   override ensureCapacity(minCapacity: number): void {
+    if (!Number.isInteger(minCapacity)) throw new IllegalArgumentException(`Illegal Capacity: ${minCapacity}`);
     // like the reference: open iterators fail fast after any positive request
     if (minCapacity > 0) this.modCount++;
     this.ensure(minCapacity);

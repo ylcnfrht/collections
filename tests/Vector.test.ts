@@ -34,6 +34,16 @@ describe('Vector · implementation', () => {
       }
       expect([v.size(), v.indexOf(2, 1), v.lastIndexOf(2, 2)]).toEqual([3, 1, 1]);
     });
+    it('capacity must be an integer: constructor and ensureCapacity', () => {
+      for (const bad of [2.5, Infinity, NaN]) {
+        expectThrows(() => new Vector(bad), 'IllegalArgumentException');
+        expectThrows(() => new ArrayList(bad), 'IllegalArgumentException');
+        expectThrows(() => new Vector<number>().ensureCapacity(bad), 'IllegalArgumentException');
+      }
+      const v = new Vector<number>(0);
+      v.ensureCapacity(3);
+      expect(v.capacity()).toBe(3);
+    });
     it('trimToSize and ensureCapacity fail open iterators, as the reference', () => {
       for (const op of [(v: Vector<number>) => v.trimToSize(), (v: Vector<number>) => v.ensureCapacity(100)]) {
         const v = Vector.of(1, 2, 3);

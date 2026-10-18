@@ -35,7 +35,7 @@ export class ArrayList<E> extends AbstractList<E> {
   constructor(arg?: number | Collection<E>) {
     super();
     if (arguments.length === 0 || typeof arg === 'number') {
-      if (typeof arg === 'number' && !(arg >= 0)) throw new IllegalArgumentException(`Illegal Capacity: ${arg}`);
+      if (typeof arg === 'number' && !(Number.isInteger(arg) && arg >= 0)) throw new IllegalArgumentException(`Illegal Capacity: ${arg}`);
       this.es = [];
     } else {
       requireNonNull(arg);
