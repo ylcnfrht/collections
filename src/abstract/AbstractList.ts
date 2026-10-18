@@ -265,14 +265,14 @@ class RandomAccessSpliterator<E> extends BaseSpliterator<E> {
 }
 
 export function removeRangeCheck(fromIndex: number, toIndex: number, size: number): void {
-  if (fromIndex < 0 || toIndex > size || fromIndex > toIndex) {
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex) || fromIndex < 0 || toIndex > size || fromIndex > toIndex) {
     throw new IndexOutOfBoundsException(`From Index: ${fromIndex} To Index: ${toIndex}, Size: ${size}`);
   }
 }
 
 export function subListRangeCheck(fromIndex: number, toIndex: number, size: number): void {
-  if (fromIndex < 0) throw new IndexOutOfBoundsException(`fromIndex = ${fromIndex}`);
-  if (toIndex > size) throw new IndexOutOfBoundsException(`toIndex = ${toIndex}`);
+  if (!(fromIndex >= 0) || !Number.isInteger(fromIndex)) throw new IndexOutOfBoundsException(`fromIndex = ${fromIndex}`);
+  if (!(toIndex <= size) || !Number.isInteger(toIndex)) throw new IndexOutOfBoundsException(`toIndex = ${toIndex}`);
   if (fromIndex > toIndex) throw new IllegalArgumentException(`fromIndex(${fromIndex}) > toIndex(${toIndex})`);
 }
 

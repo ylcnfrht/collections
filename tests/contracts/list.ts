@@ -517,6 +517,15 @@ export function listContract(name: string, create: () => List<any>) {
         s.removeRange(0, 1);
         expect([l.toArray(), s.size()]).toEqual([[0, 2, 3], 1]);
       });
+      it('subList and removeRange reject NaN and fractional bounds', () => {
+        const l = of(1, 2, 3, 4) as any;
+        for (const [a, b] of [[0.5, 2], [NaN, 2], [0, NaN], [1, 2.5]]) {
+          expectThrows(() => l.subList(a, b), IOOBE);
+          if (typeof l.removeRange === 'function') expectThrows(() => l.removeRange(a, b), IOOBE);
+          if (typeof l.removeRange === 'function') expectThrows(() => l.subList(0, 4).removeRange(a, b), IOOBE);
+        }
+        expect(l.toArray()).toEqual([1, 2, 3, 4]);
+      });
       it('removeRange with a bad range removes nothing', () => {
         const l = of(0, 1, 2) as any;
         if (typeof l.removeRange !== 'function') return;
