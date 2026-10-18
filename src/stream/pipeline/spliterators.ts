@@ -13,6 +13,12 @@ export abstract class EngineSpliterator<T> extends BaseSpliterator<T> {
 }
 
 /** Pushes every remaining element of any spliterator into sink. */
+/** Drains a mapped stream into the outer sink; if that already stopped, advances once (as ForwardSink does). */
+export function drainInner<T>(sp: Spliterator<T>, sink: Sink<T>, shortCircuit: boolean): void {
+  if (shortCircuit && sink.cancelled) sp.tryAdvance(() => undefined);
+  else drain(sp, sink, shortCircuit);
+}
+
 export function drain<T>(sp: Spliterator<T>, sink: Sink<T>, shortCircuit: boolean): void {
   if (sp instanceof EngineSpliterator) sp.drainTo(sink, shortCircuit);
   else if (!shortCircuit) sp.forEachRemaining((t) => sink.accept(t));

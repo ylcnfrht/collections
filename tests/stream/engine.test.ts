@@ -1138,10 +1138,17 @@ describe('engine · cancellation through sorted()', () => {
 describe('engine · flatMap after downstream cancellation', () => {
   // mapMulti hands flatMap several elements per upstream element, without checking cancellation in between
   const three = <T>(x: T, emit: (t: number) => void) => [1, 2, 3].forEach(emit);
-  it('push mode: an inner stream begun after the downstream stopped is not read', () => {
+  it('push mode: an inner stream begun after the downstream stopped yields one element, not forwarded (as the reference)', () => {
     const read: number[] = [];
     const r = Stream.of(0).mapMulti<number>(three).flatMap((x) => Stream.of(x).peek((v) => read.push(v))).findFirst();
-    expect([r.get(), read]).toEqual([1, [1]]);
+    expect([r.get(), read]).toEqual([1, [1, 2, 3]]);
+    const m: string[] = [];
+    Stream.of(0)
+      .mapMulti<number>((v, c) => (c(v), c(v)))
+      .flatMap((v) => Stream.of(v, v + 1).peek((x) => m.push('p' + x)))
+      .limit(1)
+      .toList();
+    expect(m).toEqual(['p0', 'p0']);
   });
   it('pull mode: queued elements are not mapped once the downstream stopped', () => {
     const mapped: number[] = [];

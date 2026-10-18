@@ -181,12 +181,11 @@ export class ForwardSink<T> extends Sink<T> {
   constructor(readonly down: Sink<T>) {
     super();
   }
-  override begin(_size: number): void {
-    if (this.down.cancelled) this.stop();
-  }
+  // an inner stream begun after the outer sink stopped still produces its first element, as the reference's
+  // (it pushes the mapped stream with allMatch, which sees the stop only on the first test): not forwarded
   accept(t: T): void {
     const d = this.down;
-    d.accept(t);
+    if (!d.cancelled) d.accept(t);
     if (d.cancelled) this.stop();
   }
 }

@@ -46,7 +46,7 @@ import {
   TakeWhileSink,
 } from './Sink';
 import { SpliteratorIterator } from '../Spliterators';
-import { EngineArraySpliterator, DelegatingSpliterator, drain, JsIterator, NumberIterator } from './spliterators';
+import { EngineArraySpliterator, DelegatingSpliterator, drain, drainInner, JsIterator, NumberIterator } from './spliterators';
 
 const LINKED = 'stream has already been operated upon or closed';
 const { DISTINCT, SORTED, ORDERED, SIZED, SUBSIZED } = Spliterator;
@@ -177,7 +177,7 @@ export abstract class AbstractPipeline<T = any> {
   pushInto(sink: Sink, shortCircuit: boolean): void {
     const sp = this.open();
     // no stages: drain straight into the outer sink (no begin/end, its cancellation checked directly)
-    if (this.prev === null) drain(sp, sink, shortCircuit);
+    if (this.prev === null) drainInner(sp, sink, shortCircuit);
     else this.exec(sp, new ForwardSink(sink), shortCircuit);
   }
 
@@ -458,7 +458,7 @@ export class FlatMapSink<T> extends ChainedSink<T, any> {
     if (inner === null || inner === undefined) return;
     try {
       if (inner instanceof AbstractPipeline) inner.pushInto(this.down, this.shortCircuit);
-      else drain(inner.spliterator(), this.down, this.shortCircuit);
+      else drainInner(inner.spliterator(), this.down, this.shortCircuit);
     } catch (e) {
       closeAfterFailure(e, inner);
     }
