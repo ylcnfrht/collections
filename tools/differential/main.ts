@@ -242,6 +242,11 @@ export function runDifferential(o: Options): Result {
   return { perTarget, total, divergences, groups };
 }
 
+/** Divergence groups that are neither known (known.ts) nor assessed (assessments.ts); only these fail a run. */
+export function unexpectedGroups(r: Result): Result['groups'] {
+  return r.groups.filter((g) => !isKnown(g.signature) && assess(g.signature, g.example).category === 'unassessed');
+}
+
 export function formatReport(r: Result): string {
   const lines: string[] = [];
   lines.push(`scripts: ${r.total}`);
@@ -305,7 +310,7 @@ function cli(): void {
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, 'report.txt'), report + '\n');
   }
-  process.exit(r.divergences.length ? 1 : 0);
+  process.exit(unexpectedGroups(r).length ? 1 : 0);
 }
 
 if (require.main === module) cli();

@@ -1,8 +1,6 @@
 // Differential smoke test against the reference JDK (tools/differential). Skipped when no JDK >= 23 is installed.
 // The full run is `npm run test:diff`.
-import { formatReport, refAvailable, runDifferential } from '../../tools/differential/main';
-import { assess } from '../../tools/differential/assessments';
-import { isKnown } from '../../tools/differential/known';
+import { formatReport, refAvailable, runDifferential, unexpectedGroups } from '../../tools/differential/main';
 
 const available = refAvailable();
 
@@ -10,7 +8,7 @@ const available = refAvailable();
   it('200 seeded scripts', () => {
     const r = runDifferential({ seed: 20261018, count: 200, batch: 200, shrink: false, maxShrink: 0, quiet: true });
     // known (known.ts) and assessed (assessments.ts: reported library differences, reference quirks) divergences are tolerated
-    const unexpected = r.groups.filter((g) => !isKnown(g.signature) && assess(g.signature, g.example).category === 'unassessed');
+    const unexpected = unexpectedGroups(r);
     expect(unexpected.length === 0 ? '' : formatReport({ ...r, groups: unexpected })).toBe('');
   }, 60_000);
 });
