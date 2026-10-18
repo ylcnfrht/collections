@@ -715,3 +715,19 @@ describe('TreeMap · sequenced views (as the reference)', () => {
     expect(m.toString()).toBe('{2=2}');
   });
 });
+
+describe('TreeMap with a comparator that returns NaN', () => {
+  type S = { name: string; score?: number };
+  const byScore = (a: S, b: S) => (a.score as number) - (b.score as number);
+  it('rejects the NaN instead of returning another key’s value or storing duplicates', () => {
+    const a = { name: 'a', score: 1 };
+    const b: S = { name: 'b' };
+    const c = { name: 'c', score: 2 };
+    const m = new TreeMap<S, string>(byScore);
+    m.put(a, 'A');
+    m.put(c, 'C');
+    expectThrows(() => m.put(b, 'B'), 'IllegalArgumentException');
+    expectThrows(() => m.get(b), 'IllegalArgumentException');
+    expect([m.size(), m.get(c), m.keySet().toArray().map((k) => k.name)]).toEqual([2, 'C', ['a', 'c']]);
+  });
+});

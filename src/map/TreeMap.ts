@@ -201,6 +201,14 @@ export class TreeIter<T> implements Iterator<T> {
 }
 
 
+/**
+ * A comparator result that is not a number or is NaN (say `(a, b) => a.score - b.score` with a missing score). Lookups
+ * and inserts would disagree about where the key goes (get() returning another key's value, duplicate keys).
+ */
+function badOrder(r: unknown): never {
+  throw new IllegalArgumentException(`comparator returned ${String(r)}, not a number`);
+}
+
 /** What the key/value/entry views need from TreeMap and its range views. @internal */
 export interface TreeBacked<K, V> extends NavigableMap<K, V> {
   iter<T>(kind: Kind): TreeIter<T>;
@@ -270,7 +278,8 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
         const r = c(key as K, p.key);
         if (r < 0) p = p.left;
         else if (r > 0) p = p.right;
-        else return p;
+        else if (r === 0) return p;
+        else badOrder(r);
       }
       return null;
     }
@@ -401,6 +410,7 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     const rm = c === null ? natCmp(key, max.key) : c(key, max.key);
     if (rm > 0) return this.attach(key, value, max, false);
     if (rm === 0) return this.overwrite(max, value, onlyIfAbsent);
+    if (!(rm < 0)) badOrder(rm);
     let parent: Node<K, V>;
     let left: boolean;
     if (c !== null) {
@@ -409,6 +419,7 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
         const r = c(key, t.key);
         if (r === 0) return this.overwrite(t, value, onlyIfAbsent);
         left = r < 0;
+        if (!left && !(r > 0)) badOrder(r);
         t = left ? t.left : t.right;
       } while (t !== null);
     } else if (typeof key === 'number' && key === key) {
