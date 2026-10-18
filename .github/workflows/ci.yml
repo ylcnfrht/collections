@@ -21,6 +21,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # the bundle must load and keep real class names (they show in errors and logs)
+      - run: node -e "const l = require('./dist'); if (new l.ArrayList().constructor.name !== 'ArrayList') throw new Error('class names mangled')"
 
   differential:
     runs-on: ubuntu-latest

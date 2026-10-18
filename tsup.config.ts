@@ -7,4 +7,6 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   target: 'es2020',
+  // bundling renames clashing classes (_ArrayList); keep the real names for errors, logs and stack traces
+  keepNames: true,
 });
