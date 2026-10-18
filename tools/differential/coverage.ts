@@ -50,7 +50,8 @@ function interfacesOf(o: any): string[] {
   const out: string[] = [];
   for (const [name, ms] of ifaceMembers) {
     if (SET_IFACES.has(name) && o[SET_BRAND] !== true) continue;
-    if (ms.every((m) => typeof o[m] === 'function')) out.push(name);
+    // an interface with no function members left (Integrator once greedy is dropped) would match everything
+    if (ms.length !== 0 && ms.every((m) => typeof o[m] === 'function')) out.push(name);
   }
   return out;
 }

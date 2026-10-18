@@ -8,7 +8,7 @@ import type { Divergence } from './main';
 
 /** API rows that cannot be compared with the reference runtime, with the reason. Matched on owner and member. */
 export const EXCLUSIONS: { owner: RegExp; member: RegExp; kind?: ApiRow['kind']; reason: string }[] = [
-  { owner: /./, member: /^\[(iterator|dispose|SET_BRAND|RANDOM_ACCESS)\]$/, reason: 'JS protocol / brand symbol; no reference counterpart' },
+  { owner: /./, member: /^\[(iterator|dispose|SET_BRAND|RANDOM_ACCESS|INSPECT)\]$/, reason: 'JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart' },
   { owner: /^(ArrayList|LinkedList|Vector|Stack|ArrayDeque|PriorityQueue|HashMap|LinkedHashMap|HashSet|LinkedHashSet|TreeSet)$/, member: /^of$/, kind: 'static',
     reason: 'JS-only convenience factory (the reference has no Class.of on these classes)' },
   { owner: /^(Stream|IntStream|LongStream|DoubleStream)$/, member: /^(from|ofArray)$/, reason: 'JS-only source (array / iterable) with no reference counterpart' },
