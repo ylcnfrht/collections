@@ -97,6 +97,16 @@ data.push(3); // outside the stream's range
 console.log(s.toList()); // → [100, 2]
 ```
 
+`Stream.concat` nests its inputs, as the JDK's does: chaining it in a loop over thousands of streams is quadratic
+and eventually overflows the call stack. To join many streams, flatten them instead:
+
+```ts
+import { Stream } from 'ts-collections-framework';
+
+const parts = [Stream.of(1, 2), Stream.of(3), Stream.of(4, 5)];
+console.log(Stream.of(...parts).flatMap((p) => p).toList()); // → [1, 2, 3, 4, 5]
+```
+
 ## Intermediate vs terminal operations
 
 | | Intermediate | Terminal |
