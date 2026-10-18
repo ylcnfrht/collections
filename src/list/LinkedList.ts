@@ -1,5 +1,5 @@
 import { AbstractSequentialList } from '../abstract/AbstractSequentialList';
-import { ReversedList } from '../abstract/AbstractList';
+import { ReverseOrderListView } from '../abstract/AbstractList';
 import { ConcurrentModificationException, IllegalStateException, NoSuchElementException } from '../exceptions';
 import { Collection } from '../interfaces/Collection';
 import { Iterator, ListIterator } from '../interfaces/Iterator';
@@ -881,11 +881,11 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
   }
 
   override listIterator(index = 0): ListIterator<E> {
-    return new ReversedList(this.base).listIterator(index);
+    return ReverseOrderListView.of(this.base, true).listIterator(index);
   }
 
   override subList(fromIndex: number, toIndex: number): List<E> {
-    return new ReversedList(this.base).subList(fromIndex, toIndex);
+    return ReverseOrderListView.of(this.base, true).subList(fromIndex, toIndex);
   }
 
   override [Symbol.iterator](): Generator<E> {

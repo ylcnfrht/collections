@@ -196,6 +196,17 @@ describe('ArrayList · implementation', () => {
       expectThrows(() => l.removeIf((x) => (x === 3 && l.add(9), x === 1)), CME);
       expect(l.toArray()).toEqual([2, 3, 4, 9]);
     });
+    it('reversed() bulk operations reach the base list in one call, not per element', () => {
+      const l = ArrayList.of(1, 2, 3, 4);
+      const add = jest.spyOn(l, 'add');
+      const addAll = jest.spyOn(l, 'addAll');
+      const removeIf = jest.spyOn(l, 'removeIf');
+      l.reversed().addAll(ArrayList.of(7, 8, 9));
+      l.reversed().addAll(1, ArrayList.of(5, 6));
+      l.reversed().removeIf((x) => x % 2 === 0);
+      expect([add.mock.calls.length, addAll.mock.calls.length, removeIf.mock.calls.length]).toEqual([0, 2, 1]);
+      expect(l.toArray()).toEqual([9, 7, 1, 3, 5]);
+    });
     it('removeAll and retainAll are linear on 100k elements', () => {
       const l = new ArrayList<number>();
       for (let i = 0; i < 100_000; i++) l.add(i);

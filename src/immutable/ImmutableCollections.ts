@@ -1,5 +1,7 @@
 import { AbstractCollection } from '../abstract/AbstractCollection';
-import { AbstractList, subListRangeCheck } from '../abstract/AbstractList';
+import { AbstractList, removeWhere, ReverseOrderListView, subListRangeCheck } from '../abstract/AbstractList';
+
+export { removeWhere, ReverseOrderListView };
 import { AbstractMap, mapIterator, SimpleImmutableEntry } from '../abstract/AbstractMap';
 import { AbstractSet } from '../abstract/AbstractSet';
 import {
@@ -19,11 +21,11 @@ import { Set as SetType } from '../interfaces/Set';
 import { HashMap, isPlainKey, jsIterator } from '../map/HashMap';
 import { HashSet } from '../set/HashSet';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
-import { Comparator, naturalCompare, reverseOrder } from '../util/Comparator';
+import { naturalCompare } from '../util/Comparator';
 import { Spliterator } from '../stream/Spliterator';
-import { ArraySpliterator, IteratorSpliterator } from '../stream/Spliterators';
-import { isEntry, isList, isRandomAccess, RANDOM_ACCESS } from '../util/guards';
-import { checkFromToIndex, checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
+import { ArraySpliterator } from '../stream/Spliterators';
+import { isEntry, isList, RANDOM_ACCESS } from '../util/guards';
+import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 
 /** Thrown by every mutator of an unmodifiable collection, whether or not the call would change anything. */
 export function uoe(): never {
@@ -281,224 +283,6 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
     for (let i = 0; i < a.length; i++) s += (i > 0 ? ', ' : '') + toString(a[i]);
     return s + ']';
   }
-}
-
-const ORDERED_SIZED = Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
-
-function checkClosedRange(index: number, size: number): void {
-  if (!Number.isInteger(index) || index < 0 || index > size) throw new IndexOutOfBoundsException(`Index: ${index}, Size: ${size}`);
-}
-
-/**
- * The reference's reverse-ordered list view (List.reversed()). An unmodifiable one (List.of lists) throws
- * UnsupportedOperationException from every mutator before anything else; a modifiable one (the default
- * reversed() of Collections.unmodifiableList, emptyList, singletonList, nCopies) validates and delegates,
- * so the base decides whether the call fails.
- */
-export class ReverseOrderListView<E> extends AbstractList<E> {
-  static of<E>(list: ListType<E>, modifiable: boolean): ListType<E> {
-    return list instanceof ReverseOrderListView ? list.base : new ReverseOrderListView(list, modifiable, isRandomAccess(list));
-  }
-
-  private constructor(readonly base: ListType<E>, private readonly modifiable: boolean, private readonly randomAccess: boolean) {
-    super();
-  }
-
-  get [RANDOM_ACCESS](): boolean {
-    return this.randomAccess;
-  }
-
-  private checkModifiable(): void {
-    if (!this.modifiable) uoe();
-  }
-
-  size(): number {
-    return this.base.size();
-  }
-  override isEmpty(): boolean {
-    return this.base.isEmpty();
-  }
-  get(index: number): E {
-    const n = this.base.size();
-    checkIndex(index, n);
-    return this.base.get(n - index - 1);
-  }
-  override contains(o: unknown): boolean {
-    return this.base.contains(o);
-  }
-  override containsAll(c: Collection<unknown>): boolean {
-    return this.base.containsAll(c);
-  }
-  override indexOf(o: unknown): number {
-    const i = this.base.lastIndexOf(o);
-    return i === -1 ? -1 : this.base.size() - i - 1;
-  }
-  override lastIndexOf(o: unknown): number {
-    const i = this.base.indexOf(o);
-    return i === -1 ? -1 : this.base.size() - i - 1;
-  }
-  override toArray(): E[];
-  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
-  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
-    const a = this.base.toArray().reverse();
-    return arguments.length > 0 ? toArrayWith(a, generator as (length: number) => A) : a;
-  }
-  // for-each over this: the action is only dereferenced once there is an element
-  override forEach(action: (e: E) => void): void {
-    const it = this.iterator();
-    while (it.hasNext()) requireNonNull(action)(it.next());
-  }
-
-  override iterator(): Iterator<E> {
-    const it = this.base.listIterator(this.base.size());
-    return {
-      hasNext: () => it.hasPrevious(),
-      next: () => it.previous(),
-      remove: () => {
-        this.checkModifiable();
-        it.remove();
-      },
-      forEachRemaining(action: (e: E) => void): void {
-        requireNonNull(action);
-        while (it.hasPrevious()) action(it.previous());
-      },
-    };
-  }
-
-  override listIterator(index = 0): ListIterator<E> {
-    const size = this.base.size();
-    checkClosedRange(index, size);
-    const base = this.base;
-    const it = base.listIterator(size - index);
-    const check = () => this.checkModifiable();
-    return {
-      hasNext: () => it.hasPrevious(),
-      next: () => it.previous(),
-      hasPrevious: () => it.hasNext(),
-      previous: () => it.next(),
-      nextIndex: () => base.size() - it.nextIndex(),
-      previousIndex: () => base.size() - it.nextIndex() - 1,
-      remove(): void {
-        check();
-        it.remove();
-      },
-      set(e: E): void {
-        check();
-        it.set(e);
-      },
-      add(e: E): void {
-        check();
-        it.add(e);
-        it.previous();
-      },
-      forEachRemaining(action: (e: E) => void): void {
-        requireNonNull(action);
-        while (it.hasPrevious()) action(it.previous());
-      },
-    };
-  }
-
-  override spliterator(): Spliterator<E> {
-    return new IteratorSpliterator(this, null, -1, ORDERED_SIZED);
-  }
-
-  // add(e) and add(index, e) both land here: add(e) is base.add(0, e)
-  protected override addAtIndex(index: number, e: E): void {
-    this.checkModifiable();
-    const size = this.base.size();
-    checkClosedRange(index, size);
-    this.base.add(size - index, e);
-  }
-
-  protected override addAllAt(index: number, c: Collection<E>): boolean {
-    this.checkModifiable();
-    const size = this.base.size();
-    checkClosedRange(index, size);
-    const adds = c.toArray();
-    if (adds.length === 0) return false;
-    this.base.addAll(size - index, new ImmutableList(adds.reverse(), false));
-    return true;
-  }
-
-  override clear(): void {
-    this.checkModifiable();
-    this.base.clear();
-  }
-
-  override remove(o: unknown): boolean {
-    this.checkModifiable();
-    return super.remove(o);
-  }
-
-  override removeAll(c: Collection<unknown>): boolean {
-    this.checkModifiable();
-    requireNonNull(c);
-    return removeWhere(this, (e) => c.contains(e));
-  }
-
-  override retainAll(c: Collection<unknown>): boolean {
-    this.checkModifiable();
-    requireNonNull(c);
-    return removeWhere(this, (e) => !c.contains(e));
-  }
-
-  override removeIf(filter: (e: E) => boolean): boolean {
-    this.checkModifiable();
-    return this.base.removeIf(filter);
-  }
-
-  override replaceAll(operator: (e: E) => E): void {
-    this.checkModifiable();
-    this.base.replaceAll(operator);
-  }
-
-  override sort(c: Comparator<E> | null = null): void {
-    this.checkModifiable();
-    this.base.sort(reverseOrder(c));
-  }
-
-  override set(index: number, e: E): E {
-    this.checkModifiable();
-    const n = this.base.size();
-    checkIndex(index, n);
-    return this.base.set(n - index - 1, e);
-  }
-
-  override removeAt(index: number): E {
-    this.checkModifiable();
-    const n = this.base.size();
-    checkIndex(index, n);
-    return this.base.removeAt(n - index - 1);
-  }
-
-  override subList(fromIndex: number, toIndex: number): ListType<E> {
-    const n = this.base.size();
-    checkFromToIndex(fromIndex, toIndex, n);
-    // a plain view: the reference does not mark it RandomAccess
-    return new ReverseOrderListView(this.base.subList(n - toIndex, n - fromIndex), this.modifiable, false);
-  }
-
-  override reversed(): ListType<E> {
-    return this.base;
-  }
-
-  override removeRange(fromIndex: number, toIndex: number): void {
-    this.checkModifiable();
-    super.removeRange(fromIndex, toIndex);
-  }
-}
-
-/** The reference's iterator-based removal loop (AbstractCollection.removeAll/retainAll), bypassing removeIf overrides. */
-export function removeWhere<E>(c: Collection<E>, pred: (e: E) => boolean): boolean {
-  const it = c.iterator();
-  let modified = false;
-  while (it.hasNext()) {
-    if (pred(it.next())) {
-      it.remove();
-      modified = true;
-    }
-  }
-  return modified;
 }
 
 /**

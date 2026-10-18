@@ -1,5 +1,5 @@
 import { List } from '../../src/interfaces/List';
-import { ReversedList } from '../../src/abstract/AbstractList';
+import { ReverseOrderListView } from '../../src/abstract/AbstractList';
 import { isRandomAccess } from '../../src/util/guards';
 import { expectThrows, refStringHash, Point, rng, timeIt } from '../helpers';
 import { SimpleList, SimpleSeqList } from '../support';
@@ -498,7 +498,7 @@ export function listContract(name: string, create: () => List<any>) {
       it('toIndex > size throws IndexOutOfBoundsException', () => expectThrows(() => of(1, 2).subList(0, 3), IOOBE));
       // a reversed view's subList is itself a reversed view: from > to is IndexOutOfBoundsException there (checked on the reference)
       it('from > to throws IllegalArgumentException', () =>
-        expectThrows(() => of(1, 2).subList(2, 1), of(1, 2).subList(0, 1) instanceof ReversedList ? IOOBE : 'IllegalArgumentException'));
+        expectThrows(() => of(1, 2).subList(2, 1), of(1, 2).subList(0, 1) instanceof ReverseOrderListView ? IOOBE : 'IllegalArgumentException'));
       it('equals a list with the same elements', () => expect(of(0, 1, 2).subList(1, 3).equals(sl(1, 2))).toBe(true));
       it('toString', () => expect(of(0, 1, 2).subList(0, 2).toString()).toBe('[0, 1]'));
       it('is RandomAccess exactly when the list is', () => {
