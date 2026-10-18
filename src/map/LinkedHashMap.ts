@@ -137,8 +137,9 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     if (this.putMode === PUT_FIRST) this.linkFirst(node as LinkedNode<K, V>);
     else this.linkLast(node as LinkedNode<K, V>);
     const h = this.head!;
-    // the hook may have removed the eldest itself (or cleared the map): only evict it if it is still the head
-    if ((this.size() > this.maxSize || this.removeEldestEntry(h)) && this.head === h) this.removeNode(h);
+    // the hook may have removed the eldest itself (or cleared the map), or moved it: evict it if it is still linked
+    // (removal nulls before/after, and only the head has before === null)
+    if ((this.size() > this.maxSize || this.removeEldestEntry(h)) && (this.head === h || h.before !== null)) this.removeNode(h);
   }
 
   protected override afterNodeAccess(node: HashNode<K, V>): void {

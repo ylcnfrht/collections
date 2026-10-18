@@ -332,6 +332,23 @@ describe('LinkedHashMap · eviction', () => {
       expect([m.size(), m.values().toArray(), m.keySet().size()]).toEqual([3, [3, 4, 5], 3]);
     }
   });
+  it('removeEldestEntry that moves the eldest (get in access order, putLast) still evicts it, as the reference', () => {
+    class MoveThenEvict extends LinkedHashMap<string, number> {
+      constructor(access: boolean, private readonly how: 'get' | 'putLast') {
+        super(16, 0.75, access);
+      }
+      protected override removeEldestEntry(e: MapEntry<string, number>): boolean {
+        if (this.size() <= 3) return false;
+        if (this.how === 'get') this.get(e.getKey());
+        else this.putLast(e.getKey(), e.getValue());
+        return true;
+      }
+    }
+    for (const m of [new MoveThenEvict(true, 'get'), new MoveThenEvict(false, 'putLast')]) {
+      for (const k of ['a', 'b', 'c', 'd', 'e']) m.put(k, k.charCodeAt(0));
+      expect([m.size(), m.keySet().toArray()]).toEqual([3, ['c', 'd', 'e']]);
+    }
+  });
   it('removeEldestEntry that clears the map leaves it empty', () => {
     class ClearAt3 extends LinkedHashMap<string, number> {
       protected override removeEldestEntry(): boolean {
