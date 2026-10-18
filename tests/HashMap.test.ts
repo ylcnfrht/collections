@@ -1,6 +1,7 @@
 import { SimpleEntry, SimpleImmutableEntry } from '../src/abstract/AbstractMap';
 import { MapEntry } from '../src/interfaces/Map';
 import { HashMap, HashNode, NodeIterator } from '../src/map/HashMap';
+import { LinkedHashMap } from '../src/map/LinkedHashMap';
 import { mapContract } from './contracts/map';
 import { Collide, expectThrows, Point, rng, timeIt } from './helpers';
 import { SimpleMap } from './support';
@@ -603,5 +604,43 @@ describe('AbstractMap.SimpleEntry / SimpleImmutableEntry copy constructors', () 
     const e = new SimpleEntry(k, 1);
     expect([e.getKey(), e.getValue()]).toEqual([k, 1]);
     expect(new SimpleImmutableEntry<string, undefined>('a', undefined).getKey()).toBe('a');
+  });
+});
+
+describe('a key whose hash changed after insertion', () => {
+  class MutKey {
+    constructor(public id: number, public h: number) {}
+    equals(o: unknown): boolean {
+      return o instanceof MutKey && o.id === this.id;
+    }
+    hashCode(): number {
+      return this.h;
+    }
+  }
+  it('iterator.remove removes exactly that entry, not a neighbour in the new bucket', () => {
+    const m = new HashMap<MutKey, string>();
+    const k = new MutKey(1, 7);
+    m.put(k, 'mutable');
+    m.put(new MutKey(2, 99), 'two');
+    m.put(new MutKey(3, 99), 'three');
+    k.h = 99;
+    const it = m.entrySet().iterator();
+    while (it.hasNext()) if (it.next().getValue() === 'mutable') it.remove();
+    expect([m.size(), m.values().toArray().sort()]).toEqual([2, ['three', 'two']]);
+  });
+  it('removing and re-adding it leaves unrelated keys reachable', () => {
+    const m = new LinkedHashMap<MutKey, string>();
+    const k = new MutKey(1, 1);
+    const other = new MutKey(2, 50);
+    m.put(k, 'old');
+    m.put(other, 'other');
+    k.h = 2;
+    const it = m.keySet().iterator();
+    it.next();
+    it.remove();
+    k.h = 1;
+    m.put(k, 'new');
+    m.remove(k);
+    expect([m.size(), m.get(other), m.get(k)]).toEqual([1, 'other', null]);
   });
 });

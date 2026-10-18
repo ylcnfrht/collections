@@ -848,3 +848,24 @@ describe('LinkedHashMap · view toArray(generator)', () => {
     expectThrows(() => m.values().toArray(() => new Float64Array(0) as any), 'IndexOutOfBoundsException');
   });
 });
+
+describe('LRU eviction of a key whose hash changed after insertion', () => {
+  it('evicts the eldest entry and leaves the others reachable', () => {
+    class K {
+      constructor(public id: number, public h: number) {}
+      equals(o: unknown): boolean {
+        return o instanceof K && o.id === this.id;
+      }
+      hashCode(): number {
+        return this.h;
+      }
+    }
+    const c = LinkedHashMap.lru<K, string>(2);
+    const key = new K(0, 1);
+    c.put(key, 'key');
+    c.put(new K(1, 5), 'a');
+    key.h = 5; // now hashes to the bucket that 'b' joins
+    c.put(new K(2, 5), 'b');
+    expect([c.size(), c.get(new K(1, 5)), c.get(new K(2, 5))]).toEqual([2, 'a', 'b']);
+  });
+});

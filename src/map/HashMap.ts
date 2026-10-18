@@ -59,6 +59,8 @@ export function jsIterator<T, R = T>(it: Iterator<T>, f?: (t: T) => R): Iterable
 export class HashNode<K, V> implements MapEntry<K, V> {
   readonly key: K;
   value: V;
+  /** @internal hashCode(key) at insertion, for bucket keys; removal must not rehash a key that mutated since */
+  hash = 0;
   constructor(key: K, value: V) {
     this.key = key;
     this.value = value;
@@ -275,7 +277,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     } else if (isPlainKey(key)) {
       this.fast.set(key, n);
     } else {
-      const h = hashCode(key);
+      const h = (n.hash = hashCode(key));
       const b = this.buckets.get(h);
       if (b === undefined) this.buckets.set(h, n);
       else if (Array.isArray(b)) b.push(n);
@@ -294,7 +296,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     } else if (isPlainKey(k)) {
       this.fast.delete(k);
     } else {
-      const h = hashCode(k);
+      const h = node.hash;
       const b = this.buckets.get(h);
       if (b === node) this.buckets.delete(h);
       else if (Array.isArray(b)) {
