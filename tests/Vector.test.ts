@@ -25,6 +25,10 @@ describe('Vector · implementation', () => {
       expect([v.size(), v.capacity()]).toEqual([0, 10]);
     });
     it('initial capacity is reported', () => expect(new Vector(50).capacity()).toBe(50));
+    it('of() reports a capacity that holds its elements', () => {
+      const v = Vector.of(...Array.from({ length: 30 }, (_, i) => i));
+      expect([v.size(), v.capacity() >= 30, Vector.of(1, 2).capacity()]).toEqual([30, true, 10]);
+    });
     it('negative capacity throws IllegalArgumentException', () => expectThrows(() => new Vector(-1), 'IllegalArgumentException'));
     it('copies a collection', () => expect(new Vector(SimpleList.of(1, 2)).toArray()).toEqual([1, 2]));
     it('null collection throws NullPointerException', () => expectThrows(() => new Vector(null as any), 'NullPointerException'));

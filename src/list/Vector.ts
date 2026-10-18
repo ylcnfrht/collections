@@ -72,7 +72,10 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   static override of<E>(...xs: E[]): Vector<E> {
-    return super.of(...xs) as Vector<E>;
+    // ArrayList.of fills the backing array directly, past this class's capacity bookkeeping
+    const v = super.of(...xs) as Vector<E>;
+    v.ensure(xs.length);
+    return v;
   }
 
   override clone(): this {
