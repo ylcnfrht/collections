@@ -51,6 +51,7 @@ collections and the popular alternatives ([numbers](./advanced/performance.md)).
 | I want to… | Read |
 |---|---|
 | install it and write my first lines | [Getting started](./guide/getting-started.md) |
+| understand what an ArrayList, deque, heap or tree map is | [Data structures primer](./guide/data-structures.md) |
 | understand why `contains` finds my object, why my loop threw, why `subList` changed my list | [Core concepts](./guide/core-concepts.md) |
 | pick between `ArrayList`/`LinkedList`, `HashMap`/`TreeMap`, … | [Choosing a collection](./guide/choosing-a-collection.md) |
 | translate what I do with `Array`/`Map`/`Set` | [Coming from JS](./guide/coming-from-js.md) |
@@ -74,6 +75,7 @@ collections and the popular alternatives ([numbers](./advanced/performance.md)).
 | Page | Contents |
 |---|---|
 | [Getting started](./guide/getting-started.md) | install, ESM/CJS imports, a 5-minute tour, iteration, generics, bundlers, Node support |
+| [Data structures primer](./guide/data-structures.md) | what each structure is, when to use it, how it stores data, what it costs |
 | [Core concepts](./guide/core-concepts.md) | value equality, ordering, null policy, fail-fast iteration, live views, exceptions, unmodifiable vs immutable, sequenced collections, `RandomAccess` |
 | [Choosing a collection](./guide/choosing-a-collection.md) | decision flowchart and comparison table with complexities |
 | [Coming from JS](./guide/coming-from-js.md) | `Array`/`Map`/`Set` cheat sheet, array methods vs streams, interop, pitfalls |

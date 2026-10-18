@@ -5,6 +5,8 @@ like with this library, how array methods translate to streams, why value equali
 key, how to move data back and forth between the two worlds, and the handful of pitfalls that trip up everyone in
 their first hour.
 
+New to structures like deques, heaps or tree maps? Start with the [Data structures primer](./data-structures.md).
+
 - [Array ↔ ArrayList / List.of](#array--arraylist--listof)
 - [Map ↔ HashMap / LinkedHashMap / TreeMap](#map--hashmap--linkedhashmap--treemap)
 - [Set ↔ HashSet / LinkedHashSet / TreeSet](#set--hashset--linkedhashset--treeset)

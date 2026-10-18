@@ -244,6 +244,7 @@ console.log(byAge.first().name); // → a
 
 ## Where next
 
+- [Data structures primer](./data-structures.md) — what `ArrayList`, `ArrayDeque`, `TreeMap` & co. are and how they store data, if these names are new to you.
 - [Core concepts](./core-concepts.md) — the semantics that differ from plain JS collections. **Read this next.**
 - [Choosing a collection](./choosing-a-collection.md) — which class to pick.
 - [Coming from JS](./coming-from-js.md) — a cheat sheet from `Array`/`Map`/`Set`.
