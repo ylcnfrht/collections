@@ -646,7 +646,7 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
       },
       forEachRemaining(action: (e: E) => void): void {
         requireNonNull(action);
-        while (it.hasPrevious()) action(it.previous());
+        while (this.hasNext()) action(this.next());
       },
     };
   }

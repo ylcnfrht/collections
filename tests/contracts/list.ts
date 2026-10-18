@@ -737,6 +737,21 @@ export function listContract(name: string, create: () => List<any>) {
         it.set(7);
         expect(l.toArray()).toEqual([1, 7, 9, 3]);
       });
+      it('reversed() listIterator: add, then forEachRemaining, then remove/set act on the last element', () => {
+        const l = of(1, 2, 3);
+        const it = l.reversed().listIterator(1);
+        it.add(9);
+        const seen: number[] = [];
+        it.forEachRemaining((x) => seen.push(x));
+        it.remove();
+        expect([seen, l.toArray()]).toEqual([[2, 1], [2, 9, 3]]);
+        const m = of(1, 2, 3);
+        const jt = m.reversed().listIterator(1);
+        jt.add(9);
+        jt.forEachRemaining(() => undefined);
+        jt.set(7);
+        expect(m.toArray()).toEqual([7, 2, 9, 3]);
+      });
       it('reversed() listIterator: set/remove before next and after remove throw IllegalStateException', () => {
         const l = of(1, 2);
         const it = l.reversed().listIterator();
