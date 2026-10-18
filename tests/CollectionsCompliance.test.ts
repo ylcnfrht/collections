@@ -16,7 +16,6 @@ import { ArrayDeque } from '../src/queue/ArrayDeque';
 import { HashSet } from '../src/set/HashSet';
 import { LinkedHashSet } from '../src/set/LinkedHashSet';
 import { TreeSet } from '../src/set/TreeSet';
-import '../src/stream/StreamSupport'; // the entry point loads the stream engine; deep imports must too
 import { Comparator, naturalCompare } from '../src/util/Comparator';
 import { identityHashCode, Objects } from '../src/util/Objects';
 import { expectThrows, Point } from './helpers';

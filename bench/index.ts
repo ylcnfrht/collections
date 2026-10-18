@@ -2,6 +2,7 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
 import { printLosses } from './harness';
+import '../src/stream/StreamSupport'; // bench files import modules directly; load the stream engine as the entry point does
 
 async function main() {
   const filter = process.argv[2]?.toLowerCase();
