@@ -33,7 +33,7 @@ consistent `hashCode` (see the contract below). The library's own collections an
 `List` can be a map key and two lists with the same elements are equal regardless of their class.
 
 ```ts
-import { ArrayList, LinkedList, HashSet, HashMap, List, Objects } from 'ts-collections-framework';
+import { ArrayList, LinkedList, HashSet, HashMap, List, Objects } from '@nodestd/collections';
 
 // collections compare by content, across implementations
 console.log(ArrayList.of(1, 2).equals(LinkedList.of(1, 2))); // → true
@@ -64,7 +64,7 @@ hashes as `s[0]*31^(n-1) + … + s[n-1]`, a list as `31 * h + hash(e)` over its 
 element hashes, and so on.
 
 ```ts
-import { Objects, List } from 'ts-collections-framework';
+import { Objects, List } from '@nodestd/collections';
 
 console.log(Objects.hashCode('ab'));      // → 3105
 console.log(List.of(1, 2).hashCode());    // → 994
@@ -92,7 +92,7 @@ hashes with the classic formula; `Objects.equals` compares fields null-safely. T
 implement `Comparable<T>` (`compareTo(o: T): number`).
 
 ```ts
-import { HashSet, HashMap, TreeSet, Objects, Comparable } from 'ts-collections-framework';
+import { HashSet, HashMap, TreeSet, Objects, Comparable } from '@nodestd/collections';
 
 class Point implements Comparable<Point> {
   constructor(readonly x: number, readonly y: number) {}
@@ -147,7 +147,7 @@ A **comparator** is just a function `(a, b) => number` (negative, zero, positive
 classic helpers as functions that take and return comparators:
 
 ```ts
-import { ArrayList, Comparator, TreeSet, PriorityQueue } from 'ts-collections-framework';
+import { ArrayList, Comparator, TreeSet, PriorityQueue } from '@nodestd/collections';
 
 interface Person { name: string; age: number | null }
 const people = ArrayList.of<Person>(
@@ -180,7 +180,7 @@ Main helpers: `naturalOrder`, `reverseOrder`, `reversed(c)`, `comparing(key, key
 [Comparator and Objects](../utilities/comparator-and-objects.md).
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const bad = new TreeSet<object>();
 try {
@@ -202,7 +202,7 @@ The library has one notion of "nothing": **`null`**.
   `undefined` as given, but you should not rely on telling the two apart.
 
 ```ts
-import { HashMap, ArrayDeque, TreeSet } from 'ts-collections-framework';
+import { HashMap, ArrayDeque, TreeSet } from '@nodestd/collections';
 
 const m = new HashMap<string, number>();
 console.log(m.get('missing'));        // → null
@@ -234,7 +234,7 @@ Which collections accept `null`?
 | `Collections.unmodifiable*` wrappers (whatever the backing collection accepts) | `List.of`, `Set.of`, `Map.of`, `copyOf` — elements, keys, values, and even `contains(null)` |
 
 ```ts
-import { ArrayList, ArrayDeque, List } from 'ts-collections-framework';
+import { ArrayList, ArrayDeque, List } from '@nodestd/collections';
 
 const ok = new ArrayList<string | null>();
 ok.add(null);
@@ -277,7 +277,7 @@ sequenceDiagram
 ```
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of('a', 'b', 'c');
 try {
@@ -321,7 +321,7 @@ flowchart LR
 ```
 
 ```ts
-import { ArrayList, TreeMap } from 'ts-collections-framework';
+import { ArrayList, TreeMap } from '@nodestd/collections';
 
 const list = ArrayList.of('a', 'b', 'c', 'd');
 const middle = list.subList(1, 3);
@@ -390,7 +390,7 @@ classDiagram
 ```ts
 import {
   ArrayList, Stack, Vector, RuntimeException, IndexOutOfBoundsException, ArrayIndexOutOfBoundsException,
-} from 'ts-collections-framework';
+} from '@nodestd/collections';
 
 try {
   new ArrayList<number>().get(0);
@@ -420,7 +420,7 @@ by throwing `UnsupportedOperationException`. Two kinds of collection do:
 | Use it to | share fixed data, constants, map keys | hand out read-only access to state you still own |
 
 ```ts
-import { ArrayList, List, Collections } from 'ts-collections-framework';
+import { ArrayList, List, Collections } from '@nodestd/collections';
 
 const source = ArrayList.of(1, 2);
 const readOnly = Collections.unmodifiableList(source);
@@ -452,7 +452,7 @@ Collections with a defined encounter order implement `SequencedCollection` (list
 | `reversed()` (a live view) | `reversed()`, `sequencedKeySet()`, `sequencedValues()`, `sequencedEntrySet()` |
 
 ```ts
-import { ArrayList, LinkedHashSet, LinkedHashMap, TreeSet, SequencedCollection } from 'ts-collections-framework';
+import { ArrayList, LinkedHashSet, LinkedHashMap, TreeSet, SequencedCollection } from '@nodestd/collections';
 
 function ends<E>(c: SequencedCollection<E>): string {
   return `${c.getFirst()}..${c.getLast()}`;
@@ -486,7 +486,7 @@ the `RandomAccess` marker. `LinkedList` does not: its `get(i)` walks the list. G
 can do the same with `isRandomAccess`:
 
 ```ts
-import { ArrayList, LinkedList, List, isRandomAccess } from 'ts-collections-framework';
+import { ArrayList, LinkedList, List, isRandomAccess } from '@nodestd/collections';
 
 function middle<E>(list: List<E>): E {
   if (isRandomAccess(list)) return list.get(list.size() >> 1); // O(1)

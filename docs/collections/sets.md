@@ -29,7 +29,7 @@ See [core concepts](../guide/core-concepts.md) for how `equals()`/`hashCode()` w
 and your own classes.
 
 ```ts
-import { HashSet, TreeSet, LinkedHashSet, Objects } from 'ts-collections-framework';
+import { HashSet, TreeSet, LinkedHashSet, Objects } from '@nodestd/collections';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
@@ -66,7 +66,7 @@ fail-fast iterators: changing a set while iterating it — other than through th
 `ConcurrentModificationException`.
 
 ```ts
-import { HashSet } from 'ts-collections-framework';
+import { HashSet } from '@nodestd/collections';
 
 const s = HashSet.of(1, 2, 3, 4);
 try {
@@ -116,7 +116,7 @@ flowchart TD
 The split is invisible: the set behaves as one hash set. It just means primitive-heavy sets run at native speed.
 
 ```ts
-import { HashSet, List } from 'ts-collections-framework';
+import { HashSet, List } from '@nodestd/collections';
 
 const plain = new HashSet<object>();
 plain.add({ id: 1 });
@@ -154,7 +154,7 @@ Re-adding an element that is already present with `add()` keeps its original pos
 `addLast(e)` are different: they **move** an existing element to the front or back.
 
 ```ts
-import { LinkedHashSet } from 'ts-collections-framework';
+import { LinkedHashSet } from '@nodestd/collections';
 
 const s = LinkedHashSet.of('a', 'b', 'c');
 s.add('a');            // already present: position unchanged
@@ -175,7 +175,7 @@ behaves like `add` on the set (appends at the original's end), while `addFirst` 
 original.
 
 ```ts
-import { LinkedHashSet } from 'ts-collections-framework';
+import { LinkedHashSet } from '@nodestd/collections';
 
 const s = LinkedHashSet.of(1, 2, 3);
 const r = s.reversed();
@@ -190,7 +190,7 @@ console.log(r.toString()); // → [4, 3, 1]
 A typical use is de-duplicating while keeping first-seen order:
 
 ```ts
-import { LinkedHashSet, ArrayList } from 'ts-collections-framework';
+import { LinkedHashSet, ArrayList } from '@nodestd/collections';
 
 const visits = ArrayList.of('home', 'docs', 'home', 'blog', 'docs');
 console.log(new LinkedHashSet(visits).toString()); // → [home, docs, blog]
@@ -225,7 +225,7 @@ Pass a comparator to choose another order. `Comparator` has the usual helpers (`
 `thenComparing`, `nullsFirst`, …).
 
 ```ts
-import { TreeSet, Comparator } from 'ts-collections-framework';
+import { TreeSet, Comparator } from '@nodestd/collections';
 
 console.log(TreeSet.of(30, 4, 100).toString());       // → [4, 30, 100]
 console.log(TreeSet.of('pear', 'Apple', 'fig').toString()); // → [Apple, fig, pear]
@@ -247,7 +247,7 @@ comparator returns 0. That is useful — a case-insensitive set — but it also 
 fields silently merges elements that differ only in those fields.
 
 ```ts
-import { TreeSet, Comparator } from 'ts-collections-framework';
+import { TreeSet, Comparator } from '@nodestd/collections';
 
 const tags = new TreeSet<string>(Comparator.comparing((s: string) => s.toLowerCase()));
 console.log(tags.add('TypeScript')); // → true
@@ -287,7 +287,7 @@ flowchart LR
 When the probe is itself an element, `floor` and `ceiling` return it, while `lower` and `higher` skip past it.
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const s = TreeSet.of(10, 20, 30, 40);
 console.log(s.lower(25), s.floor(25), s.ceiling(25), s.higher(25)); // → 20 20 30 30
@@ -300,7 +300,7 @@ console.log(s.first(), s.last());                                  // → 10 40
 used as a priority queue without duplicates:
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const pending = TreeSet.of(5, 1, 3);
 console.log(pending.pollFirst()); // → 1
@@ -324,7 +324,7 @@ through them write through to it.
 | `subSet(from, fromInc, to, toInc)` | as given | as given |
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const s = TreeSet.of(10, 20, 30, 40, 50);
 console.log(s.headSet(30).toString());        // → [10, 20]
@@ -345,7 +345,7 @@ a view for a nested range that reaches beyond its own bounds. `subSet(from, to)`
 same way.
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const s = TreeSet.of(10, 20, 30, 40, 50);
 const mid = s.subSet(20, true, 40, false); // [20, 40)
@@ -370,7 +370,7 @@ range `[prefix, prefix + '￿')` contains the strings that start with it, unless
 U+FFFF itself (rare in practice).
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const users = TreeSet.of('alice', 'albert', 'bob', 'alfred', 'carol');
 const prefix = 'al';
@@ -384,7 +384,7 @@ the set from the largest element down. In the descending view the navigation met
 largest element and `headSet` takes the high end.
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const s = TreeSet.of(1, 2, 3);
 const d = s.descendingSet();
@@ -413,7 +413,7 @@ inputs. Copying into a `TreeSet` gives a sorted, printable result.
 | disjoint | `Collections.disjoint(a, b)` | |
 
 ```ts
-import { HashSet, TreeSet, Collections } from 'ts-collections-framework';
+import { HashSet, TreeSet, Collections } from '@nodestd/collections';
 
 const a = HashSet.of(1, 2, 3, 4);
 const b = HashSet.of(3, 4, 5);
@@ -451,7 +451,7 @@ The backing stores grow on their own, so the size is only a hint; the factories 
 count throws `IllegalArgumentException`) and exist so code ported from the Java Collections Framework keeps compiling.
 
 ```ts
-import { HashSet, LinkedHashSet } from 'ts-collections-framework';
+import { HashSet, LinkedHashSet } from '@nodestd/collections';
 
 const seen = HashSet.newHashSet<string>(1000);
 const ordered = LinkedHashSet.newLinkedHashSet<string>(1000);
@@ -490,7 +490,7 @@ old hash no longer matches — the element is still there (it shows up in iterat
 `remove` cannot find it any more.
 
 ```ts
-import { HashSet, Objects } from 'ts-collections-framework';
+import { HashSet, Objects } from '@nodestd/collections';
 
 class MutablePoint {
   constructor(public x: number, public y: number) {}

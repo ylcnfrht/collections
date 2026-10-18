@@ -147,7 +147,7 @@ flowchart LR
 **`forEach` is faster than `for..of`.** A JS iterator has to return a `{ value, done }` result for every element and check for concurrent modification. The collection's own `forEach` is a plain loop with one check at the end. In the benchmarks, `ArrayList.forEach` beats native `Array.forEach`, while `for..of` over an `ArrayList` runs at about a third of native speed. The same holds for maps: `map.forEach((k, v) => ...)` was 1.5× faster than `for (const [k, v] of map)`.
 
 ```ts
-import { ArrayList, HashMap } from 'ts-collections-framework';
+import { ArrayList, HashMap } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3);
 let sum = 0;
@@ -170,7 +170,7 @@ console.log(total); // → 3
 **Use `IntStream`/`DoubleStream` for numeric work.** JS numbers are never boxed, so the gain does not come from avoiding allocation as it would in the JDK. It comes from specialised operations: `sum()`, `average()`, `summaryStatistics()`, typed-array `sorted()` and number `distinct()`. In the `distinct + sorted` benchmark, `IntStream` was 2.3× faster than `Stream<number>`. Switch with `mapToInt` and back with `boxed()` or `mapToObj`:
 
 ```ts
-import { IntStream, List } from 'ts-collections-framework';
+import { IntStream, List } from '@nodestd/collections';
 
 const orders = List.of({ qty: 3 }, { qty: 5 }, { qty: 3 });
 console.log(orders.stream().mapToInt((o) => o.qty).sum()); // → 11
@@ -181,7 +181,7 @@ console.log(IntStream.range(0, 1000).filter((i) => i % 7 === 0).count()); // →
 **`count()` may skip your pipeline.** When the size is known from the source, `count()` returns it without traversing, so side effects in `peek` or `map` never run. This matches the JDK. Do not rely on `peek` for side effects.
 
 ```ts
-import { List } from 'ts-collections-framework';
+import { List } from '@nodestd/collections';
 
 let peeked = 0;
 const n = List.of(1, 2, 3).stream().peek(() => peeked++).map((x) => x * 2).count();
@@ -202,7 +202,7 @@ All numbers below come from one run of `npm run bench -- <group>` for each group
 | --- | --- |
 | Machine | Apple M1 Pro, 16 GB, macOS 14 |
 | Runtime | Node.js v24.12.0 |
-| Library | `ts-collections-framework` 1.0.0 (branch `jcf-rewrite`, commit `5f67687`) |
+| Library | `@nodestd/collections` 1.0.0 (branch `jcf-rewrite`, commit `5f67687`) |
 | Harness | `tinybench` 6.2.0, 300 ms per case after 100 ms warm-up |
 | Competitors | `js-sdsl` 4.4.2, `mnemonist` 0.40.5, `@datastructures-js/priority-queue` 6.4.0 |
 

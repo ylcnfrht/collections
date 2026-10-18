@@ -113,7 +113,7 @@ evaluates sequentially (see [Compatibility](../advanced/compatibility.md#stream-
 ## Common picks in code
 
 ```ts
-import { ArrayDeque, PriorityQueue, LinkedHashMap, TreeMap, LinkedHashSet, Comparator } from 'ts-collections-framework';
+import { ArrayDeque, PriorityQueue, LinkedHashMap, TreeMap, LinkedHashSet, Comparator } from '@nodestd/collections';
 
 // FIFO queue
 const jobs = new ArrayDeque<string>();

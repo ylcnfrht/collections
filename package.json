@@ -1,5 +1,5 @@
 {
-  "name": "ts-collections-framework",
+  "name": "@nodestd/collections",
   "version": "1.0.0",
   "description": "Collections framework for TypeScript: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue and more, with value equality, fail-fast iterators and live views.",
   "keywords": [
@@ -20,11 +20,11 @@
   "author": "ylcnfrht",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ylcnfrht/ts-collections-framework.git"
+    "url": "git+https://github.com/nodestd/collections.git"
   },
-  "homepage": "https://github.com/ylcnfrht/ts-collections-framework#readme",
+  "homepage": "https://github.com/nodestd/collections#readme",
   "bugs": {
-    "url": "https://github.com/ylcnfrht/ts-collections-framework/issues"
+    "url": "https://github.com/nodestd/collections/issues"
   },
   "type": "commonjs",
   "main": "./dist/index.js",
@@ -48,6 +48,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=18"
   },

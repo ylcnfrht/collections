@@ -71,7 +71,7 @@ classDiagram
 `get`, `set`, `add(index, e)` and `removeAt` take an index. An index outside the valid range throws `IndexOutOfBoundsException` — there is no silent `undefined` like a JS array. For `add(index, e)` the valid range is `0..size()` inclusive (inserting at `size()` appends); for the others it is `0..size()-1`.
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of('a', 'b', 'd');
 list.add(2, 'c');                  // insert before index 2
@@ -99,7 +99,7 @@ In the Java Collections Framework, `remove(int)` and `remove(Object)` are overlo
 | `removeAt(i)` | remove the element **at index** `i` | the removed element (throws if `i` is out of range) |
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const nums = ArrayList.of(10, 20, 30, 1);
 console.log(nums.remove(1));       // → true
@@ -114,7 +114,7 @@ console.log(nums.remove(99));      // → false
 `indexOf` and `lastIndexOf` return the first / last index of an equal element, or `-1`. "Equal" means `Objects.equals`: the element's own `equals()` when it has one, otherwise SameValueZero (so `NaN` finds `NaN`). This is what makes lists of value objects work:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
@@ -144,7 +144,7 @@ All three are linear scans, O(n), in every list class. For sorted lists use [bin
 Every list has the `SequencedCollection` methods for its two ends. The `get*`/`remove*` ones throw `NoSuchElementException` on an empty list.
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const l = ArrayList.of(2);
 l.addFirst(1);
@@ -187,7 +187,7 @@ flowchart LR
 View index `i` maps to backing index `from + i`. That makes the view the idiomatic way to do range operations without range-specific methods:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of(10, 20, 30, 40, 50);
 const window = list.subList(1, 4);
@@ -206,7 +206,7 @@ Other range operations in the same style: `list.subList(a, b).sort(null)` sorts 
 A view stays valid only while the backing list is changed **through the view** (or not at all). If the backing list changes size behind the view's back, the view fails fast on its next use:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3, 4);
 const view = list.subList(1, 3);
@@ -222,7 +222,7 @@ try {
 `reversed()` returns a live view in reverse order. Adding to the front of the reversed view adds to the end of the list:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3);
 const rev = list.reversed();
@@ -257,7 +257,7 @@ At cursor position `k`, `next()` returns element `k` and moves right, `previous(
 `remove()` and `set()` need a "last returned" element. Calling them before any `next()`/`previous()`, or right after `add()` or `remove()`, throws `IllegalStateException`.
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const letters = ArrayList.of('a', 'c', 'd');
 const it = letters.listIterator();
@@ -283,7 +283,7 @@ console.log(letters.toString());   // → [a, C, d]
 `listIterator(index)` starts the cursor at `index`; `listIterator(list.size())` is how you walk a list backwards:
 
 ```ts
-import { LinkedList } from 'ts-collections-framework';
+import { LinkedList } from '@nodestd/collections';
 
 const list = LinkedList.of(1, 2, 3);
 const it = list.listIterator(list.size());
@@ -301,7 +301,7 @@ The `ListIterator` is the efficient way to edit a `LinkedList` while walking it:
 `replaceAll(fn)` replaces every element with `fn(element)`, in place.
 
 ```ts
-import { ArrayList, Comparator } from 'ts-collections-framework';
+import { ArrayList, Comparator } from '@nodestd/collections';
 
 const nums = ArrayList.of(10, 9, 100, 1);
 nums.sort(null);
@@ -329,7 +329,7 @@ Ada and Cy have the same age, so stability keeps Ada before Cy. Building compara
 Each list counts its *structural modifications*: adds and removes, plus `sort` and `replaceAll` on `ArrayList` and `Vector` (as the reference); `set` never counts. An iterator remembers that count when created and throws `ConcurrentModificationException` as soon as it notices the list was structurally changed by anything other than the iterator itself. This turns a subtle bug — skipping or repeating elements — into an immediate, loud error.
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3, 4);
 try {
@@ -352,7 +352,7 @@ Fail-fast is a debugging aid, not a guarantee: it is "best effort" detection. `s
 `ArrayList<E>` stores its elements in a dense native JS array. It is the default list: indexed reads and writes are O(1), appending is amortized O(1), iteration is cache-friendly, and memory overhead is low. It implements the `RandomAccess` marker (`isRandomAccess(list)` returns `true`), which algorithms like `Collections.binarySearch` use to pick index-based strategies.
 
 ```ts
-import { ArrayList, LinkedList, isRandomAccess } from 'ts-collections-framework';
+import { ArrayList, LinkedList, isRandomAccess } from '@nodestd/collections';
 
 console.log(isRandomAccess(new ArrayList<number>()));  // → true
 console.log(isRandomAccess(new LinkedList<number>())); // → false
@@ -361,7 +361,7 @@ console.log(isRandomAccess(new LinkedList<number>())); // → false
 ### Creating one
 
 ```ts
-import { ArrayList, HashSet } from 'ts-collections-framework';
+import { ArrayList, HashSet } from '@nodestd/collections';
 
 const empty = new ArrayList<string>();
 const sized = new ArrayList<string>(1000);          // capacity hint
@@ -386,7 +386,7 @@ To build from a JS array, spread it: `ArrayList.of(...array)`.
 `clone()` returns a shallow, independent copy of the same class. The elements themselves are shared, not copied.
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const a = ArrayList.of({ n: 1 }, { n: 2 });
 const b = a.clone();
@@ -446,7 +446,7 @@ flowchart LR
 Compare that with ArrayList's single array: adding or removing at either end only rewires a couple of links (O(1)), but reaching index `i` means walking node by node from the nearer end (O(min(i, n − i))).
 
 ```ts
-import { LinkedList } from 'ts-collections-framework';
+import { LinkedList } from '@nodestd/collections';
 
 const list = LinkedList.of('b', 'c');
 list.addFirst('a');                 // O(1)
@@ -472,7 +472,7 @@ Unlike `ArrayDeque`, `LinkedList` accepts `null` elements. That makes `poll()` a
 `LinkedList.reversed()` returns a live reverse-ordered view whose type is `LinkedList`, so it has the full list *and* deque API:
 
 ```ts
-import { LinkedList } from 'ts-collections-framework';
+import { LinkedList } from '@nodestd/collections';
 
 const list = LinkedList.of(1, 2, 3);
 const rev = list.reversed();
@@ -530,7 +530,7 @@ reference; on an `ArrayList` they are stale too.
 | `copyInto(array)` | `toArray()` |
 
 ```ts
-import { Vector } from 'ts-collections-framework';
+import { Vector } from '@nodestd/collections';
 
 const v = new Vector<string>();
 v.addElement('a');
@@ -554,7 +554,7 @@ console.log(target);                       // → [ 1, 2, 1, 2 ]
 `ArrayIndexOutOfBoundsException` is a subclass of `IndexOutOfBoundsException`, so code that catches the latter keeps working.
 
 ```ts
-import { Vector, IndexOutOfBoundsException } from 'ts-collections-framework';
+import { Vector, IndexOutOfBoundsException } from '@nodestd/collections';
 
 const v = Vector.of(1, 2, 3);
 try {
@@ -570,7 +570,7 @@ try {
 A `Vector` tracks a reported capacity (`capacity()`), default 10. When an add would exceed it, it grows by `capacityIncrement` if that is positive, otherwise it doubles. As with `ArrayList`, the real storage is managed by the engine; the number exists so ported code that reads `capacity()` sees the values it expects.
 
 ```ts
-import { Vector } from 'ts-collections-framework';
+import { Vector } from '@nodestd/collections';
 
 const doubling = new Vector<number>();          // capacity 10, doubles
 for (let i = 0; i < 11; i++) doubling.add(i);
@@ -587,7 +587,7 @@ console.log(stepped.capacityIncrement);         // → 2
 `setSize(n)` truncates, or pads with `null`. `elements()` returns a legacy `Enumeration` (`hasMoreElements`/`nextElement`), which is also JS-iterable and can be adapted with `asIterator()`. Unlike `iterator()`, an enumeration is **not** fail-fast.
 
 ```ts
-import { Vector } from 'ts-collections-framework';
+import { Vector } from '@nodestd/collections';
 
 const v = Vector.of<number | null>(1, 2, 3);
 v.setSize(5);
@@ -622,7 +622,7 @@ Same as [ArrayList](#arraylist-complexity). The legacy methods are thin aliases 
 | `search(o)` | 1-based distance of `o` from the top (top is 1), or `-1` |
 
 ```ts
-import { Stack } from 'ts-collections-framework';
+import { Stack } from '@nodestd/collections';
 
 const s = new Stack<string>();
 s.push('a');
@@ -651,7 +651,7 @@ Note that `toString()` and iteration go bottom-to-top (index order), and since a
 For a new stack, use `ArrayDeque` through its `Deque` methods. It has a focused API, throws the standard `NoSuchElementException` on an empty `pop()`, offers a non-throwing `peek()` that returns `null`, and iterates top-first:
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 const stack = new ArrayDeque<string>();
 stack.push('a');
@@ -683,7 +683,7 @@ See [queues and deques](./queues-and-deques.md#using-a-deque-as-a-stack).
 Never call `list.remove(...)` inside a `for...of` over the same list (see [fail-fast iteration](#fail-fast-iteration)). Two correct ways:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 // 1. Iterator.remove(): removes the element just returned by next()
 const a = ArrayList.of(1, 2, 3, 4, 5, 6);
@@ -706,7 +706,7 @@ Prefer `removeIf` on an `ArrayList`: removing through the iterator one by one sh
 Copy through a `LinkedHashSet` to keep first-occurrence order (or a `HashSet` if order does not matter). Both use `equals()`/`hashCode()`, so value objects dedupe correctly. See [sets](./sets.md).
 
 ```ts
-import { ArrayList, LinkedHashSet } from 'ts-collections-framework';
+import { ArrayList, LinkedHashSet } from '@nodestd/collections';
 
 const withDupes = ArrayList.of('b', 'a', 'b', 'c', 'a');
 const unique = new ArrayList(new LinkedHashSet(withDupes));
@@ -720,7 +720,7 @@ The same thing with a stream: `withDupes.stream().distinct().toList()` (see [str
 Inserting many elements in the middle one at a time shifts the tail once per element. `addAll(index, c)` shifts once:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 6, 7);
 list.addAll(2, ArrayList.of(3, 4, 5));
@@ -732,7 +732,7 @@ console.log(list.toString());        // → [1, 2, 3, 4, 5, 6, 7]
 `Collections.binarySearch(list, key, comparator?)` runs in O(log n) on a `RandomAccess` list. It returns the index of the key, or `-(insertionPoint) - 1` when absent — so a negative result tells you where to insert to keep the list sorted. The list must be sorted by the same ordering you search with.
 
 ```ts
-import { ArrayList, Collections, Comparator } from 'ts-collections-framework';
+import { ArrayList, Collections, Comparator } from '@nodestd/collections';
 
 const sorted = ArrayList.of(1, 3, 5, 7);
 console.log(Collections.binarySearch(sorted, 5));  // → 2
@@ -753,7 +753,7 @@ If you insert and search constantly, a [`TreeSet`](./sets.md) keeps elements sor
 ### Converting to and from JS arrays
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of(...[3, 1, 2]);   // from an array
 console.log(list.toArray());               // → [ 3, 1, 2 ]

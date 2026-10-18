@@ -3,8 +3,8 @@ import type { Map, MapEntry } from '../interfaces/Map';
 import type { Set } from '../interfaces/Set';
 
 // TS interfaces vanish at runtime, so set and random-access checks use brands.
-export const SET_BRAND: unique symbol = Symbol.for('ts-collections-framework.Set');
-export const RANDOM_ACCESS: unique symbol = Symbol.for('ts-collections-framework.RandomAccess');
+export const SET_BRAND: unique symbol = Symbol.for('@nodestd/collections.Set');
+export const RANDOM_ACCESS: unique symbol = Symbol.for('@nodestd/collections.RandomAccess');
 
 /** Marker for lists with O(1) get(index), like RandomAccess. */
 export interface RandomAccess {

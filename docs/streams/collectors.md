@@ -57,7 +57,7 @@ const staff: Emp[] = [
 `stream.toList()` (a stream method, not a collector) returns an unmodifiable list that allows `null`.
 
 ```ts
-import { Stream, Collectors, TreeSet, Comparator } from 'ts-collections-framework';
+import { Stream, Collectors, TreeSet, Comparator } from '@nodestd/collections';
 
 const list = Stream.of('b', 'a', 'b').collect(Collectors.toList());
 list.add('c');
@@ -99,7 +99,7 @@ function to combine values for equal keys instead, and a map factory to choose t
 | `toConcurrentMap(…)` | as `toMap` | a map (same three forms; concurrency is moot in JS) |
 
 ```ts
-import { Stream, Collectors, TreeMap, LinkedHashMap } from 'ts-collections-framework';
+import { Stream, Collectors, TreeMap, LinkedHashMap } from '@nodestd/collections';
 
 type Emp = { name: string; dept: string; salary: number };
 const staff: Emp[] = [
@@ -142,7 +142,7 @@ Concatenates `string` elements (a `null` element is written as `"null"`). Option
 an empty stream gives just `prefix + suffix`.
 
 ```ts
-import { Stream, Collectors } from 'ts-collections-framework';
+import { Stream, Collectors } from '@nodestd/collections';
 
 console.log(Stream.of('a', 'b', 'c').collect(Collectors.joining())); // → abc
 console.log(Stream.of('a', 'b', 'c').collect(Collectors.joining(', '))); // → a, b, c
@@ -164,7 +164,7 @@ They shine as downstream collectors of [`groupingBy`](#groupingby). See
 [number streams](number-streams.md#summary-statistics) for the statistics objects.
 
 ```ts
-import { Stream, Collectors } from 'ts-collections-framework';
+import { Stream, Collectors } from '@nodestd/collections';
 
 type Emp = { name: string; salary: number };
 const staff: Emp[] = [
@@ -195,7 +195,7 @@ form of `stream.reduce`, mostly useful as a downstream:
 | `reducing(identity, mapper, op)` | `U` — maps each element first |
 
 ```ts
-import { Stream, Collectors, Comparator } from 'ts-collections-framework';
+import { Stream, Collectors, Comparator } from '@nodestd/collections';
 
 type Emp = { name: string; salary: number };
 const staff: Emp[] = [
@@ -238,7 +238,7 @@ A classifier returning `null` throws `NullPointerException` ("element cannot be 
 keep the encounter order of their elements.
 
 ```ts
-import { Stream, Collectors, TreeMap, Comparator, List } from 'ts-collections-framework';
+import { Stream, Collectors, TreeMap, Comparator, List } from '@nodestd/collections';
 
 type Emp = { name: string; dept: string; salary: number };
 const staff: Emp[] = [
@@ -287,7 +287,7 @@ try {
 (even when empty). The result map prints `false` first. The optional second argument is a downstream collector.
 
 ```ts
-import { Stream, Collectors } from 'ts-collections-framework';
+import { Stream, Collectors } from '@nodestd/collections';
 
 const parts = Stream.of(1, 2, 3, 4, 5).collect(Collectors.partitioningBy((x: number) => x % 2 === 0));
 console.log(parts); // → {false=[1, 3, 5], true=[2, 4]}
@@ -311,7 +311,7 @@ These wrap another collector, which makes them the building blocks of `groupingB
 | `collectingAndThen(downstream, finisher)` | applies `finisher` to the downstream's result |
 
 ```ts
-import { Stream, Collectors, TreeMap, TreeSet, List } from 'ts-collections-framework';
+import { Stream, Collectors, TreeMap, TreeSet, List } from '@nodestd/collections';
 
 type Emp = { name: string; dept: string; salary: number; skills: string[] };
 const staff: Emp[] = [
@@ -343,7 +343,7 @@ console.log(size); // → 4
 pass.
 
 ```ts
-import { Stream, Collectors } from 'ts-collections-framework';
+import { Stream, Collectors } from '@nodestd/collections';
 
 const salaries = () => Stream.of(120, 100, 90, 80);
 const mean = salaries().collect(Collectors.teeing(
@@ -390,7 +390,7 @@ the characteristics given. They are available as `Collector.Characteristics.UNOR
 literals.
 
 ```ts
-import { Stream, Collector, LinkedList } from 'ts-collections-framework';
+import { Stream, Collector, LinkedList } from '@nodestd/collections';
 
 // container = result: a LinkedList built in reverse
 const reversed = Collector.of(
@@ -427,7 +427,7 @@ console.log(median.characteristics()); // → [UNORDERED]
 **Frequency map**, most frequent first:
 
 ```ts
-import { Stream, Collectors, TreeMap, Comparator, MapEntry } from 'ts-collections-framework';
+import { Stream, Collectors, TreeMap, Comparator, MapEntry } from '@nodestd/collections';
 
 const words = 'the cat and the hat and the bat'.split(' ');
 const freq = Stream.ofArray(words).collect(Collectors.groupingBy((w: string) => w, () => new TreeMap<string, number>(), Collectors.counting()));
@@ -444,7 +444,7 @@ console.log(ranked); // → [the:3, and:2]
 **Top-N per group:**
 
 ```ts
-import { Stream, Collectors, TreeMap, Comparator, List } from 'ts-collections-framework';
+import { Stream, Collectors, TreeMap, Comparator, List } from '@nodestd/collections';
 
 type Sale = { region: string; amount: number };
 const sales: Sale[] = [
@@ -463,7 +463,7 @@ console.log(top2); // → {north=[9, 7], south=[8, 3]}
 **Statistics per category:**
 
 ```ts
-import { Stream, Collectors, TreeMap, DoubleSummaryStatistics } from 'ts-collections-framework';
+import { Stream, Collectors, TreeMap, DoubleSummaryStatistics } from '@nodestd/collections';
 
 type Reading = { sensor: string; value: number };
 const readings: Reading[] = [
@@ -478,7 +478,7 @@ console.log(a.getCount(), a.getMin(), a.getMax(), a.getAverage()); // → 2 1.5 
 **Index by key** (last one wins on duplicates, in encounter order):
 
 ```ts
-import { Stream, Collectors, LinkedHashMap } from 'ts-collections-framework';
+import { Stream, Collectors, LinkedHashMap } from '@nodestd/collections';
 
 type User = { id: number; name: string };
 const users: User[] = [{ id: 2, name: 'old' }, { id: 1, name: 'one' }, { id: 2, name: 'two' }];

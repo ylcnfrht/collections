@@ -47,7 +47,7 @@ shifts every later element.
 ```
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of('a', 'b', 'c');
 list.add(1, 'x');
@@ -82,7 +82,7 @@ Relinking a node is cheap, but reaching index `i` means walking there.
 ```
 
 ```ts
-import { LinkedList } from 'ts-collections-framework';
+import { LinkedList } from '@nodestd/collections';
 
 const line = LinkedList.of(2, 3);
 line.addFirst(1);
@@ -118,7 +118,7 @@ slot; both wrap around the end, so nothing ever shifts. When the ring fills up, 
 ```
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 const tasks = new ArrayDeque<string>();
 tasks.addLast('b');
@@ -157,7 +157,7 @@ ordered, so iterating it does **not** give sorted order; `poll()` does.
 ```
 
 ```ts
-import { PriorityQueue } from 'ts-collections-framework';
+import { PriorityQueue } from '@nodestd/collections';
 
 const queue = new PriorityQueue<number>();
 [5, 1, 8, 3].forEach((n) => queue.add(n));
@@ -191,7 +191,7 @@ key.
 ```
 
 ```ts
-import { HashSet } from 'ts-collections-framework';
+import { HashSet } from '@nodestd/collections';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
@@ -233,7 +233,7 @@ always at the front, ready to evict.
 ```
 
 ```ts
-import { LinkedHashMap } from 'ts-collections-framework';
+import { LinkedHashMap } from '@nodestd/collections';
 
 const cache = LinkedHashMap.lru<string, string>(2); // keeps the 2 most recently used entries
 cache.put('a', '1');
@@ -269,7 +269,7 @@ itself on every change, so every path from the root is short, about log₂ n ste
 ```
 
 ```ts
-import { TreeMap, TreeSet } from 'ts-collections-framework';
+import { TreeMap, TreeSet } from '@nodestd/collections';
 
 const grades = new TreeMap<number, string>();
 grades.put(70, 'C');
@@ -298,7 +298,7 @@ modules.
 so reads are as fast as on the mutable classes.
 
 ```ts
-import { List } from 'ts-collections-framework';
+import { List } from '@nodestd/collections';
 
 const weekdays = List.of('Mon', 'Tue', 'Wed');
 try {

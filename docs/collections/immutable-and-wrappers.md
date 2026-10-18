@@ -33,7 +33,7 @@ mutable collections.
 | `Map.entry(k, v)` | immutable entry | `setValue` throws |
 
 ```ts
-import { List, Set, Map, ArrayList, HashSet, HashMap } from 'ts-collections-framework';
+import { List, Set, Map, ArrayList, HashSet, HashMap } from '@nodestd/collections';
 
 const primes = List.of(2, 3, 5, 7);
 console.log(primes.get(2), primes.size());       // → 5 4
@@ -68,7 +68,7 @@ These collections are deliberately strict, so mistakes surface at construction t
 - **No duplicates** in `Set.of` and in the keys of `Map.of`/`Map.ofEntries` (`IllegalArgumentException`).
 
 ```ts
-import { List, Set, Map } from 'ts-collections-framework';
+import { List, Set, Map } from '@nodestd/collections';
 
 const nameOf = (f: () => unknown): string => {
   try {
@@ -93,7 +93,7 @@ console.log(nameOf(() => Map.of('a', 1, 'a', 2)));       // → IllegalArgumentE
 `HashSet`'s. If you need order, sort, or use a `LinkedHashSet`/`TreeMap` copy:
 
 ```ts
-import { Set, Map, TreeSet, TreeMap } from 'ts-collections-framework';
+import { Set, Map, TreeSet, TreeMap } from '@nodestd/collections';
 
 const s = Set.of('pear', 'apple', 'fig');
 console.log(new TreeSet(s).toString()); // → [apple, fig, pear]
@@ -119,7 +119,7 @@ every later access, without calling the function again. Later changes to the can
 seen.
 
 ```ts
-import { List, Map, Set, TreeSet } from 'ts-collections-framework';
+import { List, Map, Set, TreeSet } from '@nodestd/collections';
 
 let calls = 0;
 const squares = List.ofLazy(5, (i) => {
@@ -168,7 +168,7 @@ elements and answer null queries normally (except the sorted/navigable empties, 
 | `Collections.EMPTY_LIST`, `EMPTY_SET`, `EMPTY_MAP` | the shared empties as constants |
 
 ```ts
-import { Collections, ArrayList } from 'ts-collections-framework';
+import { Collections, ArrayList } from '@nodestd/collections';
 
 console.log(Collections.emptyList<number>().toString());   // → []
 console.log(Collections.singletonMap('k', 1).toString());  // → {k=1}
@@ -208,7 +208,7 @@ flowchart LR
   a defensive copy of an argument).
 
 ```ts
-import { ArrayList, Collections, List } from 'ts-collections-framework';
+import { ArrayList, Collections, List } from '@nodestd/collections';
 
 const source = ArrayList.of('a', 'b');
 const view = Collections.unmodifiableList(source);
@@ -228,7 +228,7 @@ try {
 A typical class exposes a view of its private state:
 
 ```ts
-import { ArrayList, Collections, List } from 'ts-collections-framework';
+import { ArrayList, Collections, List } from '@nodestd/collections';
 
 class Playlist {
   private readonly tracks = new ArrayList<string>();
@@ -283,7 +283,7 @@ a class token you pass a **type-check predicate**. Every way an element can get 
 | `checkedMap(m, keyType, valueType)`, `checkedSortedMap(…)`, `checkedNavigableMap(…)` | keys and values |
 
 ```ts
-import { ArrayList, HashMap, Collections } from 'ts-collections-framework';
+import { ArrayList, HashMap, Collections } from '@nodestd/collections';
 
 const isString = (x: unknown): boolean => typeof x === 'string';
 const names = Collections.checkedList(new ArrayList<unknown>(), isString);
@@ -318,7 +318,7 @@ these objects), so there is nothing to lock: the wrappers are plain delegating v
 measurable cost; in new code just use the collection directly.
 
 ```ts
-import { ArrayList, Collections } from 'ts-collections-framework';
+import { ArrayList, Collections } from '@nodestd/collections';
 
 const list = ArrayList.of(1);
 const sync = Collections.synchronizedList(list);
@@ -335,7 +335,7 @@ with `IdentityHashMap` for an identity set, or with an access-ordered `LinkedHas
 A non-empty map throws `IllegalArgumentException`.
 
 ```ts
-import { Collections, IdentityHashMap, LinkedHashMap, ArrayList, List } from 'ts-collections-framework';
+import { Collections, IdentityHashMap, LinkedHashMap, ArrayList, List } from '@nodestd/collections';
 
 // a set that tells equal-but-distinct objects apart
 const seen = Collections.newSetFromMap(new IdentityHashMap<List<number>, boolean>());
@@ -375,7 +375,7 @@ In short: never rely on a no-op mutator succeeding on a collection you did not c
 you may modify a collection, own it — make a copy (`new ArrayList(c)`) and modify that.
 
 ```ts
-import { List, Map, Collections, ArrayList } from 'ts-collections-framework';
+import { List, Map, Collections, ArrayList } from '@nodestd/collections';
 
 const nameOf = (f: () => unknown): string => {
   try {

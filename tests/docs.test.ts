@@ -58,8 +58,8 @@ function run(block: Block): string[] {
   const printed: string[] = [];
   // same realm as the library, so arrays/Maps created in examples are the ones the library expects
   const requireLib = (id: string) => {
-    if (id === 'ts-collections-framework') return lib;
-    throw new Error(`docs may only import 'ts-collections-framework' (got ${id})`);
+    if (id === '@nodestd/collections') return lib;
+    throw new Error(`docs may only import '@nodestd/collections' (got ${id})`);
   };
   const log = { log: (...a: unknown[]) => printed.push(a.map(show).join(' ')) };
   const fn = new Function('require', 'exports', 'module', 'console', js + `\n//# sourceURL=${relative(ROOT, block.file)}:${block.line}`);
@@ -101,7 +101,7 @@ describe('docs examples type-check', () => {
       skipLibCheck: true,
       types: [],
       baseUrl: ROOT,
-      paths: { 'ts-collections-framework': ['src/index.ts'] },
+      paths: { '@nodestd/collections': ['src/index.ts'] },
     };
     const host = ts.createCompilerHost(options);
     const read = host.readFile.bind(host);

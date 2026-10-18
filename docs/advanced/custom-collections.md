@@ -129,8 +129,8 @@ So **override `addAtIndex(index, e)`, not `add`**. If you override `add(e)` alon
 TypeScript interfaces vanish at runtime, so whether a list has fast `get(i)` is signalled with a symbol brand. `ArrayList`, `Vector`, `List.of` and the others expose `[RANDOM_ACCESS]: true`. `AbstractList` does **not** add the brand for you. Add it when `get(i)` is O(1):
 
 ```ts nocheck
-import { AbstractList, RANDOM_ACCESS } from 'ts-collections-framework';
-import type { RandomAccess } from 'ts-collections-framework';
+import { AbstractList, RANDOM_ACCESS } from '@nodestd/collections';
+import type { RandomAccess } from '@nodestd/collections';
 
 class MyList<E> extends AbstractList<E> implements RandomAccess {
   get [RANDOM_ACCESS](): true {
@@ -157,8 +157,8 @@ Leave the brand off for linked storage. Otherwise those algorithms would call `g
 A collection does not have to store its elements. `IntRange` computes them, uses O(1) memory and answers `contains` in O(1). It implements only `iterator()` and `size()`, plus a faster `contains`:
 
 ```ts
-import { AbstractCollection, ArrayList, HashSet, NoSuchElementException, UnsupportedOperationException } from 'ts-collections-framework';
-import type { Iterator } from 'ts-collections-framework';
+import { AbstractCollection, ArrayList, HashSet, NoSuchElementException, UnsupportedOperationException } from '@nodestd/collections';
+import type { Iterator } from '@nodestd/collections';
 
 /** The integers start, start + step, ... below end. Read-only. */
 class IntRange extends AbstractCollection<number> {
@@ -237,8 +237,8 @@ import {
   Objects,
   RANDOM_ACCESS,
   isRandomAccess,
-} from 'ts-collections-framework';
-import type { RandomAccess } from 'ts-collections-framework';
+} from '@nodestd/collections';
+import type { RandomAccess } from '@nodestd/collections';
 
 class RingList<E> extends AbstractList<E> implements RandomAccess {
   private readonly buf: E[];
@@ -370,8 +370,8 @@ Notes on the design:
 `BoundedQueue` is a FIFO queue that holds at most `capacity` elements. `offer` returns `false` when the queue is full, and the inherited `add` turns that into `IllegalStateException`. Storage is delegated to an `ArrayDeque`, which gives O(1) operations and a fail-fast iterator with `remove()`.
 
 ```ts
-import { AbstractQueue, ArrayDeque, IllegalArgumentException, List, Objects } from 'ts-collections-framework';
-import type { Iterator } from 'ts-collections-framework';
+import { AbstractQueue, ArrayDeque, IllegalArgumentException, List, Objects } from '@nodestd/collections';
+import type { Iterator } from '@nodestd/collections';
 
 class BoundedQueue<E> extends AbstractQueue<E> {
   private readonly items: ArrayDeque<E>;
@@ -440,8 +440,8 @@ try {
 `SortedArraySet` keeps its elements in a sorted `ArrayList` and finds them with `Collections.binarySearch`. Lookups are O(log n). For small sets, inserts cost O(n) but are fast in practice. Because it defines `comparator()`, `first()`, `last()` and `headSet()`, its inherited spliterator reports `SORTED` and hands out the comparator.
 
 ```ts
-import { AbstractSet, ArrayList, Collections, Comparator, NoSuchElementException, Spliterator, TreeSet, naturalCompare } from 'ts-collections-framework';
-import type { Iterator } from 'ts-collections-framework';
+import { AbstractSet, ArrayList, Collections, Comparator, NoSuchElementException, Spliterator, TreeSet, naturalCompare } from '@nodestd/collections';
+import type { Iterator } from '@nodestd/collections';
 
 class SortedArraySet<E> extends AbstractSet<E> {
   private readonly list = new ArrayList<E>();
@@ -531,8 +531,8 @@ This class is not declared as `implements SortedSet<E>`, because the full interf
 The entry-set iterator's `remove()` keeps the two maps in sync. That one method makes `keySet().remove`, `values().removeIf`, `entrySet().clear` and the inherited `remove(key)` correct.
 
 ```ts
-import { AbstractMap, AbstractSet, IllegalArgumentException, LinkedHashMap, Map, Objects, SimpleImmutableEntry } from 'ts-collections-framework';
-import type { Iterator, MapEntry, Set } from 'ts-collections-framework';
+import { AbstractMap, AbstractSet, IllegalArgumentException, LinkedHashMap, Map, Objects, SimpleImmutableEntry } from '@nodestd/collections';
+import type { Iterator, MapEntry, Set } from '@nodestd/collections';
 
 class BiMap<K, V> extends AbstractMap<K, V> {
   constructor(
@@ -639,8 +639,8 @@ What the skeleton handles for you here: `toString`, `equals`/`hashCode` (by mapp
 Custom collections, like the built-in ones, compare elements with `Objects.equals`, hash them with `Objects.hashCode`, and order them with `naturalCompare` unless you give a comparator. Element types therefore need:
 
 ```ts
-import { HashSet, Objects, TreeSet } from 'ts-collections-framework';
-import type { Comparable } from 'ts-collections-framework';
+import { HashSet, Objects, TreeSet } from '@nodestd/collections';
+import type { Comparable } from '@nodestd/collections';
 
 class Money implements Comparable<Money> {
   constructor(readonly currency: string, readonly cents: number) {}

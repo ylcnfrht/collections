@@ -39,7 +39,7 @@ function doubleHash(x: number): number {
   return i32[0] ^ i32[1];
 }
 
-const OPTIONAL_BRAND: unique symbol = Symbol.for('ts-collections-framework.Optional');
+const OPTIONAL_BRAND: unique symbol = Symbol.for('@nodestd/collections.Optional');
 
 /** o is an optional of the given kind ('Optional', 'OptionalInt', ...), from this or another copy of the library. */
 function isOptional(o: unknown, kind: string): o is { present: boolean; value: any } {

@@ -30,7 +30,7 @@ A `Queue<E>` holds elements waiting to be processed and hands them out from its 
 Use `poll`/`peek` in loops where "empty" is a normal condition, and `remove`/`element` where an empty queue would be a bug you want to hear about.
 
 ```ts
-import { ArrayDeque, Queue } from 'ts-collections-framework';
+import { ArrayDeque, Queue } from '@nodestd/collections';
 
 const q: Queue<string> = new ArrayDeque<string>();
 q.offer('first');
@@ -82,7 +82,7 @@ flowchart LR
 ```
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 const d = new ArrayDeque<number>();
 d.offerLast(2);
@@ -102,7 +102,7 @@ console.log(d.toString());         // → [2]
 `push(e)` is `addFirst(e)`, `pop()` is `removeFirst()`, and `peek()` looks at the head — so the head of the deque is the top of the stack, and iteration and `toString()` go top-first.
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 const stack = new ArrayDeque<string>();
 stack.push('a');
@@ -121,7 +121,7 @@ This is the recommended stack for new code, rather than the legacy [`Stack`](./l
 `descendingIterator()` walks from tail to head. `reversed()` returns a live, reverse-ordered `Deque` view: its first element is the original's last, and writes go through to the original.
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 const d = ArrayDeque.of(1, 2, 3);
 
@@ -172,7 +172,7 @@ On growth the array doubles and the shorter of the two wrapped segments is moved
 `ArrayDeque` rejects `null` and `undefined` with `NullPointerException`, so `poll()` returning `null` always means "empty".
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 const d = new ArrayDeque<string | null>();
 try {
@@ -185,7 +185,7 @@ try {
 ### Creating one
 
 ```ts
-import { ArrayDeque, ArrayList } from 'ts-collections-framework';
+import { ArrayDeque, ArrayList } from '@nodestd/collections';
 
 const a = new ArrayDeque<number>();            // 16 slots
 const b = new ArrayDeque<number>(1000);        // room for 1000 without growing
@@ -241,7 +241,7 @@ flowchart TB
 The heap only guarantees that the root is the minimum. Iteration, `toString()`, `toArray()` and streams all walk the **array**, which is in heap order, not sorted order. To get elements in priority order, `poll()` them out:
 
 ```ts
-import { PriorityQueue } from 'ts-collections-framework';
+import { PriorityQueue } from '@nodestd/collections';
 
 const pq = PriorityQueue.of(5, 1, 4, 2, 3);
 console.log(pq.toString());        // → [1, 2, 4, 5, 3]
@@ -261,7 +261,7 @@ If you need a sorted *view* rather than a drain, copy and sort (`const l = new A
 With no comparator, elements are compared by natural ordering: numbers numerically, strings by code unit, and objects through their `compareTo()` method. Objects with no natural ordering throw `ClassCastException` when added. Pass a comparator for anything else — max-heaps, objects, multi-key priorities.
 
 ```ts
-import { PriorityQueue, Comparator } from 'ts-collections-framework';
+import { PriorityQueue, Comparator } from '@nodestd/collections';
 
 // max-heap
 const max = new PriorityQueue<number>(Comparator.reverseOrder<number>());
@@ -291,7 +291,7 @@ try {
 `new PriorityQueue(collection)` copies the elements and builds the heap bottom-up in O(n), which is cheaper than n separate `offer` calls (O(n log n)). If the source is a `PriorityQueue` or a sorted collection such as a `TreeSet`, its comparator is inherited.
 
 ```ts
-import { PriorityQueue, ArrayList, TreeSet, Comparator } from 'ts-collections-framework';
+import { PriorityQueue, ArrayList, TreeSet, Comparator } from '@nodestd/collections';
 
 const pq = new PriorityQueue(ArrayList.of(5, 1, 4));
 console.log(pq.peek());                        // → 1
@@ -328,7 +328,7 @@ console.log(fromTree.poll());                  // → 3
 Otherwise `ArrayDeque` is lighter: no node object per element.
 
 ```ts
-import { LinkedList, Queue } from 'ts-collections-framework';
+import { LinkedList, Queue } from '@nodestd/collections';
 
 const q: Queue<string> = new LinkedList<string>();
 q.offer('a');
@@ -349,7 +349,7 @@ console.log(withNull.isEmpty());   // → true
 Some APIs take a `Queue` and simply call `add`/`poll`. `Collections.asLifoQueue(deque)` returns a `Queue` view of a deque whose `add`/`offer` push onto the **front**, so those APIs process items last-in-first-out — turning a breadth-first algorithm into a depth-first one without changing it.
 
 ```ts
-import { ArrayDeque, Collections } from 'ts-collections-framework';
+import { ArrayDeque, Collections } from '@nodestd/collections';
 
 const backing = new ArrayDeque<number>();
 const lifo = Collections.asLifoQueue(backing);
@@ -372,7 +372,7 @@ The view is live, and its `equals`/`hashCode` are by identity. More adapters are
 The deque holds the frontier. `poll()` returning `null` ends the loop.
 
 ```ts
-import { ArrayDeque, HashMap, HashSet, ArrayList, List } from 'ts-collections-framework';
+import { ArrayDeque, HashMap, HashSet, ArrayList, List } from '@nodestd/collections';
 
 const graph = new HashMap<string, List<string>>();
 graph.put('a', ArrayList.of('b', 'c'));
@@ -406,7 +406,7 @@ Swap `offer`/`poll` for `push`/`pop` (or wrap the deque in `Collections.asLifoQu
 Keep a deque of *indexes* whose values are decreasing. The front is the maximum of the current window; drop it when it slides out, and drop smaller values from the back when a bigger one arrives. Each index enters and leaves once, so the whole pass is O(n).
 
 ```ts
-import { ArrayDeque } from 'ts-collections-framework';
+import { ArrayDeque } from '@nodestd/collections';
 
 function windowMax(values: number[], k: number): number[] {
   const idx = new ArrayDeque<number>();
@@ -428,7 +428,7 @@ console.log(windowMax([1, 3, -1, -3, 5, 3, 6, 7], 3)); // → [ 3, 3, 5, 5, 6, 7
 Order tasks by due time, then priority, then insertion sequence. The sequence number makes the order fully deterministic, because the heap alone is not stable.
 
 ```ts
-import { PriorityQueue, Comparator } from 'ts-collections-framework';
+import { PriorityQueue, Comparator } from '@nodestd/collections';
 
 interface Task { name: string; due: number; priority: number; seq: number }
 
@@ -460,7 +460,7 @@ console.log(ran); // → [ '10:report', '10:email', '10:cleanup', '30:backup' ]
 Keep a min-heap of at most `k` elements; whenever it grows past `k`, evict the smallest. What remains are the `k` largest, found in O(n log k) time and O(k) memory — far better than sorting everything when `k` is small.
 
 ```ts
-import { PriorityQueue, ArrayList } from 'ts-collections-framework';
+import { PriorityQueue, ArrayList } from '@nodestd/collections';
 
 function topK(values: Iterable<number>, k: number): number[] {
   const heap = new PriorityQueue<number>();
@@ -483,7 +483,7 @@ For the k smallest, use a max-heap (`Comparator.reverseOrder()`) the same way.
 Put the head of each sorted input in a priority queue, together with where it came from. Repeatedly take the smallest, then push the next element from the same input. Merging `k` lists with `n` total elements costs O(n log k).
 
 ```ts
-import { PriorityQueue, Comparator, ArrayList, Iterator, List } from 'ts-collections-framework';
+import { PriorityQueue, Comparator, ArrayList, Iterator, List } from '@nodestd/collections';
 
 function merge(lists: List<number>[]): List<number> {
   type Head = { value: number; rest: Iterator<number> };

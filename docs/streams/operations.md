@@ -54,7 +54,7 @@ and add a few of their own — see [number streams](number-streams.md).
 Keeps the elements for which the predicate returns `true`.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3, 4, 5).filter((x) => x % 2 === 1).toList()); // → [1, 3, 5]
 ```
@@ -64,7 +64,7 @@ console.log(Stream.of(1, 2, 3, 4, 5).filter((x) => x % 2 === 1).toList()); // �
 Transforms each element. The mapper may return `null`; nulls flow through like any other element.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of('a', 'bb', 'ccc').map((s) => s.length).toList()); // → [1, 2, 3]
 console.log(Stream.of(1, 2).map((x) => (x === 1 ? null : x)).toList()); // → [null, 2]
@@ -75,7 +75,7 @@ console.log(Stream.of(1, 2).map((x) => (x === 1 ? null : x)).toList()); // → [
 Map to a [number stream](number-streams.md), which adds `sum`, `average`, `summaryStatistics` and friends.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const words = Stream.of('one', 'three', 'five');
 console.log(words.mapToInt((w) => w.length).sum()); // → 12
@@ -90,7 +90,7 @@ empty stream. Each inner stream is **closed** right after its elements have been
 short-circuit stops the pipeline early, so `onClose` handlers of inner streams always run.
 
 ```ts
-import { Stream, List } from 'ts-collections-framework';
+import { Stream, List } from '@nodestd/collections';
 
 const lines = List.of('to be', 'or not');
 console.log(lines.stream().flatMap((l) => Stream.of(...l.split(' '))).toList()); // → [to, be, or, not]
@@ -111,7 +111,7 @@ console.log(first, log); // → Optional[10] [ 'closed 1' ]
 `flatMap` whose mapper returns a number stream.
 
 ```ts
-import { Stream, IntStream } from 'ts-collections-framework';
+import { Stream, IntStream } from '@nodestd/collections';
 
 const ranges = Stream.of(2, 3).flatMapToInt((n) => IntStream.range(0, n));
 console.log(ranges.toArray()); // → [ 0, 1, 0, 1, 2 ]
@@ -124,7 +124,7 @@ stream is created, which makes it cheaper when an element expands to a few value
 map in one step. `mapMultiToInt/Long/Double` produce number streams.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const expanded = Stream.of(1, 2, 3).mapMulti<number>((x, emit) => {
   if (x !== 2) {
@@ -145,7 +145,7 @@ primitives compare by value, objects with `equals`/`hashCode` (such as this libr
 and plain JS objects by identity. It is stateful but not a barrier (see the [overview](overview.md#stateless-vs-stateful-operations)).
 
 ```ts
-import { Stream, List } from 'ts-collections-framework';
+import { Stream, List } from '@nodestd/collections';
 
 console.log(Stream.of(3, 1, 3, 2, 1).distinct().toList()); // → [3, 1, 2]
 // equal lists are duplicates
@@ -164,7 +164,7 @@ that cannot be compared throw `ClassCastException`. `sorted(comparator)` uses th
 building comparators.
 
 ```ts
-import { Stream, Comparator } from 'ts-collections-framework';
+import { Stream, Comparator } from '@nodestd/collections';
 
 console.log(Stream.of(10, 9, 1).sorted().toList()); // → [1, 9, 10]
 console.log(Stream.of('pear', 'fig', 'apple').sorted(Comparator.comparing((s: string) => s.length)).toList()); // → [fig, pear, apple]
@@ -188,7 +188,7 @@ Runs an action on each element as it passes, without changing it. Meant for debu
 pipeline may skip elements (`limit`, short-circuits) or not run at all, do not put required side effects here.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const seen: number[] = [];
 const firstTwo = Stream.of(1, 2, 3, 4).peek((x) => seen.push(x)).limit(2).toList();
@@ -205,7 +205,7 @@ console.log(Stream.of(1, 2, 3).peek((x) => seen.push(x)).count(), seen.length - 
 non-integer `n` throws `IllegalArgumentException`.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.iterate(1, (x) => x + 1).skip(2).limit(3).toList()); // → [3, 4, 5]
 console.log(Stream.of(1, 2).skip(5).toList()); // → []
@@ -223,7 +223,7 @@ infinite streams). `dropWhile(p)` discards elements while `p` holds, then passes
 both look at a **prefix** only.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3, 1).takeWhile((x) => x < 3).toList()); // → [1, 2]
 console.log(Stream.of(1, 2, 3, 1).dropWhile((x) => x < 3).toList()); // → [3, 1]
@@ -237,7 +237,7 @@ Applies a **gatherer**, a custom intermediate operation that can be one-to-one, 
 or short-circuiting. Built-ins live in `Gatherers`; see [gatherers](gatherers.md) for writing your own.
 
 ```ts
-import { Stream, Gatherers } from 'ts-collections-framework';
+import { Stream, Gatherers } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3, 4, 5).gather(Gatherers.windowFixed(2)).toList()); // → [[1, 2], [3, 4], [5]]
 console.log(Stream.of(1, 2, 3, 4).gather(Gatherers.scan(() => 0, (acc: number, x: number) => acc + x)).toList()); // → [1, 3, 6, 10]
@@ -252,7 +252,7 @@ Run an action for each element. `forEach` makes no ordering promise in the Java 
 encounter order — use `forEachOrdered` when your code depends on it, to state the intent.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const out: string[] = [];
 Stream.of('a', 'b', 'c').forEachOrdered((s) => out.push(s));
@@ -266,7 +266,7 @@ element count and must return an array-like of exactly that length (a sized stre
 otherwise `IllegalStateException` / `IndexOutOfBoundsException` is thrown. Typed arrays work.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3).toArray()); // → [ 1, 2, 3 ]
 const ints = Stream.of(1, 2, 3).toArray((n) => new Int32Array(n));
@@ -306,7 +306,7 @@ The diagram shows how `reduce(0, (n, s) => n + s.length, (a, b) => a + b)` *coul
 a sequential run is the left chain alone.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3, 4).reduce(0, (a, b) => a + b)); // → 10
 console.log(Stream.of(1, 2, 3, 4).reduce((a, b) => a * b)); // → Optional[24]
@@ -324,7 +324,7 @@ full catalogue. `collect(supplier, accumulator, combiner)` is the do-it-yourself
 container, `accumulator` adds an element to it, `combiner` merges the second container into the first.
 
 ```ts
-import { Stream, Collectors } from 'ts-collections-framework';
+import { Stream, Collectors } from '@nodestd/collections';
 
 console.log(Stream.of('b', 'a', 'b').collect(Collectors.toSet()).size()); // → 2
 console.log(Stream.of('x', 'y').collect(Collectors.joining('+'))); // → x+y
@@ -343,7 +343,7 @@ Returns an **unmodifiable** `List` in encounter order. Unlike `Collectors.toUnmo
 elements. Mutators throw `UnsupportedOperationException`.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const list = Stream.of(1, null, 3).toList();
 console.log(list); // → [1, null, 3]
@@ -362,7 +362,7 @@ sized source with no filtering stage it may compute the count without running th
 `peek` side effects there.
 
 ```ts
-import { Stream, Comparator } from 'ts-collections-framework';
+import { Stream, Comparator } from '@nodestd/collections';
 
 const words = () => Stream.of('kiwi', 'banana', 'fig');
 console.log(words().min(Comparator.naturalOrder())); // → Optional[banana]
@@ -377,7 +377,7 @@ Short-circuiting predicates: they stop as soon as the answer is known. On an emp
 `noneMatch` are `true` and `anyMatch` is `false`.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3).anyMatch((x) => x > 2)); // → true
 console.log(Stream.of(1, 2, 3).allMatch((x) => x > 0)); // → true
@@ -395,7 +395,7 @@ Return the first element (`findAny`: any element; here it is always the first) a
 A `null` element throws `NullPointerException`.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(4, 5, 6).filter((x) => x > 4).findFirst()); // → Optional[5]
 console.log(Stream.of(4, 5, 6).findAny().isPresent()); // → true
@@ -414,7 +414,7 @@ Escape hatches to pull elements yourself. `iterator()` returns the library's `It
 also JS iterables (`for…of`, spread).
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const it = Stream.iterate(1, (x) => x * 3).iterator();
 console.log(it.next(), it.next(), it.next()); // → 1 3 9

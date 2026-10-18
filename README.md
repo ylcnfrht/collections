@@ -1,4 +1,4 @@
-# ts-collections-framework
+# @nodestd/collections
 
 A production-grade collections framework for TypeScript and JS, inspired by **Java's Collections Framework and
 Stream API**: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`, `Stream`, `Collectors` and the rest,
@@ -19,7 +19,7 @@ own API and semantics. This library is one coherent framework instead. It has:
 ## Install
 
 ```sh
-npm install ts-collections-framework
+npm install @nodestd/collections
 ```
 
 Zero dependencies, ESM and CommonJS, full type definitions, Node 18+ and modern browsers.
@@ -27,7 +27,7 @@ Zero dependencies, ESM and CommonJS, full type definitions, Node 18+ and modern 
 ## Example
 
 ```ts
-import { ArrayList, HashMap, TreeMap, Collectors, List } from 'ts-collections-framework';
+import { ArrayList, HashMap, TreeMap, Collectors, List } from '@nodestd/collections';
 
 const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
 

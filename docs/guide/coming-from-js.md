@@ -40,7 +40,7 @@ New to structures like deques, heaps or tree maps? Start with the [Data structur
 | `a.join(', ')` | `list.stream().map(String).collect(Collectors.joining(', '))` | |
 
 ```ts
-import { ArrayList, Collections } from 'ts-collections-framework';
+import { ArrayList, Collections } from '@nodestd/collections';
 
 const a = ArrayList.of(30, 10, 20);
 a.add(40);                        // push
@@ -77,7 +77,7 @@ key.
 | `m.forEach((v, k) => …)` | `m.forEach((k, v) => …)` | **key first** |
 
 ```ts
-import { HashMap, TreeMap, ArrayList, List } from 'ts-collections-framework';
+import { HashMap, TreeMap, ArrayList, List } from '@nodestd/collections';
 
 const words = ['bee', 'ant', 'bat', 'cow', 'ape'];
 
@@ -107,7 +107,7 @@ Again, the JS `Set` is insertion-ordered like `LinkedHashSet`.
 | `a.isSubsetOf(b)` | `b.containsAll(a)` | |
 
 ```ts
-import { TreeSet } from 'ts-collections-framework';
+import { TreeSet } from '@nodestd/collections';
 
 const a = TreeSet.of(1, 2, 3, 4);
 const b = TreeSet.of(3, 4, 5);
@@ -146,7 +146,7 @@ Streams are lazy: nothing runs until a *terminal* operation (`toList`, `collect`
 | `Array.from({ length: n }, (_, i) => f(i))` | `IntStream.range(0, n).mapToObj(f)` | |
 
 ```ts
-import { List, Stream, IntStream, Collectors, Comparator } from 'ts-collections-framework';
+import { List, Stream, IntStream, Collectors, Comparator } from '@nodestd/collections';
 
 const nums = List.of(5, 3, 8, 1, 9, 2);
 
@@ -170,7 +170,7 @@ A JS `Map` compares keys by identity, so a composite key must be serialized into
 `equals()`/`hashCode()` — including every list, set, map and entry of this library — works as a key directly.
 
 ```ts
-import { HashMap, List } from 'ts-collections-framework';
+import { HashMap, List } from '@nodestd/collections';
 
 // JS: identity, so this lookup misses
 const native = new globalThis.Map<number[], string>();
@@ -208,7 +208,7 @@ Every collection is iterable and every map iterates as `[key, value]` pairs, so 
 | object → map | `HashMap.of(...Object.entries(obj))` |
 
 ```ts
-import { ArrayList, LinkedHashMap, HashSet, Stream } from 'ts-collections-framework';
+import { ArrayList, LinkedHashMap, HashSet, Stream } from '@nodestd/collections';
 
 const list = ArrayList.of(1.5, 2.5);
 console.log([...list], list.toArray());           // → [ 1.5, 2.5 ] [ 1.5, 2.5 ]
@@ -227,12 +227,12 @@ console.log(Stream.from(new globalThis.Set([3, 4])).map((n) => n * 2).toList().t
 
 ## Common pitfalls
 
-**`Set`, `Map` (and `List`, `Iterator`) shadow globals.** `import { Set } from 'ts-collections-framework'` makes
+**`Set`, `Map` (and `List`, `Iterator`) shadow globals.** `import { Set } from '@nodestd/collections'` makes
 `new Set()` in that module refer to... nothing constructible — the library's `Set` is an interface plus the `Set.of`
 factory. Alias on import, or use `globalThis.Set`:
 
 ```ts
-import { Set as CSet, HashSet } from 'ts-collections-framework';
+import { Set as CSet, HashSet } from '@nodestd/collections';
 
 const ours: CSet<string> = HashSet.of('a');
 const theirs = new Set<string>(['a']); // still the JS Set, because ours is aliased
@@ -242,7 +242,7 @@ console.log(ours.size(), theirs.size); // → 1 1
 **`remove(index)` is `removeAt(index)`.** On a `List<number>`, `remove(1)` removes the *value* `1`:
 
 ```ts
-import { ArrayList } from 'ts-collections-framework';
+import { ArrayList } from '@nodestd/collections';
 
 const l = ArrayList.of(10, 1, 20);
 l.remove(1);       // removes the element equal to 1
@@ -259,7 +259,7 @@ not. Use `containsKey` when `null` is a legitimate value.
 loop.
 
 ```ts
-import { HashMap } from 'ts-collections-framework';
+import { HashMap } from '@nodestd/collections';
 
 const m = HashMap.of<string, number>(['a', 1], ['b', 2], ['c', 3]);
 try {

@@ -29,7 +29,7 @@ the common needs: `HashMap` (fastest, no order), `LinkedHashMap` (insertion or a
 | **Value equality** | `a.equals(b)` is `true` when `b` is any `Map` with the same key-value pairs; order is ignored. `hashCode()` is the sum over entries of `hash(key) ^ hash(value)`. |
 
 ```ts
-import { HashMap, TreeMap, LinkedHashMap } from 'ts-collections-framework';
+import { HashMap, TreeMap, LinkedHashMap } from '@nodestd/collections';
 
 const ages = new HashMap<string, number>();
 console.log(ages.put('ada', 36));  // → null
@@ -47,7 +47,7 @@ console.log(LinkedHashMap.of(['ada', 37]).equals(ages)); // → true
 `null` both for a missing key and for a key mapped to `null`, ask `containsKey` when the difference matters:
 
 ```ts
-import { HashMap } from 'ts-collections-framework';
+import { HashMap } from '@nodestd/collections';
 
 const m = new HashMap<string, string | null>();
 m.put('nickname', null);
@@ -76,7 +76,7 @@ A callback returning `null` or `undefined` means "no mapping": the key is remove
 | `forEach(f)` | calls `f(k, v)` for every mapping |
 
 ```ts
-import { TreeMap } from 'ts-collections-framework';
+import { TreeMap } from '@nodestd/collections';
 
 const stock = new TreeMap<string, number>();
 stock.put('apples', 3);
@@ -112,7 +112,7 @@ add to it" is a single expression. (The `!` is needed because `computeIfAbsent` 
 returns `null` leaves the key absent. Ours never does.)
 
 ```ts
-import { TreeMap, ArrayList, List } from 'ts-collections-framework';
+import { TreeMap, ArrayList, List } from '@nodestd/collections';
 
 const words = ['apple', 'avocado', 'banana', 'blueberry', 'cherry'];
 const byLetter = new TreeMap<string, List<string>>();
@@ -125,7 +125,7 @@ console.log(byLetter.toString()); // → {a=[apple, avocado], b=[banana, blueber
 `merge(k, 1, (a, b) => a + b)` inserts 1 for a new key and adds 1 to an existing one:
 
 ```ts
-import { TreeMap } from 'ts-collections-framework';
+import { TreeMap } from '@nodestd/collections';
 
 const counts = new TreeMap<string, number>();
 for (const ch of 'mississippi') counts.merge(ch, 1, (a, b) => a + b);
@@ -146,7 +146,7 @@ in these four methods (as the reference, whose versions are the plain defaults),
 goes unnoticed; the rule still applies.
 
 ```ts
-import { HashMap } from 'ts-collections-framework';
+import { HashMap } from '@nodestd/collections';
 
 const memo = new HashMap<number, number>();
 const fib = (n: number): number =>
@@ -194,7 +194,7 @@ flowchart LR
 - **`entry.setValue(v)` writes through** for entries obtained by iterating `entrySet()`.
 
 ```ts
-import { TreeMap } from 'ts-collections-framework';
+import { TreeMap } from '@nodestd/collections';
 
 const m = new TreeMap<string, number>();
 m.put('a', 1);
@@ -252,7 +252,7 @@ flowchart TD
 You never see the split: it is one map with one fail-fast iteration over all three stores.
 
 ```ts
-import { HashMap, List } from 'ts-collections-framework';
+import { HashMap, List } from '@nodestd/collections';
 
 const byId = new HashMap<number, string>();
 for (let id = 0; id < 5; id++) byId.put(id, `user${id}`); // dense table
@@ -299,7 +299,7 @@ Two orders are available:
   recently used entry. Note that in access order `get` is a structural change for iterators.
 
 ```ts
-import { LinkedHashMap } from 'ts-collections-framework';
+import { LinkedHashMap } from '@nodestd/collections';
 
 const insertion = new LinkedHashMap<string, number>();
 insertion.put('a', 1);
@@ -323,7 +323,7 @@ An access-ordered map plus "drop the head when too big" is an LRU cache. `Linked
 that:
 
 ```ts
-import { LinkedHashMap } from 'ts-collections-framework';
+import { LinkedHashMap } from '@nodestd/collections';
 
 const cache = LinkedHashMap.lru<string, string>(2);
 cache.put('a', 'A');
@@ -350,7 +350,7 @@ sequenceDiagram
 ```
 
 ```ts
-import { LinkedHashMap, MapEntry } from 'ts-collections-framework';
+import { LinkedHashMap, MapEntry } from '@nodestd/collections';
 
 class BoundedCache<K, V> extends LinkedHashMap<K, V> {
   readonly evicted: K[] = [];
@@ -384,7 +384,7 @@ console.log(c.toString(), c.evicted); // → {b=2, c=3} [ 'a' ]
 | `sequencedKeySet()`, `sequencedValues()`, `sequencedEntrySet()` | views with `getFirst`, `reversed()`, … |
 
 ```ts
-import { LinkedHashMap } from 'ts-collections-framework';
+import { LinkedHashMap } from '@nodestd/collections';
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
 m.putFirst('b', 20);
@@ -407,7 +407,7 @@ O(log n), and iteration is always in key order. Keys are ordered naturally (numb
 comparator also decides which keys are equal. `null` keys are rejected under natural ordering.
 
 ```ts
-import { TreeMap, Comparator } from 'ts-collections-framework';
+import { TreeMap, Comparator } from '@nodestd/collections';
 
 const m = new TreeMap<string, number>(Comparator.reverseOrder<string>());
 m.put('b', 2);
@@ -433,7 +433,7 @@ Entries returned by navigation methods are **immutable snapshots**: `setValue` t
 `UnsupportedOperationException`. (Entries reached by iterating `entrySet()` are live and writable.)
 
 ```ts
-import { TreeMap } from 'ts-collections-framework';
+import { TreeMap } from '@nodestd/collections';
 
 const grades = new TreeMap<number, string>();
 grades.put(90, 'A');
@@ -467,7 +467,7 @@ flags. `descendingMap()` is a live reverse-ordered view; `navigableKeySet()` and
 views.
 
 ```ts
-import { TreeMap } from 'ts-collections-framework';
+import { TreeMap } from '@nodestd/collections';
 
 const m = new TreeMap<number, string>();
 for (const k of [10, 20, 30, 40]) m.put(k, `v${k}`);
@@ -504,7 +504,7 @@ Use it when the *object* is what matters, not its value:
 - keys whose `hashCode()` changes over time.
 
 ```ts
-import { IdentityHashMap, HashMap, ArrayList, List } from 'ts-collections-framework';
+import { IdentityHashMap, HashMap, ArrayList, List } from '@nodestd/collections';
 
 const a = ArrayList.of(1, 2);
 const b = ArrayList.of(1, 2); // equal to a, but a different object
@@ -540,7 +540,7 @@ value `equals`/`hashCode` and `toString()` as `key=value`.
 taking a comparator for the key/value.
 
 ```ts
-import { Map, SimpleEntry, SimpleImmutableEntry, HashMap, ArrayList, Comparator } from 'ts-collections-framework';
+import { Map, SimpleEntry, SimpleImmutableEntry, HashMap, ArrayList, Comparator } from '@nodestd/collections';
 
 const e = new SimpleEntry('k', 1);
 e.setValue(2);
@@ -565,7 +565,7 @@ Every map is iterable as `[key, value]` pairs, like a native `Map`. That makes d
 conversion to native structures direct:
 
 ```ts
-import { LinkedHashMap } from 'ts-collections-framework';
+import { LinkedHashMap } from '@nodestd/collections';
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
 
@@ -611,7 +611,7 @@ for picking one.
 ### Word frequency
 
 ```ts
-import { HashMap, ArrayList, Map } from 'ts-collections-framework';
+import { HashMap, ArrayList, Map } from '@nodestd/collections';
 
 const text = 'the quick fox jumps over the lazy dog the end';
 const freq = new HashMap<string, number>();
@@ -629,7 +629,7 @@ Streams can do the same in one expression with `Collectors.groupingBy` and `Coll
 ### Group by
 
 ```ts
-import { TreeMap, ArrayList, List } from 'ts-collections-framework';
+import { TreeMap, ArrayList, List } from '@nodestd/collections';
 
 interface Order { customer: string; total: number }
 const orders: Order[] = [
@@ -648,7 +648,7 @@ console.log(byCustomer.toString()); // → {ann=[10, 7], bob=[5]}
 Map each word to the sorted set of documents containing it:
 
 ```ts
-import { TreeMap, TreeSet } from 'ts-collections-framework';
+import { TreeMap, TreeSet } from '@nodestd/collections';
 
 const docs = ['red fish blue fish', 'one fish', 'red car'];
 const index = new TreeMap<string, TreeSet<number>>();
@@ -670,7 +670,7 @@ A `TreeMap` keyed by timestamp (or by ISO date strings, which sort chronological
 A and B" and "what was the latest value at time T" in O(log n):
 
 ```ts
-import { TreeMap } from 'ts-collections-framework';
+import { TreeMap } from '@nodestd/collections';
 
 const price = new TreeMap<string, number>();
 price.put('2024-01-01', 100);
@@ -693,7 +693,7 @@ console.log(price.toString()); // → {2024-01-09=98, 2024-01-15=110}
 ### LRU cache
 
 ```ts
-import { LinkedHashMap } from 'ts-collections-framework';
+import { LinkedHashMap } from '@nodestd/collections';
 
 const cache = LinkedHashMap.lru<string, number>(3);
 const load = (key: string): number => cache.computeIfAbsent(key, (k) => k.length)!; // k.length stands in for slow work

@@ -16,11 +16,11 @@ collection, how the generic types fit together, and what you need to know about 
 ## Install
 
 ```sh
-npm install ts-collections-framework
+npm install @nodestd/collections
 # or
-yarn add ts-collections-framework
+yarn add @nodestd/collections
 # or
-pnpm add ts-collections-framework
+pnpm add @nodestd/collections
 ```
 
 The package has **zero runtime dependencies** and ships its own type definitions, so there is no `@types/…` package
@@ -33,7 +33,7 @@ The package is published as both ES modules and CommonJS. The `exports` map pick
 
 ```ts
 // ESM / TypeScript
-import { ArrayList, HashMap, Collectors } from 'ts-collections-framework';
+import { ArrayList, HashMap, Collectors } from '@nodestd/collections';
 
 const names = new ArrayList<string>();
 names.add('Ada');
@@ -42,7 +42,7 @@ console.log(names.toString()); // → [Ada]
 
 ```js
 // CommonJS
-const { ArrayList, HashMap, Collectors } = require('ts-collections-framework');
+const { ArrayList, HashMap, Collectors } = require('@nodestd/collections');
 ```
 
 Everything is a named export of the package root; there are no deep imports.
@@ -51,7 +51,7 @@ Everything is a named export of the package root; there are no deep imports.
 you import `Set` or `Map`, they shadow the JS built-ins in that module. Alias them if you need both:
 
 ```ts
-import { Map as CMap, HashMap } from 'ts-collections-framework';
+import { Map as CMap, HashMap } from '@nodestd/collections';
 
 const ours: CMap<string, number> = new HashMap<string, number>();
 const native = new globalThis.Map<string, number>();
@@ -63,7 +63,7 @@ console.log(ours.size(), native.size); // → 0 0
 ### Lists
 
 ```ts
-import { ArrayList, List } from 'ts-collections-framework';
+import { ArrayList, List } from '@nodestd/collections';
 
 const list = new ArrayList<string>();
 list.add('b');
@@ -86,7 +86,7 @@ console.log(fixed.contains(2)); // → true
 ### Sets
 
 ```ts
-import { HashSet, TreeSet, LinkedHashSet } from 'ts-collections-framework';
+import { HashSet, TreeSet, LinkedHashSet } from '@nodestd/collections';
 
 const seen = new HashSet<string>();
 console.log(seen.add('x'));  // → true
@@ -105,7 +105,7 @@ console.log(ordered.toString());    // → [z, a, m]
 ### Maps
 
 ```ts
-import { HashMap, TreeMap } from 'ts-collections-framework';
+import { HashMap, TreeMap } from '@nodestd/collections';
 
 const ages = new HashMap<string, number>();
 ages.put('ada', 36);
@@ -128,7 +128,7 @@ Missing keys give `null`, not `undefined` — see [Core concepts](./core-concept
 Streams are lazy pipelines over any collection (or array, or iterable). Collectors turn a stream into a result.
 
 ```ts
-import { List, Stream, IntStream, Collectors } from 'ts-collections-framework';
+import { List, Stream, IntStream, Collectors } from '@nodestd/collections';
 
 const words = List.of('apple', 'fig', 'banana', 'kiwi', 'cherry');
 
@@ -153,7 +153,7 @@ More in [Streams overview](../streams/overview.md) and [Collectors](../streams/c
 Every collection is a JS iterable, so all the usual language features work. Maps iterate as `[key, value]` pairs.
 
 ```ts
-import { ArrayList, LinkedHashMap } from 'ts-collections-framework';
+import { ArrayList, LinkedHashMap } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3);
 
@@ -187,7 +187,7 @@ Program against the interfaces (`List`, `Set`, `Map`, `Deque`, `NavigableMap`, �
 construction time — the same habit as with the Java API.
 
 ```ts
-import { ArrayList, LinkedList, List, Deque, NavigableMap, TreeMap, Collection } from 'ts-collections-framework';
+import { ArrayList, LinkedList, List, Deque, NavigableMap, TreeMap, Collection } from '@nodestd/collections';
 
 const todo: List<string> = new ArrayList<string>();
 const queue: Deque<number> = new LinkedList<number>();
@@ -214,7 +214,7 @@ give them explicitly on empty constructors (`new HashMap<string, number>()`), ot
 Comparators are plain functions `(a, b) => number`, so they type-check like any callback:
 
 ```ts
-import { TreeSet, Comparator } from 'ts-collections-framework';
+import { TreeSet, Comparator } from '@nodestd/collections';
 
 interface User { name: string; age: number }
 const byAge = new TreeSet<User>(Comparator.comparing((u: User) => u.age));

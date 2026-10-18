@@ -27,7 +27,7 @@ Related pages: [operations](operations.md) · [number streams](number-streams.md
 ## A first example
 
 ```ts
-import { List, Collectors } from 'ts-collections-framework';
+import { List, Collectors } from '@nodestd/collections';
 
 const words = List.of('stream', 'map', 'filter', 'reduce', 'sorted', 'limit');
 
@@ -64,7 +64,7 @@ cover everything else:
 | `StreamSupport.stream(spliterator, parallel)` | a custom source ([spliterators](spliterators.md)) |
 
 ```ts
-import { Stream, IntStream, ArrayList, List } from 'ts-collections-framework';
+import { Stream, IntStream, ArrayList, List } from '@nodestd/collections';
 
 console.log(new ArrayList(List.of(1, 2, 3)).stream().toList()); // → [1, 2, 3]
 console.log(Stream.of('a', 'b').toList());                  // → [a, b]
@@ -88,7 +88,7 @@ console.log(IntStream.rangeClosed(1, 3).sum()); // → 6
 read when the terminal operation runs, so element updates made before then are visible:
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const data = [1, 2];
 const s = Stream.ofArray(data);
@@ -101,7 +101,7 @@ console.log(s.toList()); // → [100, 2]
 and eventually overflows the call stack. To join many streams, flatten them instead:
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const parts = [Stream.of(1, 2), Stream.of(3), Stream.of(4, 5)];
 console.log(Stream.of(...parts).flatMap((p) => p).toList()); // → [1, 2, 3, 4, 5]
@@ -118,7 +118,7 @@ console.log(Stream.of(...parts).flatMap((p) => p).toList()); // → [1, 2, 3, 4,
 A pipeline without a terminal operation does nothing at all:
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const seen: number[] = [];
 const pipeline = Stream.of(1, 2, 3).peek((x) => seen.push(x)).map((x) => x * 2);
@@ -155,7 +155,7 @@ sequenceDiagram
 The `peek` log proves the order:
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const log: string[] = [];
 const result = Stream.of(5, 3, 8, 1, 9, 2)
@@ -177,7 +177,7 @@ Some operations can finish without seeing all elements: `limit`, `takeWhile`, `f
 element-by-element, they work on infinite sources:
 
 ```ts
-import { Stream, IntStream } from 'ts-collections-framework';
+import { Stream, IntStream } from '@nodestd/collections';
 
 // first square above 1000
 console.log(IntStream.iterate(1, (i) => i + 1).map((i) => i * i).filter((sq) => sq > 1000).findFirst().getAsInt()); // → 1024
@@ -201,7 +201,7 @@ A stream is a one-shot pipeline, not a collection. Once an operation has been ca
 twice, create a new stream from the source each time (a `() => Stream` function is a handy "reusable stream").
 
 ```ts
-import { Stream, List } from 'ts-collections-framework';
+import { Stream, List } from '@nodestd/collections';
 
 const s = Stream.of(1, 2, 3);
 console.log(s.count()); // → 3
@@ -245,7 +245,7 @@ flowchart LR
 ```
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const log: string[] = [];
 const first = Stream.of(3, 1, 2)
@@ -261,7 +261,7 @@ console.log(log.join(' ')); // → a3 a1 a2 b1
 `distinct()` is stateful but **not** a barrier: it emits an element the first time it sees it.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const log: string[] = [];
 Stream.of(1, 1, 2, 3)
@@ -283,7 +283,7 @@ sequential here, results come out in source order anyway; treat `unordered()` as
 not rely on any particular order after it.
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 console.log(Stream.of(1, 2, 3).unordered().toList()); // → [1, 2, 3]
 ```
@@ -296,7 +296,7 @@ stream API is specified so that a sequential run gives a valid result, so code w
 (associative reducers, combiners, `findAny`) works unchanged and produces the same results.
 
 ```ts
-import { Stream, List } from 'ts-collections-framework';
+import { Stream, List } from '@nodestd/collections';
 
 const s = List.of(1, 2, 3).parallelStream();
 console.log(s.isParallel()); // → true
@@ -312,7 +312,7 @@ close the stream; JS iteration does (see [Iterating a stream from JS](#iterating
 as suppressed).
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const log: string[] = [];
 const s = Stream.of(1, 2)
@@ -329,7 +329,7 @@ console.log(log); // → [ 'first', 'second' ]
 Streams implement `Symbol.dispose`, so a `using` declaration closes them at the end of the block:
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const events: string[] = [];
 function openLines() {
@@ -357,7 +357,7 @@ stage that throws leaves the source open and reading can go on, as in the refere
 (`close()` or `using`).
 
 ```ts
-import { Stream } from 'ts-collections-framework';
+import { Stream } from '@nodestd/collections';
 
 const seen: string[] = [];
 for (const w of Stream.of('a', 'b').map((s) => s.toUpperCase())) seen.push(w);
@@ -385,7 +385,7 @@ console.log(out); // → [ 'x', 'y' ]
 | Reusable result | yes, it's an array | single use | single use |
 
 ```ts
-import { Stream, Collectors } from 'ts-collections-framework';
+import { Stream, Collectors } from '@nodestd/collections';
 
 type Order = { customer: string; total: number };
 const orders: Order[] = [

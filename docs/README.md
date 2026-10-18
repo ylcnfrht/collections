@@ -1,6 +1,6 @@
-# ts-collections-framework documentation
+# @nodestd/collections documentation
 
-`ts-collections-framework` brings the Java Collections Framework to TypeScript and JS: `ArrayList`,
+`@nodestd/collections` brings the Java Collections Framework to TypeScript and JS: `ArrayList`,
 `LinkedList`, `ArrayDeque`, `PriorityQueue`, `HashSet`, `TreeSet`, `HashMap`, `LinkedHashMap`, `TreeMap`, lazy
 `Stream`s with `Collectors` and `Gatherers`, `Optional`, the `Collections` utility class and more. It keeps the
 semantics that make that API pleasant for real programs — **value equality** through `equals()`/`hashCode()`,
@@ -9,7 +9,7 @@ fitting into JS: every collection is iterable, maps iterate as `[key, value]` pa
 functions, and there are zero dependencies.
 
 ```ts
-import { ArrayList, TreeMap, Collectors, List } from 'ts-collections-framework';
+import { ArrayList, TreeMap, Collectors, List } from '@nodestd/collections';
 
 const words = ArrayList.of('pear', 'fig', 'apple', 'kiwi');
 const byLength = words.stream().collect(
@@ -40,7 +40,7 @@ Other platforms solved this long ago. The best-known example is **Java's Collect
 than twenty-five years has given developers one vocabulary for lists, queues, sets, maps and streams, together with
 a precise specification of how each one behaves.
 
-**ts-collections-framework is inspired by that framework and brings it to Node.js, JS and TypeScript:** the same
+**@nodestd/collections is inspired by that framework and brings it to Node.js, JS and TypeScript:** the same
 interfaces, classes and documented behaviour, adapted to TypeScript. It is
 built to production standards: every documented behaviour is tested, it is verified against the JDK
 on over 1.6 million compared operations ([how](./advanced/testing.md)), and it is tuned to match or beat native
@@ -184,7 +184,7 @@ Also part of the hierarchy:
   `Optional*`.
 
 ```ts
-import { LinkedList, List, Deque, SequencedCollection } from 'ts-collections-framework';
+import { LinkedList, List, Deque, SequencedCollection } from '@nodestd/collections';
 
 const ll = new LinkedList<number>();
 const asList: List<number> = ll;   // LinkedList is a List…

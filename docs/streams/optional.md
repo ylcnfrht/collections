@@ -25,7 +25,7 @@ answer — `findFirst`, `min`, `max`, `reduce(op)`, `Collectors.minBy` — retur
 | `Optional.empty()` | the empty optional (a shared instance) |
 
 ```ts
-import { Optional } from 'ts-collections-framework';
+import { Optional } from '@nodestd/collections';
 
 console.log(Optional.of('ts')); // → Optional[ts]
 console.log(Optional.ofNullable(null)); // → Optional.empty
@@ -49,7 +49,7 @@ try {
 | `isPresent()` / `isEmpty()` | `true` / `false` | `false` / `true` |
 
 ```ts
-import { Optional, IllegalArgumentException } from 'ts-collections-framework';
+import { Optional, IllegalArgumentException } from '@nodestd/collections';
 
 const some = Optional.of(5);
 const none = Optional.empty<number>();
@@ -82,7 +82,7 @@ Prefer `orElseGet` when the fallback is expensive: `orElse(compute())` always ca
 | `or(supplier)` | itself | `supplier()` (another optional) |
 
 ```ts
-import { Optional } from 'ts-collections-framework';
+import { Optional } from '@nodestd/collections';
 
 type User = { name: string; email?: string; manager?: User };
 const ann: User = { name: 'Ann', email: 'ann@example.com' };
@@ -101,7 +101,7 @@ console.log(Optional.empty<string>().or(() => Optional.of('fallback'))); // → 
 ## Side effects: ifPresent, ifPresentOrElse
 
 ```ts
-import { Optional } from 'ts-collections-framework';
+import { Optional } from '@nodestd/collections';
 
 const log: string[] = [];
 Optional.of('saved').ifPresent((v) => log.push(v));
@@ -116,7 +116,7 @@ console.log(log); // → [ 'saved', 'nothing to save' ]
 optionals:
 
 ```ts
-import { Stream, Optional } from 'ts-collections-framework';
+import { Stream, Optional } from '@nodestd/collections';
 
 console.log(Optional.of('x').stream().map((s) => s + '!').toList()); // → [x!]
 
@@ -131,7 +131,7 @@ lists are equal). `hashCode()` is the value's hash code, `0` when empty. `toStri
 `Optional.empty`.
 
 ```ts
-import { Optional, List } from 'ts-collections-framework';
+import { Optional, List } from '@nodestd/collections';
 
 console.log(Optional.of(List.of(1)).equals(Optional.of(List.of(1)))); // → true
 console.log(Optional.empty().equals(Optional.empty())); // → true
@@ -149,7 +149,7 @@ console.log(Optional.of(List.of(1, 2)).toString()); // → Optional[[1, 2]]
 stream first (`boxed()`) if you need an `Optional<number>`.
 
 ```ts
-import { IntStream, OptionalInt, OptionalLong, OptionalDouble } from 'ts-collections-framework';
+import { IntStream, OptionalInt, OptionalLong, OptionalDouble } from '@nodestd/collections';
 
 const max = IntStream.of(3, 9, 4).max();
 console.log(max, max.getAsInt()); // → OptionalInt[9] 9
@@ -187,7 +187,7 @@ try {
   (`Stream.of(null).findFirst()`); filter nulls out first.
 
 ```ts
-import { Optional, Stream } from 'ts-collections-framework';
+import { Optional, Stream } from '@nodestd/collections';
 
 console.log(Optional.of(1).map(() => null).isPresent()); // → false
 console.log(Optional.empty<string | null>().orElse(null)); // → null
@@ -202,7 +202,7 @@ console.log(Stream.of(null, 'a').filter((x) => x !== null).findFirst()); // → 
 ## Idioms: replacing null checks
 
 ```ts
-import { Optional, Stream, HashMap } from 'ts-collections-framework';
+import { Optional, Stream, HashMap } from '@nodestd/collections';
 
 type Config = { db?: { host?: string; port?: number } };
 const config: Config = { db: { host: 'localhost' } };

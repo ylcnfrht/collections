@@ -1,7 +1,7 @@
 {
   "entryPoints": ["src/index.ts"],
   "out": "docs-api",
-  "name": "ts-collections-framework",
+  "name": "@nodestd/collections",
   "readme": "none",
   "excludeInternal": true,
   "excludePrivate": true,

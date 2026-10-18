@@ -7,9 +7,9 @@ import * as lib from '../../src/index';
 import type { ApiRow } from './api';
 
 const WRAPPED = Symbol('covWrapped');
-const SET_BRAND = Symbol.for('ts-collections-framework.Set');
+const SET_BRAND = Symbol.for('@nodestd/collections.Set');
 /** Harness subclasses of library skeletons carry this static (see tsRunner). */
-export const HARNESS = Symbol.for('ts-collections-framework.diff.harness');
+export const HARNESS = Symbol.for('@nodestd/collections.diff.harness');
 
 let depth = 0;
 /** true while classifying a receiver (its property reads must not count) */
