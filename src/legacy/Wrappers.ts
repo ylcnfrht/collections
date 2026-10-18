@@ -196,6 +196,10 @@ function checkedEntrySet<K, V>(s: Set<MapEntry<K, V>>, cv: <T>(o: T) => T): Set<
       return a.length > 0 ? new ImmutableList(es, false).toArray(a[0] as (n: number) => MapEntry<K, V>[]) : es;
     },
     forEach: (f: (e: MapEntry<K, V>) => void) => (requireNonNull(f), s.forEach((e) => f(wrap(e)))),
+    // the bulk removers hand entries to user code (the filter, c.contains) too
+    removeIf: (p: (e: MapEntry<K, V>) => boolean) => (requireNonNull(p), s.removeIf((e) => p(wrap(e)))),
+    removeAll: (c: Collection<unknown>) => (requireNonNull(c), s.removeIf((e) => c.contains(wrap(e)))),
+    retainAll: (c: Collection<unknown>) => (requireNonNull(c), s.removeIf((e) => !c.contains(wrap(e)))),
   }));
 }
 

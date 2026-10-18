@@ -764,6 +764,9 @@ describe('checked wrappers', () => {
       () => m.entrySet().stream().forEach((e) => e.setValue('x')),
       () => m.entrySet().parallelStream().findFirst().get().setValue('x'),
       () => m.entrySet().spliterator().tryAdvance((e) => e.setValue('x')),
+      () => m.entrySet().removeIf((e) => (e.setValue('x'), false)),
+      () => m.entrySet().retainAll({ contains: (e: any) => (e.setValue('x'), true) } as any),
+      () => m.entrySet().removeAll({ contains: (e: any) => (e.setValue('x'), false), size: () => 99 } as any),
     ];
     for (const f of bad) expectThrows(f, CCE);
     expect(base.containsKey('z')).toBe(false);
