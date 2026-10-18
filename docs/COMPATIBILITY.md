@@ -11,12 +11,12 @@ This library and the reference runtime were run on the same randomly generated o
 | Reference runtime | openjdk version "23.0.2" 2025-01-21 |
 | Seeds | 1..40 (40 batches of 5000) |
 | Scripts | 200,000 |
-| Operations compared | 1,693,921 |
+| Operations compared | 1,692,438 |
 | Comparable API covered | 1602 / 1602 (100.0%) |
-| Excluded API rows (justified below) | 107 |
-| Divergent scripts | 58 in 22 signature(s) |
-| Divergence assessment | intentional: 9, reference-quirk: 13 |
-| Run time | 37s on 8 worker process(es) |
+| Excluded API rows (justified below) | 141 |
+| Divergent scripts | 57 in 21 signature(s) |
+| Divergence assessment | intentional: 8, reference-quirk: 13 |
+| Run time | 61s on 8 worker process(es) |
 
 ## Scripts per target
 
@@ -24,56 +24,56 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 
 | Target | Scripts |
 |---|---:|
-| AbsColl | 2,472 |
-| AbsList | 2,273 |
-| AbsMap | 2,382 |
-| AbsQueue | 2,317 |
-| AbsSeqList | 2,319 |
-| AbsSet | 2,421 |
-| ArrayDeque | 2,341 |
-| ArrayList | 2,377 |
-| EmptyList | 2,345 |
-| EmptyListConst | 2,390 |
-| EmptyMap | 2,314 |
-| EmptyMapConst | 2,393 |
-| EmptyNavigableMap | 2,343 |
-| EmptyNavigableSet | 2,381 |
-| EmptySet | 2,320 |
-| EmptySetConst | 2,310 |
-| EmptySortedMap | 2,339 |
-| EmptySortedSet | 2,358 |
-| HashMap | 2,357 |
-| HashSet | 2,301 |
-| IdentityHashMap | 2,340 |
-| LinkedHashMap | 2,284 |
-| LinkedHashMapAccess | 2,411 |
-| LinkedHashMapLru | 2,345 |
-| LinkedHashSet | 2,285 |
-| LinkedList | 2,347 |
-| ListCopyOf | 2,318 |
-| ListOf | 2,367 |
-| MapCopyOf | 2,353 |
-| MapOf | 2,285 |
-| MapOfPairs | 2,361 |
-| Misc | 28,104 |
-| NCopies | 2,413 |
-| PriorityQueue | 2,386 |
-| PriorityQueueRev | 2,437 |
-| SetCopyOf | 2,348 |
-| SetOf | 2,365 |
-| Singleton | 2,410 |
-| SingletonList | 2,447 |
-| SingletonMap | 2,273 |
-| Stack | 2,404 |
-| Stream | 58,737 |
-| TreeMap | 2,394 |
-| TreeMapRev | 2,405 |
-| TreeSet | 2,334 |
-| TreeSetMod3 | 2,377 |
-| TreeSetRev | 2,325 |
-| UnmodList | 2,358 |
-| Vector | 2,433 |
-| VectorCap | 2,301 |
+| AbsColl | 2,412 |
+| AbsList | 2,328 |
+| AbsMap | 2,428 |
+| AbsQueue | 2,334 |
+| AbsSeqList | 2,332 |
+| AbsSet | 2,395 |
+| ArrayDeque | 2,310 |
+| ArrayList | 2,407 |
+| EmptyList | 2,375 |
+| EmptyListConst | 2,395 |
+| EmptyMap | 2,325 |
+| EmptyMapConst | 2,322 |
+| EmptyNavigableMap | 2,336 |
+| EmptyNavigableSet | 2,365 |
+| EmptySet | 2,303 |
+| EmptySetConst | 2,332 |
+| EmptySortedMap | 2,354 |
+| EmptySortedSet | 2,344 |
+| HashMap | 2,359 |
+| HashSet | 2,326 |
+| IdentityHashMap | 2,365 |
+| LinkedHashMap | 2,348 |
+| LinkedHashMapAccess | 2,394 |
+| LinkedHashMapLru | 2,381 |
+| LinkedHashSet | 2,325 |
+| LinkedList | 2,361 |
+| ListCopyOf | 2,343 |
+| ListOf | 2,369 |
+| MapCopyOf | 2,333 |
+| MapOf | 2,309 |
+| MapOfPairs | 2,354 |
+| Misc | 28,309 |
+| NCopies | 2,400 |
+| PriorityQueue | 2,338 |
+| PriorityQueueRev | 2,411 |
+| SetCopyOf | 2,277 |
+| SetOf | 2,392 |
+| Singleton | 2,374 |
+| SingletonList | 2,376 |
+| SingletonMap | 2,300 |
+| Stack | 2,341 |
+| Stream | 58,559 |
+| TreeMap | 2,421 |
+| TreeMapRev | 2,385 |
+| TreeSet | 2,360 |
+| TreeSetMod3 | 2,373 |
+| TreeSetRev | 2,386 |
+| UnmodList | 2,392 |
+| Vector | 2,352 |
+| VectorCap | 2,290 |
 
 ## Normalisations (intentional deviations)
 
@@ -101,42 +101,18 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 
 ### Stream pipe:primIter result ref=value ours=value
 
-- scripts: 10; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
+- scripts: 9; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
 
 ```
-   @2-2445 Stream
->> pipe of [3] | flatMap dup | peek | flatMapToInt dup | primIter h
-   ref : [true] LOG[3,3]
-   ours: [true] LOG[3]
-```
-
-### HashSet splw result ref=value ours=value
-
-- scripts: 7; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
-
-```
-   @3-3928 HashSet
-   init [']
->> splw c,f,c,x,f,t
-   ref : "[DISTINCT|SIZED,#1,DISTINCT,~,#0,false]" ;; [""]
-   ours: "[DISTINCT|SIZED,#1,DISTINCT|SIZED,~,#0,false]" ;; [""]
-```
-
-### Stack/reversed litw result ref=value ours=value
-
-- scripts: 6; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
-
-```
-   @28-2041 Stack/reversed
-   init ['a]
->> litw 1 h,a:'bb,r
-   ref : "[false,a,r]" ;; ["a"] || ["a"]
-   ours: "[false,a,EXC:IllegalStateException]" ;; ["a","bb"] || ["bb","a"]
+   @28-1954 Stream
+>> pipe generate 5 | limit 6 | flatMapToLong dup | peek | primIter N
+   ref : [5] LOG[5,5]
+   ours: [5] LOG[5]
 ```
 
 ### Stream pipe:splwT result ref=value ours=value
 
-- scripts: 6; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
+- scripts: 7; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
 
 ```
    @24-1577 Stream
@@ -145,21 +121,70 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: [UNKNOWN,45e-1,ORDERED] LOG[45e-1]
 ```
 
-### HashSet/synchronizedSet splw result ref=value ours=value
+### HashSet splw result ref=value ours=value
 
-- scripts: 5; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
+- scripts: 6; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
 
 ```
-   @25-1663 HashSet/synchronizedSet
-   init [-2]
->> splw f,e,t,c,s,x,s
-   ref : "[#1,~,false,DISTINCT,S#0]" ;; [-2] || [-2]
-   ours: "[#1,~,false,DISTINCT|SIZED,S#0]" ;; [-2] || [-2]
+   @3-3880 HashSet
+   init [']
+>> splw c,f,c,x,f,t
+   ref : "[DISTINCT|SIZED,#1,DISTINCT,~,#0,false]" ;; [""]
+   ours: "[DISTINCT|SIZED,#1,DISTINCT|SIZED,~,#0,false]" ;; [""]
+```
+
+### HashSet/synchronizedSet splw result ref=value ours=value
+
+- scripts: 6; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
+
+```
+   @33-1075 HashSet/synchronizedSet
+   init [9]
+>> splw f,f,f,f,c
+   ref : "[#1,#0,#0,#0,DISTINCT]" ;; [9] || [9]
+   ours: "[#1,#0,#0,#0,DISTINCT|SIZED]" ;; [9] || [9]
+```
+
+### Stack/reversed litw result ref=value ours=value
+
+- scripts: 4; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+
+```
+   @29-2739 Stack/reversed
+   init []
+>> litw 0 a:16,s:11,r,i
+   ref : "[a,s,r,0]" ;; [] || []
+   ours: "[a,EXC:IllegalStateException]" ;; [16] || [16]
+```
+
+### AbsSeqList/reversed litw result ref=value ours=value
+
+- scripts: 4; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+
+```
+   @31-4103 AbsSeqList/reversed
+   init [8,3]
+>> litw 2 a:3,j,s:1,h,s:1,a:3,r,p
+   ref : "[a,2,s,false,s,a,r,1]" ;; [3,8,1] || [1,8,3]
+   ours: "[a,2,EXC:IllegalStateException]" ;; [3,8,3] || [3,8,3]
+```
+
+### Vector/reversed/subList litw result ref=value ours=value
+
+- scripts: 2; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+
+```
+   @25-2709 Vector/reversed/subList:1:2
+   init ['c,'bb]
+   addAt 1 'b
+>> litw 2 a:',s:'ca,n,f
+   ref : "[a,s,EXC:NoSuchElementException]" ;; ["c","b","ca"] || ["ca","b","c","bb"]
+   ours: "[a,EXC:IllegalStateException]" ;; ["c","b",""] || ["","b","c","bb"]
 ```
 
 ### HashSet/unmodifiableSet splw result ref=value ours=value
 
-- scripts: 4; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
+- scripts: 2; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
 
 ```
    @5-1200 HashSet/unmodifiableSet
@@ -169,9 +194,33 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[#1,~,~,DISTINCT|SIZED,EXC:IllegalStateException]" ;; ["ab"] || ["ab"]
 ```
 
+### Vector/reversed litw result ref=value ours=value
+
+- scripts: 2; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+
+```
+   @2-3470 Vector/reversed
+   init ['c,'ca,null,'a]
+>> litw 4 i,h,a:'b,a:'b,h,r,s:'a,p
+   ref : "[4,false,a,a,false,r,EXC:IllegalStateException]" ;; ["a",null,"ca","c","b"] || ["b","c","ca",null,"a"]
+   ours: "[4,false,a,a,false,EXC:IllegalStateException]" ;; ["a",null,"ca","c","b","b"] || ["b","b","c","ca",null,"a"]
+```
+
+### AbsSeqList/reversed/subList litw result ref=value ours=value
+
+- scripts: 2; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+
+```
+   @11-4873 AbsSeqList/reversed/subList:2:3
+   init ['ab,'ca,'b]
+>> litw 1 a:'b,s:',f
+   ref : "[a,s,[]]" ;; ["ab",""] || ["","ab","ca","b"]
+   ours: "[a,EXC:IllegalStateException]" ;; ["ab","b"] || ["b","ab","ca","b"]
+```
+
 ### HashSet/checkedSet splw result ref=value ours=value
 
-- scripts: 3; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
+- scripts: 2; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
 
 ```
    @22-1021 HashSet/checkedSet:int
@@ -181,74 +230,16 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[#1,~,DISTINCT|SIZED,false,false]" ;; [5] || [5]
 ```
 
-### Stream pipe:allMatch result ref=value ours=value
+### HashMap/newSetFromMap splw result ref=value ours=value
 
-- scripts: 2; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
-
-```
-   @15-936 Stream
->> pipe iterate3 8 lt10 plus1 | peek | gather custom mapConc | allMatch even
-   ref : false LOG[8,9]
-   ours: false LOG[8]
-```
-
-### AbsSeqList/reversed litw result ref=value ours=value
-
-- scripts: 2; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+- scripts: 2; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
 
 ```
-   @22-4945 AbsSeqList/reversed
-   init []
->> litw 0 a:',H,r,s:'ab,n
-   ref : "[a,true,r,EXC:IllegalStateException]" ;; [] || []
-   ours: "[a,true,EXC:IllegalStateException]" ;; [""] || [""]
-```
-
-### Vector/reversed litw result ref=value ours=value
-
-- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
-
-```
-   @2-3385 Vector/reversed
-   init ['c,'ca,null,'a]
->> litw 4 i,h,a:'b,a:'b,h,r,s:'a,p
-   ref : "[4,false,a,a,false,r,EXC:IllegalStateException]" ;; ["a",null,"ca","c","b"] || ["b","c","ca",null,"a"]
-   ours: "[4,false,a,a,false,EXC:IllegalStateException]" ;; ["a",null,"ca","c","b","b"] || ["b","b","c","ca",null,"a"]
-```
-
-### LinkedList/reversed litw result ref=value ours=value
-
-- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
-
-```
-   @10-3901 LinkedList/reversed
-   init [null,-2]
->> litw 2 h,j,a:5,r,h,a:5
-   ref : "[false,1,a,r,false,a]" ;; [-2,null,5] || [5,null,-2]
-   ours: "[false,1,a,EXC:IllegalStateException]" ;; [-2,null,5] || [5,null,-2]
-```
-
-### ArrayList/reversed litw result ref=value ours=value
-
-- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
-
-```
-   @3-2957 ArrayList/reversed
-   init []
->> litw 0 a:3,a:3,s:1,p
-   ref : "[a,a,s,1]" ;; [3,1] || [1,3]
-   ours: "[a,a,EXC:IllegalStateException]" ;; [3,3] || [3,3]
-```
-
-### Stream pipe:findAny result ref=EXC:NullPointerException ours=value
-
-- scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
-
-```
-   @11-810 Stream
->> pipe concat [6] [null] | filter pos | gather custom mapConc | findAny
-   ref : EXC:NullPointerException
-   ours: OPT[7]
+   @30-1800 HashMap/newSetFromMap
+   init [']
+>> splw f,c,s,c,s
+   ref : "[#1,DISTINCT,S#0]" ;; [""] || {""=true}
+   ours: "[#1,DISTINCT|SIZED,S#0]" ;; [""] || {""=true}
 ```
 
 ### Stream pipe:forEach result ref=value ours=value
@@ -262,15 +253,38 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "void" LOG[-5,-4,8,9]
 ```
 
-### Stream pipe:iterT result ref=value ours=value
+### Stream pipe:anyMatch result ref=EXC:NullPointerException ours=value
 
-- scripts: 1; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
+- scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
 
 ```
-   @12-3316 Stream
->> pipe builder ['ab] | flatMapToDouble dup | peek | boxed | iterT h,h,n
-   ref : [true,true,2] LOG[2,2]
-   ours: [true,true,2] LOG[2]
+   @19-3340 Stream
+>> pipe concat ['a,null] [] | map len | gather custom mapConc | anyMatch lt10
+   ref : EXC:NullPointerException
+   ours: true
+```
+
+### Stream pipe:allMatch result ref=value ours=value
+
+- scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
+
+```
+   @27-2412 Stream
+>> pipe iterate3 2 lt10 times2 | peek | gather custom mapConc | peek | allMatch lt10
+   ref : true LOG[2,4,8,3,5,9]
+   ours: true LOG[2,3,4,5,8,9]
+```
+
+### Vector/subList/reversed litw result ref=value ours=value
+
+- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+
+```
+   @12-3768 Vector/subList:1:1/reversed
+   init [8]
+>> litw 0 h,h,a:8,s:11
+   ref : "[false,false,a,s]" ;; [11] || [8,11]
+   ours: "[false,false,a,EXC:IllegalStateException]" ;; [8] || [8,8]
 ```
 
 ### Stream pipe:count result ref=EXC:NullPointerException ours=value
@@ -289,7 +303,7 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 - scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
 
 ```
-   @5-3427 AbsList/reversed/subList:2:3
+   @5-3604 AbsList/reversed/subList:2:3
    init [9,2,3]
    nCopiesAddAll 1 6
 >> litw 1 f,s:0,p,j,a:8,s:0,p,a:8
@@ -297,41 +311,15 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[[6],s,0,0,a,EXC:IllegalStateException]" ;; [9,8,0] || [0,8,9,2,3]
 ```
 
-### AbsSeqList/reversed/subList litw result ref=value ours=value
+### Stream pipe:iterT result ref=value ours=value
 
-- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
-
-```
-   @14-869 AbsSeqList/reversed/subList:2:4
-   init ['ca,null,'ab,null]
->> litw 1 a:'abc,H,p,a:'abc,r,n
-   ref : "[a,true,"abc",a,r,"abc"]" ;; [null,"abc","ca"] || ["ca","abc",null,"ab",null]
-   ours: "[a,true,"abc",a,EXC:IllegalStateException]" ;; [null,"abc","abc","ca"] || ["ca","abc","abc",null,"ab",null]
-```
-
-### AbsList/reversed litw result ref=value ours=value
-
-- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
+- scripts: 1; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
 
 ```
-   @30-508 AbsList/reversed
-   init [0,-2]
->> litw 1 H,n,f,a:7,r,h,h,p
-   ref : "[true,0,[],a,r,false,false,0]" ;; [-2,0] || [0,-2]
-   ours: "[true,0,[],a,EXC:IllegalStateException]" ;; [-2,0,7] || [7,0,-2]
-```
-
-### Vector/reversed/subList litw result ref=value ours=value
-
-- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
-
-```
-   @38-2924 Vector/reversed/subList:4:4
-   init ['ca,'a,'abc,null]
-   nCopiesAddAll 2 'abc
->> litw 1 a:'ba,i,s:'ab
-   ref : "[a,2,s]" ;; ["abc","ab","abc"] || ["abc","ab","abc","ca","a","abc",null]
-   ours: "[a,2,EXC:IllegalStateException]" ;; ["abc","ba","abc"] || ["abc","ba","abc","ca","a","abc",null]
+   @6-3085 Stream
+>> pipe slong [7] | flatMap upto | peek | boxed | iterT n,h,h
+   ref : [0,true,true] LOG[0,1,2]
+   ours: [0,true,true] LOG[0,1]
 ```
 
 ### Stream pipe:collect3 result ref=EXC:NullPointerException ours=EXC:NullPointerException
@@ -345,15 +333,16 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: EXC:NullPointerException LOG[null]
 ```
 
-### Stream pipe:findFirstStr result ref=value ours=value
+### AbsList/reversed litw result ref=value ours=value
 
-- scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
+- scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
 
 ```
-   @23-4232 Stream
->> pipe dof [2.5,5] | peek | mapToObj id | gather custom mapConc | findFirstStr
-   ref : "Optional[3.5]" LOG[25e-1,5]
-   ours: "Optional[3.5]" LOG[25e-1]
+   @8-3061 AbsList/reversed
+   init ['a,'ab,',null]
+>> litw 1 n,n,n,a:',s:'c,j,j
+   ref : "["","ab","a",a,s,4,4]" ;; [null,"","ab","a","c"] || ["c","a","ab","",null]
+   ours: "["","ab","a",a,EXC:IllegalStateException]" ;; [null,"","ab","a",""] || ["","a","ab","",null]
 ```
 
 ## API coverage matrix
@@ -390,37 +379,37 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | RANDOM_ACCESS (object) | 0/0 | 1 |
 | isRandomAccess (object) | 1/1 | 0 |
 | RandomAccess (interface) | 0/0 | 1 |
-| AbstractCollection (class) | 16/16 | 5 |
-| AbstractList (class) | 32/32 | 6 |
-| AbstractSequentialList (class) | 34/34 | 4 |
-| AbstractQueue (class) | 18/18 | 7 |
-| AbstractSet (class) | 17/17 | 5 |
-| AbstractMap (class) | 22/22 | 3 |
-| SimpleEntry (class) | 6/6 | 0 |
-| SimpleImmutableEntry (class) | 6/6 | 0 |
-| ArrayList (class) | 39/39 | 3 |
+| AbstractCollection (class) | 16/16 | 6 |
+| AbstractList (class) | 32/32 | 8 |
+| AbstractSequentialList (class) | 34/34 | 6 |
+| AbstractQueue (class) | 18/18 | 8 |
+| AbstractSet (class) | 17/17 | 6 |
+| AbstractMap (class) | 22/22 | 4 |
+| SimpleEntry (class) | 6/6 | 1 |
+| SimpleImmutableEntry (class) | 6/6 | 1 |
+| ArrayList (class) | 39/39 | 5 |
 | ArrayList (static) | 0/0 | 1 |
-| LinkedList (class) | 52/52 | 2 |
+| LinkedList (class) | 52/52 | 4 |
 | LinkedList (static) | 0/0 | 1 |
-| Vector (class) | 52/52 | 4 |
+| Vector (class) | 52/52 | 6 |
 | Vector (static) | 0/0 | 1 |
-| Stack (class) | 57/57 | 4 |
+| Stack (class) | 57/57 | 6 |
 | Stack (static) | 0/0 | 1 |
-| ArrayDeque (class) | 42/42 | 2 |
+| ArrayDeque (class) | 42/42 | 3 |
 | ArrayDeque (static) | 0/0 | 1 |
-| PriorityQueue (class) | 24/24 | 2 |
+| PriorityQueue (class) | 24/24 | 3 |
 | PriorityQueue (static) | 0/0 | 1 |
-| HashMap (class) | 25/25 | 4 |
+| HashMap (class) | 25/25 | 5 |
 | HashMap (static) | 1/1 | 1 |
-| LinkedHashMap (class) | 35/35 | 5 |
+| LinkedHashMap (class) | 35/35 | 6 |
 | LinkedHashMap (static) | 2/2 | 2 |
-| TreeMap (class) | 52/52 | 1 |
-| IdentityHashMap (class) | 24/24 | 3 |
-| HashSet (class) | 21/21 | 3 |
+| TreeMap (class) | 52/52 | 2 |
+| IdentityHashMap (class) | 24/24 | 4 |
+| HashSet (class) | 21/21 | 4 |
 | HashSet (static) | 1/1 | 1 |
-| LinkedHashSet (class) | 28/28 | 3 |
+| LinkedHashSet (class) | 28/28 | 4 |
 | LinkedHashSet (static) | 2/2 | 1 |
-| TreeSet (class) | 42/42 | 2 |
+| TreeSet (class) | 42/42 | 3 |
 | TreeSet (static) | 0/0 | 1 |
 | Collections (object) | 67/67 | 0 |
 | Stream (object) | 7/7 | 2 |
@@ -448,20 +437,20 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Integrator (interface) | 0/0 | 1 |
 | Downstream (interface) | 2/2 | 0 |
 | DefinedGatherer (interface) | 5/5 | 0 |
-| Optional (class) | 16/16 | 0 |
+| Optional (class) | 16/16 | 1 |
 | Optional (static) | 3/3 | 0 |
-| OptionalInt (class) | 12/12 | 0 |
+| OptionalInt (class) | 12/12 | 1 |
 | OptionalInt (static) | 2/2 | 0 |
-| OptionalLong (class) | 12/12 | 0 |
+| OptionalLong (class) | 12/12 | 1 |
 | OptionalLong (static) | 2/2 | 0 |
-| OptionalDouble (class) | 12/12 | 0 |
+| OptionalDouble (class) | 12/12 | 1 |
 | OptionalDouble (static) | 2/2 | 0 |
 | Spliterator (object) | 8/8 | 0 |
 | Spliterator (interface) | 8/8 | 0 |
 | Spliterators (static) | 11/11 | 0 |
-| IntSummaryStatistics (class) | 8/8 | 0 |
-| LongSummaryStatistics (class) | 8/8 | 0 |
-| DoubleSummaryStatistics (class) | 8/8 | 0 |
+| IntSummaryStatistics (class) | 8/8 | 1 |
+| LongSummaryStatistics (class) | 8/8 | 1 |
+| DoubleSummaryStatistics (class) | 8/8 | 1 |
 | RuntimeException (class) | 0/0 | 1 |
 | IndexOutOfBoundsException (class) | 1/1 | 0 |
 | ArrayIndexOutOfBoundsException (class) | 1/1 | 0 |
@@ -478,9 +467,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| hasMoreElements | 3,819 |
-| nextElement | 7,941 |
-| asIterator | 3,884 |
+| hasMoreElements | 3,851 |
+| nextElement | 8,096 |
+| asIterator | 3,963 |
 
 </details>
 
@@ -488,10 +477,10 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| hasNext | 4,205,391 |
-| next | 3,287,990 |
-| remove | 21,475 |
-| forEachRemaining | 31,447 |
+| hasNext | 4,128,562 |
+| next | 3,224,972 |
+| remove | 20,845 |
+| forEachRemaining | 31,137 |
 
 </details>
 
@@ -499,16 +488,16 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| hasPrevious | 4,644 |
-| previous | 3,906 |
-| nextIndex | 653 |
-| previousIndex | 643 |
-| set | 3,189 |
-| add | 1,993 |
-| hasNext | 2,280,003 |
-| next | 1,749,208 |
-| remove | 7,905 |
-| forEachRemaining | 10,066 |
+| hasPrevious | 4,018 |
+| previous | 3,366 |
+| nextIndex | 514 |
+| previousIndex | 533 |
+| set | 2,718 |
+| add | 1,692 |
+| hasNext | 2,100,978 |
+| next | 1,562,768 |
+| remove | 6,865 |
+| forEachRemaining | 7,349 |
 
 </details>
 
@@ -524,26 +513,26 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 836,440 |
-| forEach | 9,152 |
-| size | 9,820 |
-| isEmpty | 9,020 |
-| contains | 16,891 |
-| toArray | 22,790 |
-| add | 32,571 |
-| remove | 29,088 |
-| containsAll | 9,226 |
-| addAll | 13,276 |
-| removeAll | 9,236 |
-| removeIf | 16,915 |
-| retainAll | 16,880 |
-| clear | 11,296 |
-| equals | 20,441 |
+| iterator | 833,995 |
+| forEach | 9,015 |
+| size | 9,815 |
+| isEmpty | 9,043 |
+| contains | 16,951 |
+| toArray | 22,785 |
+| add | 32,485 |
+| remove | 29,071 |
+| containsAll | 9,159 |
+| addAll | 13,309 |
+| removeAll | 9,157 |
+| removeIf | 16,787 |
+| retainAll | 16,677 |
+| clear | 11,403 |
+| equals | 20,564 |
 | hashCode | excluded: identity hash code in the reference for these wrappers/views (not overridden there) |
-| toString | 11,265 |
-| spliterator | 8,988 |
-| stream | 33,024 |
-| parallelStream | 9,348 |
+| toString | 11,420 |
+| spliterator | 9,041 |
+| stream | 32,694 |
+| parallelStream | 9,289 |
 
 </details>
 
@@ -551,33 +540,33 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| reversed | 7,847 |
-| addFirst | 4,332 |
-| addLast | 4,264 |
-| getFirst | 4,382 |
-| getLast | 4,406 |
-| removeFirst | 4,352 |
-| removeLast | 4,420 |
-| iterator | 503,200 |
-| forEach | 4,690 |
-| size | 5,389 |
-| isEmpty | 4,622 |
-| contains | 8,011 |
-| toArray | 13,385 |
-| add | 19,579 |
-| remove | 12,913 |
-| containsAll | 4,764 |
-| addAll | 8,984 |
-| removeAll | 4,819 |
-| removeIf | 8,060 |
-| retainAll | 6,301 |
-| clear | 6,897 |
-| equals | 11,601 |
+| reversed | 7,723 |
+| addFirst | 4,250 |
+| addLast | 4,325 |
+| getFirst | 4,291 |
+| getLast | 4,331 |
+| removeFirst | 4,307 |
+| removeLast | 4,340 |
+| iterator | 501,167 |
+| forEach | 4,649 |
+| size | 5,340 |
+| isEmpty | 4,630 |
+| contains | 8,090 |
+| toArray | 13,333 |
+| add | 19,624 |
+| remove | 12,947 |
+| containsAll | 4,823 |
+| addAll | 8,998 |
+| removeAll | 4,714 |
+| removeIf | 7,986 |
+| retainAll | 6,276 |
+| clear | 6,913 |
+| equals | 11,581 |
 | hashCode | excluded: identity hash code in the reference for these wrappers/views (not overridden there) |
-| toString | 6,971 |
-| spliterator | 4,640 |
-| stream | 19,784 |
-| parallelStream | 4,834 |
+| toString | 7,009 |
+| spliterator | 4,698 |
+| stream | 19,480 |
+| parallelStream | 4,755 |
 
 </details>
 
@@ -585,30 +574,30 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| offer | 60 |
-| remove | 223 |
-| poll | 55 |
-| element | 63 |
-| peek | 62 |
-| iterator | 5,920 |
-| forEach | 93 |
-| size | 71 |
-| isEmpty | 64 |
-| contains | 66 |
-| toArray | 228 |
-| add | 259 |
-| containsAll | 68 |
-| addAll | 103 |
-| removeAll | 77 |
-| removeIf | 61 |
-| retainAll | 66 |
-| clear | 69 |
-| equals | 143 |
+| offer | 63 |
+| remove | 219 |
+| poll | 45 |
+| element | 53 |
+| peek | 67 |
+| iterator | 5,658 |
+| forEach | 80 |
+| size | 64 |
+| isEmpty | 61 |
+| contains | 58 |
+| toArray | 206 |
+| add | 258 |
+| containsAll | 59 |
+| addAll | 90 |
+| removeAll | 76 |
+| removeIf | 55 |
+| retainAll | 56 |
+| clear | 67 |
+| equals | 127 |
 | hashCode | excluded: identity hash code in the reference for these wrappers/views (not overridden there) |
-| toString | 62 |
-| spliterator | 67 |
-| stream | 228 |
-| parallelStream | 77 |
+| toString | 57 |
+| spliterator | 59 |
+| stream | 201 |
+| parallelStream | 63 |
 
 </details>
 
@@ -616,48 +605,48 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| remove | 223 |
-| offerFirst | 58 |
-| offerLast | 68 |
-| pollFirst | 71 |
-| pollLast | 79 |
-| peekFirst | 57 |
-| peekLast | 88 |
-| removeFirstOccurrence | 82 |
-| removeLastOccurrence | 67 |
+| remove | 219 |
+| offerFirst | 65 |
+| offerLast | 69 |
+| pollFirst | 52 |
+| pollLast | 70 |
+| peekFirst | 59 |
+| peekLast | 80 |
+| removeFirstOccurrence | 78 |
+| removeLastOccurrence | 55 |
 | push | 57 |
-| pop | 77 |
-| descendingIterator | 153 |
+| pop | 67 |
+| descendingIterator | 131 |
 | reversed | 60 |
-| offer | 60 |
-| poll | 55 |
-| element | 63 |
-| peek | 62 |
-| iterator | 5,920 |
-| forEach | 93 |
-| size | 71 |
-| isEmpty | 64 |
-| contains | 66 |
-| toArray | 228 |
-| add | 259 |
-| containsAll | 68 |
-| addAll | 103 |
-| removeAll | 77 |
-| removeIf | 61 |
-| retainAll | 66 |
-| clear | 69 |
-| equals | 143 |
+| offer | 63 |
+| poll | 45 |
+| element | 53 |
+| peek | 67 |
+| iterator | 5,658 |
+| forEach | 80 |
+| size | 64 |
+| isEmpty | 61 |
+| contains | 58 |
+| toArray | 206 |
+| add | 258 |
+| containsAll | 59 |
+| addAll | 90 |
+| removeAll | 76 |
+| removeIf | 55 |
+| retainAll | 56 |
+| clear | 67 |
+| equals | 127 |
 | hashCode | excluded: identity hash code in the reference for these wrappers/views (not overridden there) |
-| toString | 62 |
-| spliterator | 67 |
-| stream | 228 |
-| parallelStream | 77 |
-| addFirst | 71 |
-| addLast | 42 |
-| getFirst | 58 |
-| getLast | 67 |
-| removeFirst | 71 |
-| removeLast | 71 |
+| toString | 57 |
+| spliterator | 59 |
+| stream | 201 |
+| parallelStream | 63 |
+| addFirst | 60 |
+| addLast | 44 |
+| getFirst | 63 |
+| getLast | 61 |
+| removeFirst | 62 |
+| removeLast | 70 |
 
 </details>
 
@@ -665,33 +654,33 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| reversed | 1,680 |
-| iterator | 170,002 |
-| forEach | 2,095 |
-| size | 2,100 |
-| isEmpty | 2,005 |
-| contains | 5,438 |
-| toArray | 4,322 |
-| add | 6,240 |
-| remove | 5,751 |
-| containsAll | 2,081 |
+| reversed | 1,664 |
+| iterator | 170,127 |
+| forEach | 2,112 |
+| size | 2,131 |
+| isEmpty | 2,003 |
+| contains | 5,492 |
+| toArray | 4,325 |
+| add | 6,298 |
+| remove | 5,795 |
+| containsAll | 2,104 |
 | addAll | 1,955 |
-| removeAll | 2,140 |
-| removeIf | 5,374 |
-| retainAll | 3,630 |
-| clear | 3,150 |
-| equals | 4,158 |
-| hashCode | 2,125 |
-| toString | 1,991 |
-| spliterator | 2,035 |
-| stream | 6,186 |
-| parallelStream | 2,092 |
-| addFirst | 1,750 |
-| addLast | 1,743 |
-| getFirst | 1,796 |
-| getLast | 1,813 |
-| removeFirst | 1,818 |
-| removeLast | 1,829 |
+| removeAll | 2,143 |
+| removeIf | 5,406 |
+| retainAll | 3,663 |
+| clear | 3,169 |
+| equals | 4,180 |
+| hashCode | 2,169 |
+| toString | 2,066 |
+| spliterator | 2,071 |
+| stream | 6,176 |
+| parallelStream | 2,085 |
+| addFirst | 1,751 |
+| addLast | 1,763 |
+| getFirst | 1,794 |
+| getLast | 1,802 |
+| removeFirst | 1,792 |
+| removeLast | 1,795 |
 
 </details>
 
@@ -699,39 +688,39 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| comparator | 1,437 |
-| first | 1,459 |
-| last | 1,428 |
-| headSet | 3,832 |
-| tailSet | 2,076 |
-| subSet | 2,918 |
-| reversed | 1,389 |
-| iterator | 128,585 |
-| forEach | 1,520 |
-| size | 1,516 |
-| isEmpty | 1,415 |
-| contains | 1,546 |
-| toArray | 2,968 |
-| add | 4,842 |
-| remove | 3,431 |
-| containsAll | 1,478 |
-| addAll | 1,458 |
-| removeAll | 1,477 |
-| removeIf | 1,476 |
-| retainAll | 1,936 |
-| clear | 2,606 |
-| equals | 2,979 |
-| hashCode | 1,519 |
-| toString | 1,444 |
-| spliterator | 1,441 |
-| stream | 4,459 |
-| parallelStream | 1,549 |
-| addFirst | 1,421 |
-| addLast | 1,417 |
-| getFirst | 1,419 |
-| getLast | 1,425 |
-| removeFirst | 1,441 |
-| removeLast | 1,464 |
+| comparator | 1,401 |
+| first | 1,412 |
+| last | 1,427 |
+| headSet | 3,807 |
+| tailSet | 2,107 |
+| subSet | 2,932 |
+| reversed | 1,371 |
+| iterator | 128,274 |
+| forEach | 1,515 |
+| size | 1,525 |
+| isEmpty | 1,433 |
+| contains | 1,514 |
+| toArray | 2,991 |
+| add | 4,906 |
+| remove | 3,429 |
+| containsAll | 1,480 |
+| addAll | 1,454 |
+| removeAll | 1,492 |
+| removeIf | 1,472 |
+| retainAll | 1,970 |
+| clear | 2,646 |
+| equals | 2,977 |
+| hashCode | 1,566 |
+| toString | 1,483 |
+| spliterator | 1,462 |
+| stream | 4,440 |
+| parallelStream | 1,518 |
+| addFirst | 1,431 |
+| addLast | 1,416 |
+| getFirst | 1,414 |
+| getLast | 1,430 |
+| removeFirst | 1,399 |
+| removeLast | 1,412 |
 
 </details>
 
@@ -739,47 +728,47 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| lower | 711 |
-| floor | 758 |
-| ceiling | 734 |
-| higher | 815 |
-| pollFirst | 2,070 |
-| pollLast | 760 |
-| descendingSet | 2,245 |
-| descendingIterator | 1,498 |
-| headSet | 3,832 |
-| tailSet | 2,076 |
-| subSet | 2,918 |
-| reversed | 1,389 |
-| comparator | 1,437 |
-| first | 1,459 |
-| last | 1,428 |
-| iterator | 128,585 |
-| forEach | 1,520 |
-| size | 1,516 |
-| isEmpty | 1,415 |
-| contains | 1,546 |
-| toArray | 2,968 |
-| add | 4,842 |
-| remove | 3,431 |
-| containsAll | 1,478 |
-| addAll | 1,458 |
-| removeAll | 1,477 |
-| removeIf | 1,476 |
-| retainAll | 1,936 |
-| clear | 2,606 |
-| equals | 2,979 |
-| hashCode | 1,519 |
-| toString | 1,444 |
-| spliterator | 1,441 |
-| stream | 4,459 |
-| parallelStream | 1,549 |
-| addFirst | 1,421 |
-| addLast | 1,417 |
-| getFirst | 1,419 |
-| getLast | 1,425 |
-| removeFirst | 1,441 |
-| removeLast | 1,464 |
+| lower | 745 |
+| floor | 734 |
+| ceiling | 748 |
+| higher | 798 |
+| pollFirst | 2,037 |
+| pollLast | 748 |
+| descendingSet | 2,130 |
+| descendingIterator | 1,497 |
+| headSet | 3,807 |
+| tailSet | 2,107 |
+| subSet | 2,932 |
+| reversed | 1,371 |
+| comparator | 1,401 |
+| first | 1,412 |
+| last | 1,427 |
+| iterator | 128,274 |
+| forEach | 1,515 |
+| size | 1,525 |
+| isEmpty | 1,433 |
+| contains | 1,514 |
+| toArray | 2,991 |
+| add | 4,906 |
+| remove | 3,429 |
+| containsAll | 1,480 |
+| addAll | 1,454 |
+| removeAll | 1,492 |
+| removeIf | 1,472 |
+| retainAll | 1,970 |
+| clear | 2,646 |
+| equals | 2,977 |
+| hashCode | 1,566 |
+| toString | 1,483 |
+| spliterator | 1,462 |
+| stream | 4,440 |
+| parallelStream | 1,518 |
+| addFirst | 1,431 |
+| addLast | 1,416 |
+| getFirst | 1,414 |
+| getLast | 1,430 |
+| removeFirst | 1,399 |
+| removeLast | 1,412 |
 
 </details>
 
@@ -787,12 +776,12 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getKey | 794,604 |
-| getValue | 799,905 |
-| setValue | 9,600 |
-| equals | 4,537 |
-| hashCode | 4,570 |
-| toString | 4,527 |
+| getKey | 802,781 |
+| getValue | 808,355 |
+| setValue | 9,962 |
+| equals | 4,459 |
+| hashCode | 4,643 |
+| toString | 4,630 |
 
 </details>
 
@@ -800,40 +789,40 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| reversed | 1,026 |
-| firstEntry | 971 |
-| lastEntry | 998 |
-| pollFirstEntry | 1,038 |
-| pollLastEntry | 978 |
-| putFirst | 994 |
-| putLast | 978 |
-| sequencedKeySet | 1,045 |
-| sequencedValues | 1,011 |
-| sequencedEntrySet | 1,025 |
-| size | 1,031 |
-| isEmpty | 935 |
-| containsKey | 1,008 |
-| containsValue | 1,022 |
-| get | 1,009 |
-| put | 3,598 |
-| remove | 1,987 |
-| putAll | 967 |
-| clear | 1,665 |
-| keySet | 4,670 |
-| values | 2,669 |
-| entrySet | 90,625 |
-| equals | 1,023 |
-| hashCode | 1,004 |
+| reversed | 1,027 |
+| firstEntry | 1,021 |
+| lastEntry | 1,016 |
+| pollFirstEntry | 1,013 |
+| pollLastEntry | 967 |
+| putFirst | 963 |
+| putLast | 931 |
+| sequencedKeySet | 1,056 |
+| sequencedValues | 1,047 |
+| sequencedEntrySet | 1,018 |
+| size | 1,011 |
+| isEmpty | 958 |
+| containsKey | 1,012 |
+| containsValue | 999 |
+| get | 996 |
+| put | 3,618 |
+| remove | 1,991 |
+| putAll | 1,018 |
+| clear | 1,748 |
+| keySet | 4,640 |
+| values | 2,703 |
+| entrySet | 91,386 |
+| equals | 1,015 |
+| hashCode | 1,048 |
 | toString | 987 |
-| getOrDefault | 988 |
-| forEach | 982 |
-| replaceAll | 993 |
-| putIfAbsent | 983 |
-| replace | 2,063 |
-| computeIfAbsent | 1,022 |
-| computeIfPresent | 1,044 |
-| compute | 1,027 |
-| merge | 1,045 |
+| getOrDefault | 1,053 |
+| forEach | 969 |
+| replaceAll | 974 |
+| putIfAbsent | 1,033 |
+| replace | 2,084 |
+| computeIfAbsent | 1,039 |
+| computeIfPresent | 1,027 |
+| compute | 1,030 |
+| merge | 997 |
 
 </details>
 
@@ -841,46 +830,46 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| comparator | 887 |
-| firstKey | 958 |
-| lastKey | 916 |
-| headMap | 1,683 |
-| tailMap | 1,271 |
-| subMap | 1,542 |
-| reversed | 923 |
-| firstEntry | 890 |
-| lastEntry | 914 |
-| pollFirstEntry | 963 |
-| pollLastEntry | 881 |
-| putFirst | 895 |
-| putLast | 869 |
-| sequencedKeySet | 902 |
-| sequencedValues | 922 |
+| comparator | 884 |
+| firstKey | 960 |
+| lastKey | 917 |
+| headMap | 1,727 |
+| tailMap | 1,248 |
+| subMap | 1,585 |
+| reversed | 939 |
+| firstEntry | 939 |
+| lastEntry | 933 |
+| pollFirstEntry | 936 |
+| pollLastEntry | 883 |
+| putFirst | 855 |
+| putLast | 845 |
+| sequencedKeySet | 906 |
+| sequencedValues | 953 |
 | sequencedEntrySet | 922 |
-| size | 932 |
-| isEmpty | 848 |
-| containsKey | 892 |
-| containsValue | 918 |
-| get | 904 |
-| put | 3,235 |
-| remove | 1,763 |
-| putAll | 863 |
-| clear | 1,573 |
-| keySet | 4,259 |
-| values | 2,440 |
-| entrySet | 84,254 |
-| equals | 923 |
-| hashCode | 927 |
-| toString | 891 |
-| getOrDefault | 892 |
-| forEach | 880 |
-| replaceAll | 903 |
-| putIfAbsent | 897 |
-| replace | 1,871 |
-| computeIfAbsent | 920 |
-| computeIfPresent | 949 |
-| compute | 940 |
-| merge | 936 |
+| size | 924 |
+| isEmpty | 868 |
+| containsKey | 906 |
+| containsValue | 893 |
+| get | 897 |
+| put | 3,221 |
+| remove | 1,764 |
+| putAll | 920 |
+| clear | 1,652 |
+| keySet | 4,197 |
+| values | 2,485 |
+| entrySet | 84,925 |
+| equals | 906 |
+| hashCode | 947 |
+| toString | 901 |
+| getOrDefault | 935 |
+| forEach | 859 |
+| replaceAll | 879 |
+| putIfAbsent | 944 |
+| replace | 1,874 |
+| computeIfAbsent | 940 |
+| computeIfPresent | 938 |
+| compute | 947 |
+| merge | 894 |
 
 </details>
 
@@ -888,57 +877,57 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| lowerEntry | 330 |
-| lowerKey | 369 |
-| floorEntry | 345 |
-| floorKey | 337 |
-| ceilingEntry | 346 |
-| ceilingKey | 331 |
-| higherEntry | 396 |
-| higherKey | 345 |
-| descendingMap | 976 |
-| navigableKeySet | 1,016 |
-| descendingKeySet | 330 |
-| headMap | 1,683 |
-| tailMap | 1,271 |
-| subMap | 1,542 |
-| reversed | 923 |
-| comparator | 887 |
-| firstKey | 958 |
-| lastKey | 916 |
-| firstEntry | 890 |
-| lastEntry | 914 |
-| pollFirstEntry | 963 |
-| pollLastEntry | 881 |
-| putFirst | 895 |
-| putLast | 869 |
-| sequencedKeySet | 902 |
-| sequencedValues | 922 |
+| lowerEntry | 323 |
+| lowerKey | 388 |
+| floorEntry | 357 |
+| floorKey | 354 |
+| ceilingEntry | 355 |
+| ceilingKey | 315 |
+| higherEntry | 394 |
+| higherKey | 343 |
+| descendingMap | 1,009 |
+| navigableKeySet | 1,033 |
+| descendingKeySet | 374 |
+| headMap | 1,727 |
+| tailMap | 1,248 |
+| subMap | 1,585 |
+| reversed | 939 |
+| comparator | 884 |
+| firstKey | 960 |
+| lastKey | 917 |
+| firstEntry | 939 |
+| lastEntry | 933 |
+| pollFirstEntry | 936 |
+| pollLastEntry | 883 |
+| putFirst | 855 |
+| putLast | 845 |
+| sequencedKeySet | 906 |
+| sequencedValues | 953 |
 | sequencedEntrySet | 922 |
-| size | 932 |
-| isEmpty | 848 |
-| containsKey | 892 |
-| containsValue | 918 |
-| get | 904 |
-| put | 3,235 |
-| remove | 1,763 |
-| putAll | 863 |
-| clear | 1,573 |
-| keySet | 4,259 |
-| values | 2,440 |
-| entrySet | 84,254 |
-| equals | 923 |
-| hashCode | 927 |
-| toString | 891 |
-| getOrDefault | 892 |
-| forEach | 880 |
-| replaceAll | 903 |
-| putIfAbsent | 897 |
-| replace | 1,871 |
-| computeIfAbsent | 920 |
-| computeIfPresent | 949 |
-| compute | 940 |
-| merge | 936 |
+| size | 924 |
+| isEmpty | 868 |
+| containsKey | 906 |
+| containsValue | 893 |
+| get | 897 |
+| put | 3,221 |
+| remove | 1,764 |
+| putAll | 920 |
+| clear | 1,652 |
+| keySet | 4,197 |
+| values | 2,485 |
+| entrySet | 84,925 |
+| equals | 906 |
+| hashCode | 947 |
+| toString | 901 |
+| getOrDefault | 935 |
+| forEach | 859 |
+| replaceAll | 879 |
+| putIfAbsent | 944 |
+| replace | 1,874 |
+| computeIfAbsent | 940 |
+| computeIfPresent | 938 |
+| compute | 947 |
+| merge | 894 |
 
 </details>
 
@@ -946,8 +935,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 8,881 |
-| copyOf | 2,678 |
+| of | 8,698 |
+| copyOf | 2,716 |
 | ofLazy | excluded: API newer than the reference runtime (JDK 23) |
 
 </details>
@@ -956,42 +945,42 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| add | 12,527 |
-| addAll | 6,763 |
-| get | 2,408 |
-| set | 2,342 |
-| removeAt | 2,377 |
-| indexOf | 2,234 |
-| lastIndexOf | 2,393 |
-| listIterator | 11,849 |
-| subList | 14,608 |
-| replaceAll | 2,376 |
-| sort | 4,681 |
-| reversed | 6,001 |
-| addFirst | 2,377 |
-| addLast | 2,339 |
-| getFirst | 2,392 |
-| getLast | 2,399 |
-| removeFirst | 2,344 |
-| removeLast | 2,383 |
-| iterator | 312,999 |
-| forEach | 2,281 |
-| size | 3,004 |
-| isEmpty | 2,330 |
-| contains | 2,297 |
-| toArray | 8,169 |
-| remove | 4,829 |
-| containsAll | 2,407 |
-| removeAll | 2,375 |
-| removeIf | 2,418 |
-| retainAll | 2,369 |
-| clear | 3,472 |
-| equals | 6,864 |
-| hashCode | 2,333 |
-| toString | 4,672 |
-| spliterator | 2,326 |
-| stream | 12,742 |
-| parallelStream | 2,437 |
+| add | 12,540 |
+| addAll | 6,785 |
+| get | 2,405 |
+| set | 2,299 |
+| removeAt | 2,350 |
+| indexOf | 2,256 |
+| lastIndexOf | 2,320 |
+| listIterator | 11,859 |
+| subList | 14,528 |
+| replaceAll | 2,437 |
+| sort | 4,737 |
+| reversed | 5,886 |
+| addFirst | 2,320 |
+| addLast | 2,383 |
+| getFirst | 2,325 |
+| getLast | 2,350 |
+| removeFirst | 2,331 |
+| removeLast | 2,354 |
+| iterator | 311,262 |
+| forEach | 2,244 |
+| size | 2,944 |
+| isEmpty | 2,343 |
+| contains | 2,326 |
+| toArray | 8,126 |
+| remove | 4,809 |
+| containsAll | 2,448 |
+| removeAll | 2,294 |
+| removeIf | 2,312 |
+| retainAll | 2,356 |
+| clear | 3,455 |
+| equals | 6,817 |
+| hashCode | 2,274 |
+| toString | 4,627 |
+| spliterator | 2,342 |
+| stream | 12,483 |
+| parallelStream | 2,362 |
 
 </details>
 
@@ -999,8 +988,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 2,365 |
-| copyOf | 2,714 |
+| of | 2,392 |
+| copyOf | 2,632 |
 | ofLazy | excluded: API newer than the reference runtime (JDK 23) |
 
 </details>
@@ -1009,26 +998,26 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 479,064 |
-| forEach | 6,118 |
-| size | 6,075 |
-| isEmpty | 5,968 |
-| contains | 13,895 |
-| toArray | 12,310 |
-| add | 17,849 |
-| remove | 19,911 |
-| containsAll | 6,102 |
-| addAll | 5,788 |
-| removeAll | 6,147 |
-| removeIf | 13,797 |
-| retainAll | 13,761 |
-| clear | 7,124 |
-| equals | 12,082 |
-| hashCode | 5,940 |
-| toString | 5,871 |
-| spliterator | 5,925 |
-| stream | 18,068 |
-| parallelStream | 6,149 |
+| iterator | 479,169 |
+| forEach | 6,051 |
+| size | 6,157 |
+| isEmpty | 5,994 |
+| contains | 13,927 |
+| toArray | 12,391 |
+| add | 17,816 |
+| remove | 19,915 |
+| containsAll | 6,014 |
+| addAll | 5,829 |
+| removeAll | 6,148 |
+| removeIf | 13,812 |
+| retainAll | 13,646 |
+| clear | 7,248 |
+| equals | 12,249 |
+| hashCode | 5,907 |
+| toString | 6,045 |
+| spliterator | 5,969 |
+| stream | 18,052 |
+| parallelStream | 6,159 |
 
 </details>
 
@@ -1036,12 +1025,12 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 2,361 |
-| ofEntries | 2,075 |
-| entry | 12,821 |
-| copyOf | 2,897 |
+| of | 2,354 |
+| ofEntries | 2,102 |
+| entry | 12,886 |
+| copyOf | 2,891 |
 | ofLazy | excluded: API newer than the reference runtime (JDK 23) |
-| Entry | 7,454 |
+| Entry | 7,495 |
 
 </details>
 
@@ -1049,30 +1038,30 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| size | 4,882 |
-| isEmpty | 4,698 |
-| containsKey | 4,865 |
-| containsValue | 4,803 |
-| get | 4,841 |
-| put | 15,183 |
-| remove | 9,542 |
-| putAll | 4,768 |
-| clear | 5,496 |
-| keySet | 19,075 |
-| values | 9,299 |
-| entrySet | 261,268 |
-| equals | 4,763 |
-| hashCode | 4,831 |
-| toString | 4,810 |
-| getOrDefault | 4,765 |
-| forEach | 4,782 |
-| replaceAll | 4,819 |
-| putIfAbsent | 4,787 |
-| replace | 9,698 |
-| computeIfAbsent | 4,945 |
-| computeIfPresent | 4,935 |
-| compute | 4,843 |
-| merge | 4,888 |
+| size | 4,886 |
+| isEmpty | 4,718 |
+| containsKey | 4,839 |
+| containsValue | 4,708 |
+| get | 4,697 |
+| put | 15,093 |
+| remove | 9,574 |
+| putAll | 4,856 |
+| clear | 5,609 |
+| keySet | 19,034 |
+| values | 9,276 |
+| entrySet | 261,166 |
+| equals | 4,795 |
+| hashCode | 4,809 |
+| toString | 4,852 |
+| getOrDefault | 4,837 |
+| forEach | 4,802 |
+| replaceAll | 4,696 |
+| putIfAbsent | 4,768 |
+| replace | 9,661 |
+| computeIfAbsent | 4,889 |
+| computeIfPresent | 4,860 |
+| compute | 4,840 |
+| merge | 4,696 |
 
 </details>
 
@@ -1080,20 +1069,20 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| naturalOrder | 43,804 |
-| reverseOrder | 28,951 |
-| reversed | 8,565 |
-| comparing | 9,732 |
-| comparingInt | 154,453 |
-| comparingLong | 5,036 |
-| comparingDouble | 4,905 |
-| thenComparing | 12,038 |
-| thenComparingBy | 9,694 |
-| thenComparingInt | 4,888 |
-| thenComparingLong | 4,898 |
-| thenComparingDouble | 4,724 |
-| nullsFirst | 16,181 |
-| nullsLast | 16,180 |
+| naturalOrder | 43,385 |
+| reverseOrder | 29,049 |
+| reversed | 8,515 |
+| comparing | 9,610 |
+| comparingInt | 153,857 |
+| comparingLong | 5,000 |
+| comparingDouble | 4,948 |
+| thenComparing | 11,790 |
+| thenComparingBy | 9,571 |
+| thenComparingInt | 4,901 |
+| thenComparingLong | 4,841 |
+| thenComparingDouble | 4,639 |
+| nullsFirst | 16,005 |
+| nullsLast | 16,057 |
 | max | excluded: API newer than the reference runtime (JDK 23) |
 | min | excluded: API newer than the reference runtime (JDK 23) |
 
@@ -1103,7 +1092,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| () | 4,994 |
+| () | 4,996 |
 
 </details>
 
@@ -1119,21 +1108,21 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| equals | 2,518 |
-| hashCode | 655 |
-| hash | 684 |
+| equals | 2,767 |
+| hashCode | 679 |
+| hash | 703 |
 | identityHashCode | excluded: identity-based values; differ by design between runtimes |
-| requireNonNull | 2,117 |
-| isNull | 693 |
-| nonNull | 675 |
-| toString | 1,304 |
-| checkIndex | 1,662 |
-| checkFromToIndex | 1,625 |
-| checkFromIndexSize | 1,674 |
-| requireNonNullElse | 699 |
-| requireNonNullElseGet | 660 |
-| compare | 1,629 |
-| deepEquals | 1,683 |
+| requireNonNull | 2,111 |
+| isNull | 642 |
+| nonNull | 701 |
+| toString | 1,366 |
+| checkIndex | 1,708 |
+| checkFromToIndex | 1,594 |
+| checkFromIndexSize | 1,715 |
+| requireNonNullElse | 718 |
+| requireNonNullElseGet | 670 |
+| compare | 1,663 |
+| deepEquals | 1,646 |
 | toIdentityString | excluded: identity-based values; differ by design between runtimes |
 
 </details>
@@ -1150,7 +1139,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| () | 3,352 |
+| () | 3,420 |
 
 </details>
 
@@ -1158,7 +1147,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol; no reference counterpart |
+| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1168,25 +1157,26 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 |---|---:|
 | iterator | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | size | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| isEmpty | 756 |
-| contains | 648 |
-| toArray | 2,165 |
+| isEmpty | 698 |
+| contains | 668 |
+| toArray | 2,068 |
 | add | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| remove | 1,442 |
-| containsAll | 692 |
-| addAll | 3,203 |
-| removeAll | 659 |
-| retainAll | 682 |
-| removeIf | 677 |
-| clear | 662 |
-| forEach | 724 |
-| spliterator | 714 |
-| stream | 2,103 |
-| parallelStream | 714 |
-| equals | 1,476 |
+| remove | 1,369 |
+| containsAll | 660 |
+| addAll | 3,115 |
+| removeAll | 664 |
+| retainAll | 666 |
+| removeIf | 671 |
+| clear | 671 |
+| forEach | 669 |
+| spliterator | 712 |
+| stream | 2,077 |
+| parallelStream | 709 |
+| equals | 1,361 |
 | hashCode | excluded: identity hash code in the reference (not overridden there) |
-| toString | 657 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| toString | 652 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1194,44 +1184,46 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
+| modCount | excluded: implementation field (protected in the reference) |
 | get | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | set | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | removeAt | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| add | 679 |
-| addAll | 2,655 |
-| indexOf | 138 |
-| lastIndexOf | 137 |
-| clear | 136 |
+| add | 693 |
+| addAll | 2,695 |
+| indexOf | 126 |
+| lastIndexOf | 122 |
+| clear | 120 |
 | removeRange | excluded: protected in the reference (exercised indirectly through subList(..).clear()) |
-| iterator | 19,011 |
-| listIterator | 661 |
-| subList | 1,166 |
-| spliterator | 126 |
-| replaceAll | 123 |
-| sort | 258 |
-| addFirst | 112 |
-| addLast | 111 |
-| getFirst | 140 |
-| getLast | 140 |
-| removeFirst | 136 |
-| removeLast | 142 |
-| reversed | 773 |
-| equals | 272 |
-| hashCode | 127 |
+| iterator | 19,109 |
+| listIterator | 654 |
+| subList | 1,167 |
+| spliterator | 123 |
+| replaceAll | 125 |
+| sort | 255 |
+| addFirst | 110 |
+| addLast | 113 |
+| getFirst | 144 |
+| getLast | 134 |
+| removeFirst | 138 |
+| removeLast | 140 |
+| reversed | 789 |
+| equals | 262 |
+| hashCode | 131 |
 | size | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| isEmpty | 126 |
-| contains | 151 |
+| isEmpty | 130 |
+| contains | 145 |
 | toArray | 386 |
-| remove | 279 |
-| containsAll | 121 |
-| removeAll | 123 |
-| retainAll | 131 |
-| removeIf | 114 |
-| forEach | 141 |
-| stream | 371 |
-| parallelStream | 130 |
-| toString | 128 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| remove | 271 |
+| containsAll | 119 |
+| removeAll | 116 |
+| retainAll | 129 |
+| removeIf | 125 |
+| forEach | 145 |
+| stream | 350 |
+| parallelStream | 128 |
+| toString | 123 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1240,43 +1232,45 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | listIterator | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| get | 133 |
-| set | 133 |
-| removeAt | 132 |
-| iterator | 18,976 |
-| add | 684 |
-| addAll | 2,707 |
-| indexOf | 145 |
-| lastIndexOf | 131 |
-| clear | 145 |
+| get | 127 |
+| set | 149 |
+| removeAt | 129 |
+| iterator | 18,878 |
+| modCount | excluded: implementation field (protected in the reference) |
+| add | 696 |
+| addAll | 2,722 |
+| indexOf | 135 |
+| lastIndexOf | 130 |
+| clear | 134 |
 | removeRange | excluded: protected in the reference (exercised indirectly through subList(..).clear()) |
-| subList | 1,189 |
-| spliterator | 138 |
-| replaceAll | 136 |
-| sort | 258 |
-| addFirst | 133 |
-| addLast | 108 |
-| getFirst | 126 |
-| getLast | 114 |
-| removeFirst | 138 |
-| removeLast | 144 |
-| reversed | 742 |
-| equals | 284 |
-| hashCode | 127 |
+| subList | 1,203 |
+| spliterator | 131 |
+| replaceAll | 107 |
+| sort | 254 |
+| addFirst | 122 |
+| addLast | 102 |
+| getFirst | 131 |
+| getLast | 111 |
+| removeFirst | 124 |
+| removeLast | 145 |
+| reversed | 754 |
+| equals | 270 |
+| hashCode | 121 |
 | size | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| isEmpty | 153 |
-| contains | 127 |
-| toArray | 377 |
-| remove | 247 |
-| containsAll | 121 |
-| removeAll | 125 |
-| retainAll | 119 |
-| removeIf | 149 |
-| forEach | 130 |
-| stream | 436 |
-| parallelStream | 119 |
-| toString | 139 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| isEmpty | 149 |
+| contains | 124 |
+| toArray | 380 |
+| remove | 266 |
+| containsAll | 117 |
+| removeAll | 126 |
+| retainAll | 111 |
+| removeIf | 153 |
+| forEach | 126 |
+| stream | 418 |
+| parallelStream | 117 |
+| toString | 144 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1287,28 +1281,29 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | offer | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | poll | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | peek | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| add | 1,674 |
+| add | 1,641 |
 | remove | 1,682 |
-| element | 601 |
-| clear | 544 |
-| addAll | 2,843 |
+| element | 579 |
+| clear | 518 |
+| addAll | 2,873 |
 | iterator | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | size | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| isEmpty | 543 |
-| contains | 598 |
-| toArray | 1,698 |
-| containsAll | 564 |
-| removeAll | 600 |
-| retainAll | 575 |
-| removeIf | 510 |
-| forEach | 543 |
+| isEmpty | 567 |
+| contains | 594 |
+| toArray | 1,670 |
+| containsAll | 573 |
+| removeAll | 568 |
+| retainAll | 579 |
+| removeIf | 521 |
+| forEach | 574 |
 | spliterator | 544 |
-| stream | 1,699 |
-| parallelStream | 560 |
-| equals | 1,132 |
+| stream | 1,772 |
+| parallelStream | 542 |
+| equals | 1,101 |
 | hashCode | excluded: identity hash code in the reference (not overridden there) |
-| toString | 563 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| toString | 555 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1316,28 +1311,29 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| equals | 1,413 |
-| removeAll | 682 |
-| spliterator | 648 |
-| hashCode | 672 |
-| [SET_BRAND] | excluded: JS protocol / brand symbol; no reference counterpart |
+| equals | 1,346 |
+| removeAll | 648 |
+| spliterator | 651 |
+| hashCode | 721 |
+| [SET_BRAND] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 | iterator | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
 | size | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| isEmpty | 724 |
-| contains | 703 |
-| toArray | 1,351 |
+| isEmpty | 716 |
+| contains | 709 |
+| toArray | 1,280 |
 | add | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| remove | 1,480 |
-| containsAll | 648 |
-| addAll | 3,083 |
-| retainAll | 657 |
-| removeIf | 686 |
-| clear | 718 |
-| forEach | 696 |
-| stream | 2,189 |
-| parallelStream | 726 |
-| toString | 712 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| remove | 1,443 |
+| containsAll | 700 |
+| addAll | 3,077 |
+| retainAll | 683 |
+| removeIf | 705 |
+| clear | 738 |
+| forEach | 692 |
+| stream | 2,122 |
+| parallelStream | 692 |
+| toString | 706 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1346,30 +1342,31 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | entrySet | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| size | 667 |
-| isEmpty | 719 |
-| containsKey | 734 |
-| containsValue | 704 |
-| get | 706 |
+| size | 691 |
+| isEmpty | 711 |
+| containsKey | 725 |
+| containsValue | 718 |
+| get | 747 |
 | put | excluded: abstract hook implemented by the subclass (the harness subclass), not library code |
-| remove | 1,332 |
-| putAll | 706 |
-| clear | 737 |
-| keySet | 2,648 |
-| values | 1,865 |
-| equals | 681 |
-| hashCode | 638 |
-| toString | 674 |
-| getOrDefault | 703 |
-| forEach | 681 |
-| replaceAll | 687 |
-| putIfAbsent | 672 |
-| replace | 1,336 |
-| computeIfAbsent | 666 |
-| computeIfPresent | 621 |
-| compute | 713 |
-| merge | 641 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| remove | 1,351 |
+| putAll | 721 |
+| clear | 713 |
+| keySet | 2,651 |
+| values | 1,925 |
+| equals | 690 |
+| hashCode | 642 |
+| toString | 716 |
+| getOrDefault | 719 |
+| forEach | 691 |
+| replaceAll | 686 |
+| putIfAbsent | 673 |
+| replace | 1,342 |
+| computeIfAbsent | 707 |
+| computeIfPresent | 671 |
+| compute | 708 |
+| merge | 678 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1377,12 +1374,13 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getKey | 3,054 |
-| getValue | 3,035 |
-| setValue | 3,111 |
-| equals | 2,988 |
-| hashCode | 3,141 |
-| toString | 3,100 |
+| getKey | 3,092 |
+| getValue | 3,113 |
+| setValue | 3,177 |
+| equals | 3,060 |
+| hashCode | 3,069 |
+| toString | 3,219 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1390,12 +1388,13 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getKey | 38,781 |
-| getValue | 38,791 |
-| setValue | 2,476 |
-| equals | 2,545 |
-| hashCode | 2,516 |
-| toString | 2,517 |
+| getKey | 39,069 |
+| getValue | 39,049 |
+| setValue | 2,531 |
+| equals | 2,620 |
+| hashCode | 2,505 |
+| toString | 2,526 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1403,48 +1402,50 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| ensureCapacity | 140 |
-| trimToSize | 147 |
-| clone | 266 |
-| size | 3,181 |
-| isEmpty | 228 |
-| get | 265 |
-| set | 305 |
-| add | 36,279 |
-| removeAt | 310 |
-| remove | 457 |
-| contains | 225 |
-| indexOf | 179 |
-| lastIndexOf | 168 |
-| toArray | 2,039 |
-| clear | 233 |
-| forEach | 216 |
+| ensureCapacity | 138 |
+| trimToSize | 150 |
+| clone | 274 |
+| size | 3,179 |
+| isEmpty | 221 |
+| get | 267 |
+| set | 300 |
+| add | 36,312 |
+| removeAt | 309 |
+| remove | 469 |
+| contains | 228 |
+| indexOf | 168 |
+| lastIndexOf | 182 |
+| toArray | 2,012 |
+| clear | 230 |
+| forEach | 231 |
 | removeRange | excluded: protected in the reference (exercised indirectly through subList(..).clear()) |
-| removeIf | 243 |
-| replaceAll | 181 |
-| sort | 25,246 |
-| getFirst | 157 |
-| getLast | 146 |
-| iterator | 124,197 |
-| listIterator | 845 |
-| spliterator | 1,247 |
-| equals | 563 |
-| hashCode | 159 |
-| toString | 209 |
-| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol; no reference counterpart |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| addAll | 8,392 |
-| subList | 911 |
-| addFirst | 170 |
-| addLast | 173 |
-| removeFirst | 170 |
-| removeLast | 172 |
-| reversed | 390 |
-| containsAll | 237 |
-| removeAll | 233 |
-| retainAll | 254 |
-| stream | 2,882 |
-| parallelStream | 247 |
+| removeIf | 249 |
+| replaceAll | 179 |
+| sort | 25,111 |
+| getFirst | 159 |
+| getLast | 152 |
+| iterator | 123,314 |
+| listIterator | 877 |
+| spliterator | 1,251 |
+| equals | 608 |
+| hashCode | 155 |
+| toString | 210 |
+| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| modCount | excluded: implementation field (protected in the reference) |
+| addAll | 8,466 |
+| subList | 922 |
+| addFirst | 181 |
+| addLast | 176 |
+| removeFirst | 174 |
+| removeLast | 178 |
+| reversed | 381 |
+| containsAll | 228 |
+| removeAll | 214 |
+| retainAll | 261 |
+| stream | 2,801 |
+| parallelStream | 236 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1461,59 +1462,61 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | clone | 222 |
-| size | 384 |
-| isEmpty | 224 |
-| add | 15,909 |
-| get | 120 |
-| set | 138 |
-| removeAt | 124 |
-| contains | 238 |
-| indexOf | 140 |
-| lastIndexOf | 148 |
-| toArray | 696 |
-| clear | 231 |
-| forEach | 234 |
-| removeIf | 237 |
-| replaceAll | 137 |
-| sort | 237 |
-| iterator | 32,394 |
+| size | 378 |
+| isEmpty | 215 |
+| add | 15,938 |
+| get | 145 |
+| set | 135 |
+| removeAt | 147 |
+| contains | 249 |
+| indexOf | 149 |
+| lastIndexOf | 153 |
+| toArray | 693 |
+| clear | 253 |
+| forEach | 238 |
+| removeIf | 244 |
+| replaceAll | 145 |
+| iterator | 32,551 |
 | listIterator | 1,323 |
-| spliterator | 1,249 |
-| addFirst | 423 |
-| addLast | 133 |
-| getFirst | 189 |
-| getLast | 146 |
-| removeFirst | 209 |
-| removeLast | 135 |
-| offer | 163 |
-| offerFirst | 147 |
-| offerLast | 117 |
-| poll | 173 |
-| pollFirst | 142 |
-| pollLast | 112 |
-| peek | 181 |
-| peekFirst | 153 |
-| peekLast | 104 |
-| element | 166 |
-| push | 96 |
-| pop | 101 |
-| remove | 598 |
-| removeFirstOccurrence | 126 |
-| removeLastOccurrence | 106 |
-| descendingIterator | 240 |
+| spliterator | 1,257 |
+| addFirst | 399 |
+| addLast | 147 |
+| getFirst | 188 |
+| getLast | 164 |
+| removeFirst | 196 |
+| removeLast | 132 |
+| offer | 172 |
+| offerFirst | 161 |
+| offerLast | 107 |
+| poll | 180 |
+| pollFirst | 149 |
+| pollLast | 116 |
+| peek | 176 |
+| peekFirst | 188 |
+| peekLast | 102 |
+| element | 172 |
+| push | 109 |
+| pop | 102 |
+| remove | 670 |
+| removeFirstOccurrence | 124 |
+| removeLastOccurrence | 102 |
+| descendingIterator | 234 |
 | reversed | 355 |
-| equals | 568 |
-| hashCode | 139 |
-| toString | 241 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| addAll | 2,799 |
+| equals | 597 |
+| hashCode | 133 |
+| toString | 238 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| modCount | excluded: implementation field (protected in the reference) |
+| addAll | 2,822 |
 | removeRange | excluded: protected in the reference (exercised indirectly through subList(..).clear()) |
-| subList | 731 |
-| containsAll | 239 |
-| removeAll | 221 |
+| subList | 760 |
+| sort | 265 |
+| containsAll | 247 |
+| removeAll | 243 |
 | retainAll | 252 |
-| stream | 2,924 |
-| parallelStream | 224 |
+| stream | 2,916 |
+| parallelStream | 226 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1530,61 +1533,63 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | capacityIncrement | excluded: implementation field (protected in the reference) |
-| get | 347 |
-| set | 327 |
-| removeAt | 370 |
-| add | 16,812 |
-| clone | 240 |
-| ensureCapacity | 523 |
-| trimToSize | 556 |
-| capacity | 583 |
-| indexOf | 397 |
-| lastIndexOf | 372 |
-| setSize | 531 |
-| copyInto | 576 |
-| elements | 900 |
+| get | 335 |
+| set | 345 |
+| removeAt | 371 |
+| add | 16,712 |
+| clone | 233 |
+| ensureCapacity | 513 |
+| trimToSize | 589 |
+| capacity | 571 |
+| indexOf | 378 |
+| lastIndexOf | 379 |
+| setSize | 536 |
+| copyInto | 541 |
+| elements | 903 |
 | elementAt | 552 |
-| firstElement | 552 |
-| lastElement | 540 |
-| addElement | 573 |
-| removeElement | 554 |
-| removeElementAt | 517 |
-| insertElementAt | 522 |
-| setElementAt | 522 |
-| removeAllElements | 494 |
-| size | 956 |
-| isEmpty | 341 |
-| remove | 761 |
-| contains | 318 |
-| toArray | 689 |
-| clear | 369 |
-| forEach | 394 |
+| firstElement | 558 |
+| lastElement | 526 |
+| addElement | 594 |
+| remove | 780 |
+| removeElement | 556 |
+| removeElementAt | 530 |
+| insertElementAt | 533 |
+| setElementAt | 529 |
+| removeAllElements | 505 |
+| size | 927 |
+| isEmpty | 356 |
+| contains | 324 |
+| toArray | 694 |
+| clear | 374 |
+| forEach | 405 |
 | removeRange | excluded: protected in the reference (exercised indirectly through subList(..).clear()) |
-| removeIf | 381 |
-| replaceAll | 384 |
-| sort | 753 |
-| getFirst | 359 |
-| getLast | 353 |
-| iterator | 51,180 |
+| removeIf | 341 |
+| replaceAll | 363 |
+| sort | 733 |
+| getFirst | 360 |
+| getLast | 343 |
+| iterator | 50,359 |
 | listIterator | 1,876 |
 | spliterator | 1,455 |
-| equals | 960 |
-| hashCode | 356 |
-| toString | 362 |
-| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol; no reference counterpart |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| addAll | 5,782 |
-| subList | 2,069 |
-| addFirst | 394 |
-| addLast | 360 |
-| removeFirst | 378 |
-| removeLast | 346 |
-| reversed | 913 |
-| containsAll | 320 |
-| removeAll | 353 |
-| retainAll | 369 |
-| stream | 3,176 |
-| parallelStream | 357 |
+| equals | 959 |
+| hashCode | 387 |
+| toString | 365 |
+| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| modCount | excluded: implementation field (protected in the reference) |
+| addAll | 5,674 |
+| subList | 1,953 |
+| addFirst | 365 |
+| addLast | 372 |
+| removeFirst | 367 |
+| removeLast | 340 |
+| reversed | 866 |
+| containsAll | 343 |
+| removeAll | 377 |
+| retainAll | 362 |
+| stream | 3,169 |
+| parallelStream | 355 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1600,67 +1605,69 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| push | 205 |
-| pop | 197 |
-| peek | 222 |
-| empty | 198 |
-| search | 202 |
+| push | 200 |
+| pop | 206 |
+| peek | 216 |
+| empty | 193 |
+| search | 221 |
 | capacityIncrement | excluded: implementation field (protected in the reference) |
-| get | 105 |
-| set | 98 |
-| removeAt | 113 |
-| add | 543 |
-| clone | 216 |
-| ensureCapacity | 110 |
-| trimToSize | 122 |
-| capacity | 117 |
-| indexOf | 93 |
-| lastIndexOf | 108 |
-| setSize | 101 |
-| copyInto | 91 |
-| elements | 206 |
-| elementAt | 113 |
-| firstElement | 115 |
-| lastElement | 98 |
-| addElement | 92 |
-| removeElement | 110 |
-| removeElementAt | 98 |
+| get | 98 |
+| set | 94 |
+| removeAt | 111 |
+| add | 560 |
+| clone | 206 |
+| ensureCapacity | 98 |
+| trimToSize | 110 |
+| capacity | 115 |
+| indexOf | 107 |
+| lastIndexOf | 109 |
+| setSize | 100 |
+| copyInto | 96 |
+| elements | 217 |
+| elementAt | 94 |
+| firstElement | 107 |
+| lastElement | 92 |
+| addElement | 88 |
+| remove | 192 |
+| removeElement | 118 |
+| removeElementAt | 88 |
 | insertElementAt | 110 |
-| setElementAt | 111 |
-| removeAllElements | 103 |
-| size | 183 |
-| isEmpty | 113 |
-| remove | 212 |
-| contains | 109 |
-| toArray | 222 |
-| clear | 95 |
-| forEach | 111 |
+| setElementAt | 100 |
+| removeAllElements | 102 |
+| size | 188 |
+| isEmpty | 100 |
+| contains | 95 |
+| toArray | 212 |
+| clear | 88 |
+| forEach | 117 |
 | removeRange | excluded: protected in the reference (exercised indirectly through subList(..).clear()) |
-| removeIf | 108 |
-| replaceAll | 107 |
-| sort | 205 |
-| getFirst | 100 |
-| getLast | 110 |
-| iterator | 20,999 |
-| listIterator | 486 |
-| spliterator | 100 |
-| equals | 419 |
-| hashCode | 107 |
-| toString | 117 |
-| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol; no reference counterpart |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| addAll | 2,669 |
-| subList | 1,089 |
-| addFirst | 101 |
-| addLast | 109 |
-| removeFirst | 90 |
-| removeLast | 119 |
-| reversed | 758 |
-| containsAll | 123 |
-| removeAll | 113 |
+| removeIf | 105 |
+| replaceAll | 95 |
+| sort | 204 |
+| getFirst | 109 |
+| getLast | 101 |
+| iterator | 20,119 |
+| listIterator | 476 |
+| spliterator | 93 |
+| equals | 400 |
+| hashCode | 93 |
+| toString | 115 |
+| [RANDOM_ACCESS] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| modCount | excluded: implementation field (protected in the reference) |
+| addAll | 2,613 |
+| subList | 1,041 |
+| addFirst | 106 |
+| addLast | 102 |
+| removeFirst | 100 |
+| removeLast | 115 |
+| reversed | 763 |
+| containsAll | 112 |
+| removeAll | 107 |
 | retainAll | 118 |
-| stream | 323 |
-| parallelStream | 100 |
+| stream | 284 |
+| parallelStream | 109 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1677,49 +1684,50 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | clone | 348 |
-| size | 934 |
-| isEmpty | 392 |
-| addFirst | 502 |
-| addLast | 176 |
-| offerFirst | 240 |
-| offerLast | 146 |
-| add | 16,152 |
-| offer | 798 |
-| push | 154 |
-| addAll | 2,952 |
-| pollFirst | 222 |
-| pollLast | 175 |
-| removeFirst | 207 |
-| removeLast | 162 |
-| poll | 767 |
-| pop | 178 |
-| remove | 976 |
-| removeFirstOccurrence | 196 |
-| removeLastOccurrence | 175 |
-| removeIf | 415 |
-| clear | 386 |
-| peekFirst | 244 |
-| peekLast | 188 |
-| peek | 791 |
-| getFirst | 238 |
-| getLast | 165 |
-| element | 242 |
-| contains | 362 |
-| toArray | 1,108 |
-| forEach | 384 |
-| toString | 411 |
-| iterator | 65,445 |
-| descendingIterator | 342 |
-| spliterator | 1,325 |
-| reversed | 414 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| containsAll | 368 |
-| removeAll | 388 |
-| retainAll | 393 |
-| stream | 3,100 |
-| parallelStream | 362 |
-| equals | 808 |
+| size | 919 |
+| isEmpty | 379 |
+| addFirst | 540 |
+| addLast | 177 |
+| offerFirst | 263 |
+| offerLast | 134 |
+| add | 16,139 |
+| offer | 771 |
+| push | 163 |
+| addAll | 2,944 |
+| pollFirst | 221 |
+| pollLast | 170 |
+| removeFirst | 225 |
+| removeLast | 160 |
+| poll | 798 |
+| pop | 160 |
+| remove | 1,002 |
+| removeFirstOccurrence | 185 |
+| removeLastOccurrence | 172 |
+| removeIf | 425 |
+| clear | 378 |
+| peekFirst | 242 |
+| peekLast | 174 |
+| peek | 784 |
+| getFirst | 231 |
+| getLast | 152 |
+| element | 235 |
+| contains | 369 |
+| toArray | 1,131 |
+| forEach | 374 |
+| toString | 388 |
+| iterator | 64,973 |
+| descendingIterator | 344 |
+| spliterator | 1,308 |
+| reversed | 403 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| containsAll | 373 |
+| removeAll | 384 |
+| retainAll | 423 |
+| stream | 3,119 |
+| parallelStream | 380 |
+| equals | 803 |
 | hashCode | excluded: identity hash code in the reference (not overridden there) |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1735,32 +1743,33 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| comparator | 805 |
-| size | 1,045 |
-| offer | 937 |
-| poll | 4,203 |
-| peek | 892 |
-| remove | 3,147 |
-| contains | 1,094 |
-| clear | 1,047 |
-| toArray | 3,291 |
-| removeIf | 1,029 |
-| forEach | 1,082 |
-| iterator | 65,990 |
-| spliterator | 1,081 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| add | 3,096 |
-| element | 934 |
-| addAll | 5,859 |
-| isEmpty | 1,092 |
-| containsAll | 1,028 |
-| removeAll | 1,064 |
-| retainAll | 1,080 |
-| stream | 3,160 |
-| parallelStream | 1,081 |
-| equals | 1,918 |
+| comparator | 786 |
+| size | 1,028 |
+| offer | 924 |
+| poll | 4,370 |
+| peek | 885 |
+| remove | 3,049 |
+| contains | 1,040 |
+| clear | 1,014 |
+| toArray | 3,194 |
+| removeIf | 1,013 |
+| forEach | 1,042 |
+| iterator | 64,878 |
+| spliterator | 1,047 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| add | 3,062 |
+| element | 926 |
+| addAll | 5,835 |
+| isEmpty | 1,055 |
+| containsAll | 1,039 |
+| removeAll | 1,059 |
+| retainAll | 1,067 |
+| stream | 3,156 |
+| parallelStream | 1,097 |
+| equals | 1,893 |
 | hashCode | excluded: identity hash code in the reference (not overridden there) |
-| toString | 1,088 |
+| toString | 1,091 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1777,34 +1786,35 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | modCount | excluded: implementation field (protected in the reference) |
-| clone | 605 |
+| clone | 603 |
 | getNode | excluded: implementation hook (package-private in the reference) |
 | removeNode | excluded: implementation hook (package-private in the reference) |
-| size | 491 |
-| isEmpty | 426 |
-| get | 425 |
-| containsKey | 385 |
-| containsValue | 435 |
-| put | 9,783 |
-| remove | 808 |
-| putAll | 8,135 |
-| clear | 462 |
-| keySet | 1,693 |
-| values | 905 |
-| entrySet | 38,835 |
-| hashCode | 380 |
-| getOrDefault | 385 |
-| forEach | 3,555 |
-| replaceAll | 722 |
-| putIfAbsent | 3,182 |
-| replace | 819 |
-| computeIfAbsent | 4,358 |
-| computeIfPresent | 382 |
-| compute | 414 |
-| merge | 3,821 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| equals | 1,019 |
-| toString | 383 |
+| size | 488 |
+| isEmpty | 403 |
+| get | 405 |
+| containsKey | 388 |
+| containsValue | 424 |
+| put | 9,897 |
+| remove | 786 |
+| putAll | 8,140 |
+| clear | 446 |
+| keySet | 1,640 |
+| values | 895 |
+| entrySet | 38,660 |
+| hashCode | 412 |
+| getOrDefault | 411 |
+| forEach | 3,589 |
+| replaceAll | 712 |
+| putIfAbsent | 3,282 |
+| replace | 840 |
+| computeIfAbsent | 4,394 |
+| computeIfPresent | 367 |
+| compute | 398 |
+| merge | 3,783 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| equals | 998 |
+| toString | 379 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1822,45 +1832,46 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | accessOrder | excluded: implementation field (private in the reference) |
-| clone | 920 |
-| get | 1,082 |
-| containsValue | 1,160 |
-| clear | 1,029 |
-| forEach | 1,140 |
-| keySet | 5,311 |
-| values | 3,226 |
-| entrySet | 121,827 |
-| sequencedKeySet | 1,220 |
-| sequencedValues | 1,195 |
-| sequencedEntrySet | 1,235 |
-| reversed | 1,253 |
-| firstEntry | 949 |
-| lastEntry | 943 |
-| pollFirstEntry | 1,009 |
-| pollLastEntry | 935 |
+| clone | 872 |
+| get | 1,115 |
+| containsValue | 1,163 |
+| clear | 1,091 |
+| forEach | 1,112 |
+| keySet | 5,314 |
+| values | 3,271 |
+| entrySet | 124,016 |
+| sequencedKeySet | 1,199 |
+| sequencedValues | 1,189 |
+| sequencedEntrySet | 1,247 |
+| reversed | 1,280 |
+| firstEntry | 923 |
+| lastEntry | 1,010 |
+| pollFirstEntry | 1,047 |
+| pollLastEntry | 985 |
 | putFirst | 1,077 |
-| putLast | 1,050 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| putLast | 1,016 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 | modCount | excluded: implementation field (protected in the reference) |
 | getNode | excluded: implementation hook (package-private in the reference) |
 | removeNode | excluded: implementation hook (package-private in the reference) |
-| size | 1,087 |
-| isEmpty | 1,081 |
-| containsKey | 1,053 |
-| put | 62,025 |
-| remove | 2,177 |
-| putAll | 1,079 |
-| hashCode | 1,042 |
-| getOrDefault | 1,042 |
-| replaceAll | 1,015 |
-| putIfAbsent | 1,168 |
-| replace | 2,230 |
-| computeIfAbsent | 1,064 |
-| computeIfPresent | 1,083 |
-| compute | 1,074 |
-| merge | 1,113 |
-| equals | 2,011 |
-| toString | 1,032 |
+| size | 1,125 |
+| isEmpty | 1,094 |
+| containsKey | 1,040 |
+| put | 63,364 |
+| remove | 2,231 |
+| putAll | 1,032 |
+| hashCode | 1,064 |
+| getOrDefault | 1,090 |
+| replaceAll | 1,063 |
+| putIfAbsent | 1,128 |
+| replace | 2,215 |
+| computeIfAbsent | 1,093 |
+| computeIfPresent | 1,102 |
+| compute | 1,159 |
+| merge | 1,108 |
+| equals | 1,994 |
+| toString | 1,086 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1870,8 +1881,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 |---|---:|
 | of | excluded: JS-only convenience factory (the reference has no Class.of on these classes) |
 | lru | excluded: JS-only convenience factory |
-| newLinkedHashMap | 335 |
-| newHashMap | 346 |
+| newLinkedHashMap | 358 |
+| newHashMap | 359 |
 
 </details>
 
@@ -1879,59 +1890,60 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| clone | 655 |
-| size | 417 |
-| isEmpty | 412 |
-| get | 414 |
-| containsKey | 446 |
-| containsValue | 440 |
-| getOrDefault | 442 |
-| put | 15,764 |
-| putIfAbsent | 480 |
-| remove | 855 |
-| clear | 422 |
-| forEach | 1,678 |
-| replaceAll | 723 |
-| computeIfAbsent | 2,040 |
-| computeIfPresent | 433 |
-| compute | 438 |
-| merge | 2,520 |
-| entrySet | 65,096 |
-| keySet | 2,051 |
-| values | 1,247 |
-| navigableKeySet | 455 |
-| descendingKeySet | 388 |
-| descendingMap | 605 |
-| reversed | 516 |
+| clone | 600 |
+| size | 446 |
+| isEmpty | 436 |
+| get | 422 |
+| containsKey | 420 |
+| containsValue | 445 |
+| getOrDefault | 408 |
+| put | 15,866 |
+| putIfAbsent | 426 |
+| remove | 798 |
+| clear | 446 |
+| forEach | 1,683 |
+| replaceAll | 741 |
+| computeIfAbsent | 2,061 |
+| computeIfPresent | 430 |
+| compute | 447 |
+| merge | 2,525 |
+| entrySet | 64,445 |
+| keySet | 2,058 |
+| values | 1,219 |
+| navigableKeySet | 442 |
+| descendingKeySet | 417 |
+| descendingMap | 622 |
+| reversed | 517 |
 | sequencedKeySet | 470 |
-| sequencedValues | 499 |
-| sequencedEntrySet | 517 |
-| headMap | 1,333 |
-| tailMap | 923 |
-| subMap | 1,261 |
-| comparator | 409 |
-| firstKey | 358 |
-| lastKey | 401 |
-| firstEntry | 401 |
-| lastEntry | 388 |
-| pollFirstEntry | 379 |
-| pollLastEntry | 419 |
-| putFirst | 369 |
-| putLast | 399 |
-| lowerEntry | 356 |
-| lowerKey | 336 |
-| floorEntry | 339 |
-| floorKey | 333 |
-| ceilingEntry | 356 |
-| ceilingKey | 345 |
-| higherEntry | 334 |
-| higherKey | 370 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| putAll | 408 |
-| equals | 1,107 |
-| hashCode | 394 |
-| toString | 459 |
-| replace | 899 |
+| sequencedValues | 457 |
+| sequencedEntrySet | 487 |
+| headMap | 1,342 |
+| tailMap | 928 |
+| subMap | 1,207 |
+| comparator | 372 |
+| firstKey | 375 |
+| lastKey | 382 |
+| firstEntry | 356 |
+| lastEntry | 378 |
+| pollFirstEntry | 369 |
+| pollLastEntry | 407 |
+| putFirst | 381 |
+| putLast | 348 |
+| lowerEntry | 343 |
+| lowerKey | 333 |
+| floorEntry | 338 |
+| floorKey | 329 |
+| ceilingEntry | 338 |
+| ceilingKey | 328 |
+| higherEntry | 329 |
+| higherKey | 369 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| putAll | 378 |
+| equals | 1,057 |
+| hashCode | 423 |
+| toString | 436 |
+| replace | 890 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1940,32 +1952,33 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | modCount | excluded: implementation field (protected in the reference) |
-| clone | 681 |
-| size | 312 |
-| isEmpty | 353 |
-| get | 378 |
-| containsKey | 342 |
-| containsValue | 351 |
-| put | 8,083 |
-| remove | 655 |
+| clone | 690 |
+| size | 294 |
+| isEmpty | 342 |
+| get | 334 |
+| containsKey | 331 |
+| containsValue | 343 |
+| put | 8,115 |
+| remove | 647 |
 | replace | 698 |
-| clear | 335 |
-| keySet | 1,420 |
-| values | 755 |
-| entrySet | 29,598 |
-| forEach | 335 |
-| equals | 1,016 |
+| clear | 354 |
+| keySet | 1,454 |
+| values | 757 |
+| entrySet | 29,830 |
+| forEach | 333 |
+| equals | 1,005 |
 | hashCode | excluded: identity hash code in the reference (not overridden there) |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| putAll | 338 |
-| toString | 353 |
-| getOrDefault | 315 |
-| replaceAll | 336 |
-| putIfAbsent | 319 |
-| computeIfAbsent | 339 |
-| computeIfPresent | 326 |
-| compute | 354 |
-| merge | 352 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| putAll | 322 |
+| toString | 331 |
+| getOrDefault | 336 |
+| replaceAll | 320 |
+| putIfAbsent | 313 |
+| computeIfAbsent | 359 |
+| computeIfPresent | 318 |
+| compute | 352 |
+| merge | 373 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -1974,29 +1987,30 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | Member | Times compared |
 |---|---:|
 | modCount | excluded: implementation field (protected in the reference) |
-| clone | 587 |
-| size | 2,879 |
-| isEmpty | 503 |
-| contains | 536 |
-| add | 7,358 |
-| remove | 1,103 |
-| clear | 548 |
-| iterator | 70,160 |
-| spliterator | 529 |
-| forEach | 527 |
-| toArray | 1,024 |
-| removeIf | 523 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| equals | 1,600 |
-| removeAll | 516 |
-| hashCode | 550 |
-| [SET_BRAND] | excluded: JS protocol / brand symbol; no reference counterpart |
-| containsAll | 535 |
-| addAll | 20,092 |
-| retainAll | 524 |
-| stream | 1,580 |
-| parallelStream | 543 |
+| clone | 599 |
+| size | 2,808 |
+| isEmpty | 532 |
+| contains | 559 |
+| add | 7,295 |
+| remove | 1,070 |
+| clear | 515 |
+| iterator | 70,007 |
+| spliterator | 547 |
+| forEach | 562 |
+| toArray | 1,023 |
+| removeIf | 548 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| equals | 1,582 |
+| removeAll | 517 |
+| hashCode | 494 |
+| [SET_BRAND] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| containsAll | 544 |
+| addAll | 20,173 |
+| retainAll | 517 |
+| stream | 1,589 |
+| parallelStream | 549 |
 | toString | 513 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2004,7 +2018,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| newHashSet | 337 |
+| newHashSet | 363 |
 | of | excluded: JS-only convenience factory (the reference has no Class.of on these classes) |
 
 </details>
@@ -2013,37 +2027,38 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| clone | 479 |
-| size | 324 |
-| isEmpty | 300 |
-| contains | 336 |
-| add | 16,507 |
-| remove | 664 |
-| clear | 306 |
-| iterator | 31,737 |
-| spliterator | 1,274 |
-| forEach | 306 |
-| toArray | 604 |
-| removeIf | 325 |
-| getFirst | 245 |
-| getLast | 231 |
-| removeFirst | 228 |
-| removeLast | 235 |
-| addFirst | 243 |
-| addLast | 209 |
-| reversed | 552 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
+| clone | 466 |
+| size | 331 |
+| isEmpty | 294 |
+| contains | 355 |
+| add | 16,211 |
+| remove | 652 |
+| clear | 311 |
+| iterator | 32,133 |
+| spliterator | 1,275 |
+| forEach | 322 |
+| toArray | 603 |
+| removeIf | 304 |
+| getFirst | 244 |
+| getLast | 253 |
+| removeFirst | 210 |
+| removeLast | 243 |
+| addFirst | 245 |
+| addLast | 218 |
+| reversed | 597 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 | modCount | excluded: implementation field (protected in the reference) |
-| equals | 1,094 |
-| removeAll | 335 |
-| hashCode | 256 |
-| [SET_BRAND] | excluded: JS protocol / brand symbol; no reference counterpart |
-| containsAll | 329 |
-| addAll | 2,606 |
-| retainAll | 313 |
-| stream | 3,109 |
-| parallelStream | 321 |
-| toString | 305 |
+| equals | 1,120 |
+| removeAll | 329 |
+| hashCode | 283 |
+| [SET_BRAND] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| containsAll | 336 |
+| addAll | 2,644 |
+| retainAll | 301 |
+| stream | 3,047 |
+| parallelStream | 316 |
+| toString | 299 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2051,9 +2066,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| newLinkedHashSet | 373 |
+| newLinkedHashSet | 376 |
 | of | excluded: JS-only convenience factory (the reference has no Class.of on these classes) |
-| newHashSet | 365 |
+| newHashSet | 367 |
 
 </details>
 
@@ -2061,50 +2076,51 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| clone | 620 |
-| iterator | 88,795 |
-| spliterator | 1,634 |
+| clone | 639 |
+| iterator | 90,352 |
+| spliterator | 1,667 |
 | descendingIterator | 1,117 |
-| size | 669 |
-| isEmpty | 701 |
-| contains | 631 |
-| add | 17,434 |
-| remove | 1,270 |
-| clear | 659 |
-| comparator | 637 |
-| first | 665 |
-| last | 651 |
-| getFirst | 609 |
-| getLast | 650 |
-| removeFirst | 690 |
-| removeLast | 624 |
-| addFirst | 622 |
-| addLast | 636 |
-| lower | 528 |
-| floor | 579 |
-| ceiling | 529 |
-| higher | 545 |
-| pollFirst | 576 |
-| pollLast | 554 |
-| descendingSet | 1,548 |
-| reversed | 838 |
-| headSet | 2,218 |
-| tailSet | 1,605 |
-| subSet | 2,147 |
-| [iterator] | excluded: JS protocol / brand symbol; no reference counterpart |
-| equals | 1,930 |
-| removeAll | 651 |
-| hashCode | 597 |
-| [SET_BRAND] | excluded: JS protocol / brand symbol; no reference counterpart |
-| toArray | 1,315 |
-| containsAll | 658 |
-| addAll | 8,068 |
-| retainAll | 638 |
-| removeIf | 631 |
+| size | 713 |
+| isEmpty | 653 |
+| contains | 630 |
+| add | 17,822 |
+| remove | 1,301 |
+| clear | 656 |
+| comparator | 627 |
+| first | 660 |
+| last | 672 |
+| getFirst | 653 |
+| getLast | 689 |
+| removeFirst | 699 |
+| removeLast | 676 |
+| addFirst | 627 |
+| addLast | 652 |
+| lower | 585 |
+| floor | 593 |
+| ceiling | 556 |
+| higher | 550 |
+| pollFirst | 551 |
+| pollLast | 576 |
+| descendingSet | 1,525 |
+| reversed | 892 |
+| headSet | 2,291 |
+| tailSet | 1,662 |
+| subSet | 2,198 |
+| [iterator] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| equals | 1,943 |
+| removeAll | 645 |
+| hashCode | 615 |
+| [SET_BRAND] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
+| toArray | 1,288 |
+| containsAll | 660 |
+| addAll | 8,162 |
+| retainAll | 646 |
+| removeIf | 642 |
 | forEach | 611 |
-| stream | 3,998 |
-| parallelStream | 675 |
-| toString | 651 |
+| stream | 3,896 |
+| parallelStream | 669 |
+| toString | 724 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2120,73 +2136,73 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| sort | 3,366 |
-| reverse | 3,533 |
-| shuffle | 3,566 |
-| swap | 3,321 |
-| fill | 3,361 |
-| copy | 3,369 |
-| min | 30,409 |
-| max | 30,319 |
-| frequency | 15,202 |
-| disjoint | 15,311 |
-| binarySearch | 4,498 |
-| rotate | 3,397 |
-| nCopies | 5,900 |
-| addAll | 15,410 |
-| indexOfSubList | 3,406 |
-| lastIndexOfSubList | 3,398 |
-| replaceAll | 3,422 |
-| reverseOrder | 9,826 |
-| emptyList | 4,471 |
-| emptySet | 2,320 |
-| emptyMap | 2,314 |
-| emptySortedSet | 2,358 |
-| emptyNavigableSet | 2,381 |
-| emptySortedMap | 2,339 |
-| emptyNavigableMap | 2,343 |
-| emptyIterator | 2,114 |
-| emptyListIterator | 2,130 |
-| emptyEnumeration | 2,010 |
-| singletonList | 2,447 |
-| singleton | 2,410 |
-| singletonMap | 2,273 |
-| unmodifiableCollection | 564 |
-| unmodifiableSequencedCollection | 348 |
-| unmodifiableList | 2,675 |
-| unmodifiableSet | 903 |
-| unmodifiableSequencedSet | 531 |
-| unmodifiableSortedSet | 235 |
-| unmodifiableNavigableSet | 212 |
-| unmodifiableMap | 487 |
-| unmodifiableSequencedMap | 256 |
-| unmodifiableSortedMap | 92 |
-| unmodifiableNavigableMap | 77 |
-| newSetFromMap | 479 |
-| newSequencedSetFromMap | 209 |
-| asLifoQueue | 484 |
-| enumeration | 32,119 |
-| list | 15,395 |
-| checkedCollection | 120 |
-| checkedList | 118 |
-| checkedSet | 735 |
-| checkedSortedSet | 212 |
-| checkedNavigableSet | 226 |
-| checkedQueue | 895 |
-| checkedMap | 479 |
-| checkedSortedMap | 73 |
-| checkedNavigableMap | 82 |
-| synchronizedCollection | 760 |
-| synchronizedList | 620 |
-| synchronizedSet | 415 |
-| synchronizedSortedSet | 218 |
-| synchronizedNavigableSet | 228 |
-| synchronizedMap | 472 |
-| synchronizedSortedMap | 84 |
-| synchronizedNavigableMap | 91 |
-| EMPTY_LIST | 4,516 |
-| EMPTY_SET | 4,436 |
-| EMPTY_MAP | 4,519 |
+| sort | 3,372 |
+| reverse | 3,514 |
+| shuffle | 3,456 |
+| swap | 3,324 |
+| fill | 3,253 |
+| copy | 3,376 |
+| min | 30,313 |
+| max | 30,351 |
+| frequency | 15,105 |
+| disjoint | 15,217 |
+| binarySearch | 4,487 |
+| rotate | 3,403 |
+| nCopies | 5,887 |
+| addAll | 15,377 |
+| indexOfSubList | 3,471 |
+| lastIndexOfSubList | 3,356 |
+| replaceAll | 3,459 |
+| reverseOrder | 9,653 |
+| emptyList | 4,444 |
+| emptySet | 2,303 |
+| emptyMap | 2,325 |
+| emptySortedSet | 2,344 |
+| emptyNavigableSet | 2,365 |
+| emptySortedMap | 2,354 |
+| emptyNavigableMap | 2,336 |
+| emptyIterator | 2,093 |
+| emptyListIterator | 2,129 |
+| emptyEnumeration | 2,068 |
+| singletonList | 2,376 |
+| singleton | 2,374 |
+| singletonMap | 2,300 |
+| unmodifiableCollection | 518 |
+| unmodifiableSequencedCollection | 343 |
+| unmodifiableList | 2,690 |
+| unmodifiableSet | 930 |
+| unmodifiableSequencedSet | 535 |
+| unmodifiableSortedSet | 261 |
+| unmodifiableNavigableSet | 208 |
+| unmodifiableMap | 497 |
+| unmodifiableSequencedMap | 265 |
+| unmodifiableSortedMap | 88 |
+| unmodifiableNavigableMap | 68 |
+| newSetFromMap | 490 |
+| newSequencedSetFromMap | 194 |
+| asLifoQueue | 494 |
+| enumeration | 32,125 |
+| list | 15,418 |
+| checkedCollection | 123 |
+| checkedList | 132 |
+| checkedSet | 718 |
+| checkedSortedSet | 219 |
+| checkedNavigableSet | 225 |
+| checkedQueue | 898 |
+| checkedMap | 463 |
+| checkedSortedMap | 81 |
+| checkedNavigableMap | 74 |
+| synchronizedCollection | 752 |
+| synchronizedList | 593 |
+| synchronizedSet | 414 |
+| synchronizedSortedSet | 222 |
+| synchronizedNavigableSet | 207 |
+| synchronizedMap | 462 |
+| synchronizedSortedMap | 94 |
+| synchronizedNavigableMap | 80 |
+| EMPTY_LIST | 4,464 |
+| EMPTY_SET | 4,401 |
+| EMPTY_MAP | 4,391 |
 
 </details>
 
@@ -2194,12 +2210,12 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 32,603 |
-| ofNullable | 6,299 |
-| empty | 6,440 |
-| iterate | 12,712 |
-| generate | 6,394 |
-| concat | 6,444 |
+| of | 32,387 |
+| ofNullable | 6,329 |
+| empty | 6,432 |
+| iterate | 12,645 |
+| generate | 6,293 |
+| concat | 6,532 |
 | builder | 12,707 |
 | from | excluded: JS-only source (array / iterable) with no reference counterpart |
 | ofArray | excluded: JS-only source (array / iterable) with no reference counterpart |
@@ -2210,50 +2226,50 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| filter | 24,735 |
-| map | 23,957 |
-| mapToInt | 6,847 |
-| mapToLong | 3,604 |
-| mapToDouble | 4,836 |
-| flatMap | 5,768 |
-| flatMapToInt | 5,725 |
-| flatMapToLong | 5,846 |
-| flatMapToDouble | 6,987 |
-| mapMulti | 6,780 |
-| mapMultiToInt | 5,778 |
-| mapMultiToLong | 5,749 |
-| mapMultiToDouble | 6,935 |
-| distinct | 6,756 |
-| sorted | 29,337 |
-| peek | 8,661 |
-| limit | 22,223 |
-| skip | 9,437 |
-| takeWhile | 6,929 |
-| dropWhile | 6,833 |
-| gather | 27,629 |
-| forEach | 3,990 |
-| forEachOrdered | 3,575 |
-| toArray | 9,014 |
-| reduce | 8,925 |
-| collect | 14,343 |
-| toList | 58,998 |
-| min | 3,193 |
-| max | 3,175 |
-| count | 19,586 |
-| anyMatch | 4,340 |
-| allMatch | 3,719 |
-| noneMatch | 3,691 |
-| findFirst | 6,218 |
-| findAny | 3,510 |
-| iterator | 7,097 |
-| spliterator | 3,563 |
-| isParallel | 19,370 |
-| sequential | 4,806 |
-| parallel | 3,966 |
-| unordered | 2,135 |
-| onClose | 8,573 |
-| close | 3,982 |
-| [dispose] | excluded: JS protocol / brand symbol; no reference counterpart |
+| filter | 24,721 |
+| map | 23,732 |
+| mapToInt | 6,795 |
+| mapToLong | 3,605 |
+| mapToDouble | 4,834 |
+| flatMap | 5,729 |
+| flatMapToInt | 5,652 |
+| flatMapToLong | 5,712 |
+| flatMapToDouble | 6,926 |
+| mapMulti | 6,839 |
+| mapMultiToInt | 5,705 |
+| mapMultiToLong | 5,711 |
+| mapMultiToDouble | 6,983 |
+| distinct | 6,718 |
+| sorted | 29,163 |
+| peek | 9,171 |
+| limit | 21,944 |
+| skip | 9,432 |
+| takeWhile | 6,777 |
+| dropWhile | 6,728 |
+| gather | 27,490 |
+| forEach | 4,002 |
+| forEachOrdered | 3,521 |
+| toArray | 8,992 |
+| reduce | 8,906 |
+| collect | 14,269 |
+| toList | 58,537 |
+| min | 3,144 |
+| max | 3,214 |
+| count | 19,488 |
+| anyMatch | 4,386 |
+| allMatch | 3,590 |
+| noneMatch | 3,767 |
+| findFirst | 6,098 |
+| findAny | 3,478 |
+| iterator | 6,921 |
+| spliterator | 3,458 |
+| isParallel | 19,255 |
+| sequential | 4,706 |
+| parallel | 3,914 |
+| unordered | 2,140 |
+| onClose | 8,509 |
+| close | 4,028 |
+| [dispose] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2261,15 +2277,15 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| range | 6,751 |
-| rangeClosed | 6,266 |
-| of | 32,112 |
+| range | 6,669 |
+| rangeClosed | 6,356 |
+| of | 31,802 |
 | ofArray | excluded: JS-only source (array / iterable) with no reference counterpart |
-| empty | 6,383 |
-| iterate | 12,946 |
-| generate | 6,272 |
-| concat | 6,489 |
-| builder | 6,465 |
+| empty | 6,326 |
+| iterate | 12,697 |
+| generate | 6,279 |
+| concat | 6,379 |
+| builder | 6,409 |
 
 </details>
 
@@ -2277,48 +2293,48 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 2,152 |
-| mapToLong | 7,504 |
-| mapToDouble | 7,561 |
-| asLongStream | 7,604 |
-| asDoubleStream | 7,641 |
-| summaryStatistics | 4,444 |
-| filter | 7,612 |
-| map | 7,629 |
-| mapToObj | 7,750 |
-| flatMap | 7,544 |
-| mapMulti | 7,609 |
-| distinct | 7,521 |
-| sorted | 7,594 |
-| peek | 6,933 |
-| limit | 20,314 |
-| skip | 7,505 |
-| takeWhile | 7,622 |
-| dropWhile | 7,558 |
-| forEach | 2,178 |
-| forEachOrdered | 2,080 |
-| toArray | 3,465 |
-| reduce | 4,521 |
-| collect | 2,401 |
-| sum | 2,866 |
-| min | 2,960 |
-| max | 2,926 |
-| count | 2,967 |
-| average | 4,312 |
-| anyMatch | 2,975 |
-| allMatch | 2,281 |
-| noneMatch | 2,159 |
-| findFirst | 4,525 |
-| findAny | 2,091 |
-| boxed | 10,128 |
-| spliterator | 8,568 |
-| isParallel | 2,365 |
-| sequential | 3,330 |
-| parallel | 3,080 |
-| unordered | 2,828 |
-| onClose | 5,292 |
-| close | 2,175 |
-| [dispose] | excluded: JS protocol / brand symbol; no reference counterpart |
+| iterator | 2,102 |
+| mapToLong | 7,393 |
+| mapToDouble | 7,591 |
+| asLongStream | 7,449 |
+| asDoubleStream | 7,662 |
+| summaryStatistics | 4,408 |
+| filter | 7,536 |
+| map | 7,566 |
+| mapToObj | 7,641 |
+| flatMap | 7,508 |
+| mapMulti | 7,572 |
+| distinct | 7,466 |
+| sorted | 7,574 |
+| peek | 7,701 |
+| limit | 20,219 |
+| skip | 7,497 |
+| takeWhile | 7,473 |
+| dropWhile | 7,607 |
+| forEach | 2,109 |
+| forEachOrdered | 2,128 |
+| toArray | 3,455 |
+| reduce | 4,488 |
+| collect | 2,307 |
+| sum | 2,870 |
+| min | 2,895 |
+| max | 2,909 |
+| count | 2,895 |
+| average | 4,320 |
+| anyMatch | 2,991 |
+| allMatch | 2,166 |
+| noneMatch | 2,107 |
+| findFirst | 4,562 |
+| findAny | 2,092 |
+| boxed | 10,169 |
+| spliterator | 8,666 |
+| isParallel | 2,399 |
+| sequential | 3,304 |
+| parallel | 3,044 |
+| unordered | 2,800 |
+| onClose | 5,268 |
+| close | 2,154 |
+| [dispose] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2326,15 +2342,15 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| range | 6,269 |
-| rangeClosed | 6,280 |
-| of | 25,625 |
+| range | 6,296 |
+| rangeClosed | 6,393 |
+| of | 25,685 |
 | ofArray | excluded: JS-only source (array / iterable) with no reference counterpart |
-| empty | 6,338 |
-| iterate | 12,917 |
-| generate | 6,352 |
-| concat | 6,398 |
-| builder | 6,327 |
+| empty | 6,190 |
+| iterate | 12,902 |
+| generate | 6,384 |
+| concat | 6,411 |
+| builder | 6,279 |
 
 </details>
 
@@ -2342,47 +2358,47 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 2,278 |
-| mapToInt | 7,904 |
-| mapToDouble | 7,976 |
-| asDoubleStream | 7,864 |
-| summaryStatistics | 4,754 |
-| filter | 7,850 |
-| map | 8,059 |
-| mapToObj | 8,049 |
-| flatMap | 8,006 |
-| mapMulti | 8,093 |
-| distinct | 8,068 |
-| sorted | 7,994 |
-| peek | 7,190 |
-| limit | 20,757 |
-| skip | 8,078 |
-| takeWhile | 8,083 |
-| dropWhile | 8,001 |
-| forEach | 2,211 |
-| forEachOrdered | 2,219 |
-| toArray | 3,668 |
-| reduce | 4,728 |
-| collect | 2,399 |
-| sum | 3,073 |
-| min | 3,137 |
-| max | 3,088 |
-| count | 3,011 |
-| average | 4,599 |
-| anyMatch | 3,057 |
-| allMatch | 2,226 |
-| noneMatch | 2,204 |
-| findFirst | 4,762 |
-| findAny | 2,277 |
-| boxed | 10,427 |
-| spliterator | 8,552 |
-| isParallel | 2,558 |
-| sequential | 3,237 |
-| parallel | 2,867 |
-| unordered | 2,992 |
-| onClose | 5,647 |
-| close | 2,241 |
-| [dispose] | excluded: JS protocol / brand symbol; no reference counterpart |
+| iterator | 2,230 |
+| mapToInt | 8,098 |
+| mapToDouble | 7,969 |
+| asDoubleStream | 7,819 |
+| summaryStatistics | 4,770 |
+| filter | 7,942 |
+| map | 8,085 |
+| mapToObj | 7,868 |
+| flatMap | 7,998 |
+| mapMulti | 7,957 |
+| distinct | 7,958 |
+| sorted | 7,937 |
+| peek | 8,094 |
+| limit | 20,727 |
+| skip | 7,991 |
+| takeWhile | 7,993 |
+| dropWhile | 7,947 |
+| forEach | 2,219 |
+| forEachOrdered | 2,248 |
+| toArray | 3,654 |
+| reduce | 4,782 |
+| collect | 2,462 |
+| sum | 3,066 |
+| min | 3,093 |
+| max | 3,038 |
+| count | 3,005 |
+| average | 4,495 |
+| anyMatch | 3,007 |
+| allMatch | 2,167 |
+| noneMatch | 2,240 |
+| findFirst | 4,771 |
+| findAny | 2,243 |
+| boxed | 10,315 |
+| spliterator | 8,577 |
+| isParallel | 2,584 |
+| sequential | 3,286 |
+| parallel | 2,887 |
+| unordered | 2,920 |
+| onClose | 5,701 |
+| close | 2,239 |
+| [dispose] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2390,13 +2406,13 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 31,771 |
+| of | 32,070 |
 | ofArray | excluded: JS-only source (array / iterable) with no reference counterpart |
-| empty | 6,432 |
-| iterate | 12,685 |
-| generate | 6,380 |
-| concat | 6,409 |
-| builder | 6,377 |
+| empty | 6,382 |
+| iterate | 12,683 |
+| generate | 6,422 |
+| concat | 6,457 |
+| builder | 6,393 |
 
 </details>
 
@@ -2404,46 +2420,46 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 2,621 |
-| mapToInt | 8,923 |
-| mapToLong | 8,568 |
-| summaryStatistics | 5,188 |
-| filter | 8,770 |
-| map | 8,751 |
-| mapToObj | 8,720 |
-| flatMap | 8,830 |
-| mapMulti | 8,623 |
-| distinct | 8,707 |
-| sorted | 8,858 |
-| peek | 7,866 |
-| limit | 21,348 |
-| skip | 8,531 |
-| takeWhile | 8,863 |
-| dropWhile | 8,758 |
-| forEach | 2,596 |
-| forEachOrdered | 2,690 |
-| toArray | 4,030 |
-| reduce | 5,046 |
-| collect | 2,618 |
-| sum | 2,555 |
-| min | 3,823 |
-| max | 3,741 |
-| count | 3,861 |
-| average | 5,214 |
-| anyMatch | 3,787 |
-| allMatch | 2,573 |
-| noneMatch | 2,623 |
-| findFirst | 5,523 |
-| findAny | 2,627 |
-| boxed | 11,887 |
-| spliterator | 8,910 |
-| isParallel | 2,891 |
-| sequential | 3,216 |
-| parallel | 2,625 |
-| unordered | 3,356 |
-| onClose | 6,478 |
-| close | 2,572 |
-| [dispose] | excluded: JS protocol / brand symbol; no reference counterpart |
+| iterator | 2,623 |
+| mapToInt | 8,760 |
+| mapToLong | 8,698 |
+| summaryStatistics | 5,222 |
+| filter | 8,741 |
+| map | 8,779 |
+| mapToObj | 8,845 |
+| flatMap | 8,845 |
+| mapMulti | 8,860 |
+| distinct | 8,792 |
+| sorted | 8,820 |
+| peek | 8,799 |
+| limit | 21,462 |
+| skip | 8,725 |
+| takeWhile | 8,818 |
+| dropWhile | 8,769 |
+| forEach | 2,590 |
+| forEachOrdered | 2,716 |
+| toArray | 4,103 |
+| reduce | 5,044 |
+| collect | 2,602 |
+| sum | 2,537 |
+| min | 3,784 |
+| max | 3,793 |
+| count | 3,880 |
+| average | 5,230 |
+| anyMatch | 3,852 |
+| allMatch | 2,554 |
+| noneMatch | 2,667 |
+| findFirst | 5,550 |
+| findAny | 2,542 |
+| boxed | 11,849 |
+| spliterator | 8,899 |
+| isParallel | 2,937 |
+| sequential | 3,288 |
+| parallel | 2,566 |
+| unordered | 3,423 |
+| onClose | 6,570 |
+| close | 2,578 |
+| [dispose] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2451,15 +2467,15 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 14,148 |
-| spliterator | 29,593 |
-| isParallel | 27,184 |
-| sequential | 14,589 |
-| parallel | 12,538 |
-| unordered | 11,311 |
-| onClose | 25,990 |
-| close | 10,970 |
-| [dispose] | excluded: JS protocol / brand symbol; no reference counterpart |
+| iterator | 13,876 |
+| spliterator | 29,600 |
+| isParallel | 27,175 |
+| sequential | 14,584 |
+| parallel | 12,411 |
+| unordered | 11,283 |
+| onClose | 26,048 |
+| close | 10,999 |
+| [dispose] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2467,9 +2483,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| accept | 38,421 |
-| add | 60,617 |
-| build | 31,876 |
+| accept | 38,247 |
+| add | 60,634 |
+| build | 31,788 |
 
 </details>
 
@@ -2477,9 +2493,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| accept | 38,421 |
-| add | 60,617 |
-| build | 31,876 |
+| accept | 38,247 |
+| add | 60,634 |
+| build | 31,788 |
 
 </details>
 
@@ -2487,11 +2503,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| nextInt | 1,326 |
-| hasNext | 2,144 |
-| next | 2,202 |
-| remove | 2,211 |
-| forEachRemaining | 2,190 |
+| nextInt | 1,322 |
+| hasNext | 2,122 |
+| next | 2,114 |
+| remove | 2,122 |
+| forEachRemaining | 2,186 |
 
 </details>
 
@@ -2499,11 +2515,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| nextLong | 1,468 |
-| hasNext | 2,144 |
-| next | 2,202 |
-| remove | 2,211 |
-| forEachRemaining | 2,190 |
+| nextLong | 1,456 |
+| hasNext | 2,122 |
+| next | 2,114 |
+| remove | 2,122 |
+| forEachRemaining | 2,186 |
 
 </details>
 
@@ -2511,11 +2527,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| nextDouble | 1,528 |
-| hasNext | 2,144 |
-| next | 2,202 |
-| remove | 2,211 |
-| forEachRemaining | 2,190 |
+| nextDouble | 1,577 |
+| hasNext | 2,122 |
+| next | 2,114 |
+| remove | 2,122 |
+| forEachRemaining | 2,186 |
 
 </details>
 
@@ -2523,10 +2539,10 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| stream | 12,426 |
-| intStream | 6,437 |
+| stream | 12,475 |
+| intStream | 6,463 |
 | longStream | 6,352 |
-| doubleStream | 6,363 |
+| doubleStream | 6,348 |
 
 </details>
 
@@ -2534,36 +2550,36 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| toCollection | 1,472 |
-| toList | 1,063 |
-| toUnmodifiableList | 753 |
-| toSet | 1,492 |
-| toUnmodifiableSet | 790 |
-| joining | 345 |
-| mapping | 942 |
-| filtering | 609 |
-| flatMapping | 500 |
-| collectingAndThen | 633 |
-| counting | 1,430 |
-| minBy | 789 |
-| maxBy | 746 |
-| summingInt | 666 |
-| summingLong | 543 |
-| summingDouble | 680 |
-| averagingInt | 619 |
-| averagingLong | 639 |
-| averagingDouble | 688 |
-| reducing | 1,958 |
-| groupingBy | 2,055 |
-| groupingByConcurrent | 1,848 |
-| partitioningBy | 1,396 |
-| toMap | 1,769 |
-| toUnmodifiableMap | 1,194 |
-| toConcurrentMap | 1,669 |
-| summarizingInt | 623 |
-| summarizingLong | 606 |
-| summarizingDouble | 681 |
-| teeing | 638 |
+| toCollection | 1,517 |
+| toList | 1,109 |
+| toUnmodifiableList | 758 |
+| toSet | 1,502 |
+| toUnmodifiableSet | 770 |
+| joining | 321 |
+| mapping | 928 |
+| filtering | 641 |
+| flatMapping | 478 |
+| collectingAndThen | 635 |
+| counting | 1,431 |
+| minBy | 774 |
+| maxBy | 737 |
+| summingInt | 647 |
+| summingLong | 542 |
+| summingDouble | 703 |
+| averagingInt | 581 |
+| averagingLong | 644 |
+| averagingDouble | 657 |
+| reducing | 1,987 |
+| groupingBy | 2,083 |
+| groupingByConcurrent | 1,821 |
+| partitioningBy | 1,387 |
+| toMap | 1,771 |
+| toUnmodifiableMap | 1,186 |
+| toConcurrentMap | 1,625 |
+| summarizingInt | 610 |
+| summarizingLong | 639 |
+| summarizingDouble | 695 |
+| teeing | 568 |
 
 </details>
 
@@ -2571,8 +2587,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 4,443 |
-| Characteristics | 2,087 |
+| of | 4,405 |
+| Characteristics | 2,013 |
 
 </details>
 
@@ -2580,11 +2596,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| supplier | 16,541 |
-| accumulator | 16,541 |
-| combiner | 16,541 |
-| finisher | 16,541 |
-| characteristics | 15,592 |
+| supplier | 16,711 |
+| accumulator | 16,711 |
+| combiner | 16,711 |
+| finisher | 16,711 |
+| characteristics | 15,745 |
 
 </details>
 
@@ -2592,11 +2608,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| fold | 5,128 |
-| scan | 7,171 |
-| windowFixed | 9,640 |
-| windowSliding | 7,226 |
-| mapConcurrent | 608 |
+| fold | 5,173 |
+| scan | 7,111 |
+| windowFixed | 9,563 |
+| windowSliding | 7,323 |
+| mapConcurrent | 618 |
 
 </details>
 
@@ -2604,11 +2620,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| defaultInitializer | 1,139 |
-| defaultCombiner | 8,596 |
-| defaultFinisher | 1,139 |
-| of | 2,388 |
-| ofSequential | 8,140 |
+| defaultInitializer | 1,116 |
+| defaultCombiner | 8,557 |
+| defaultFinisher | 1,116 |
+| of | 2,335 |
+| ofSequential | 8,039 |
 
 </details>
 
@@ -2616,11 +2632,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| initializer | 7,457 |
-| integrator | 7,457 |
-| combiner | 7,457 |
-| finisher | 7,457 |
-| andThen | 2,145 |
+| initializer | 7,441 |
+| integrator | 7,441 |
+| combiner | 7,441 |
+| finisher | 7,441 |
+| andThen | 2,066 |
 
 </details>
 
@@ -2628,8 +2644,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| of | 2,295 |
-| ofGreedy | 8,233 |
+| of | 2,218 |
+| ofGreedy | 8,156 |
 
 </details>
 
@@ -2645,8 +2661,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| push | 14,672 |
-| isRejecting | 2,218 |
+| push | 14,674 |
+| isRejecting | 2,199 |
 
 </details>
 
@@ -2654,11 +2670,11 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| initializer | 7,457 |
-| combiner | 7,457 |
-| finisher | 7,457 |
-| andThen | 2,145 |
-| integrator | 7,457 |
+| initializer | 7,441 |
+| combiner | 7,441 |
+| finisher | 7,441 |
+| andThen | 2,066 |
+| integrator | 7,441 |
 
 </details>
 
@@ -2666,22 +2682,23 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| get | 20,081 |
-| isPresent | 28,324 |
-| isEmpty | 1,531 |
-| ifPresent | 1,633 |
-| ifPresentOrElse | 1,540 |
-| filter | 1,623 |
-| map | 1,611 |
-| flatMap | 1,027 |
-| or | 1,609 |
-| stream | 1,597 |
-| orElse | 1,626 |
-| orElseGet | 1,592 |
-| orElseThrow | 3,298 |
-| equals | 1,579 |
-| hashCode | 1,548 |
-| toString | 3,935 |
+| get | 20,075 |
+| filter | 1,650 |
+| map | 1,618 |
+| flatMap | 1,016 |
+| or | 1,600 |
+| stream | 1,550 |
+| equals | 1,608 |
+| hashCode | 1,524 |
+| toString | 3,855 |
+| isPresent | 28,214 |
+| isEmpty | 1,565 |
+| ifPresent | 1,596 |
+| ifPresentOrElse | 1,586 |
+| orElse | 1,643 |
+| orElseGet | 1,548 |
+| orElseThrow | 3,286 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2689,9 +2706,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| empty | 3,042 |
-| of | 4,819 |
-| ofNullable | 4,835 |
+| empty | 3,015 |
+| of | 4,860 |
+| ofNullable | 4,859 |
 
 </details>
 
@@ -2699,18 +2716,19 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getAsInt | 1,012 |
-| stream | 1,035 |
-| isPresent | 17,790 |
-| isEmpty | 963 |
-| ifPresent | 1,016 |
-| ifPresentOrElse | 1,023 |
-| orElse | 1,018 |
-| orElseGet | 1,092 |
-| orElseThrow | 13,540 |
-| equals | 987 |
-| hashCode | 1,033 |
-| toString | 3,180 |
+| getAsInt | 1,058 |
+| stream | 1,022 |
+| equals | 979 |
+| hashCode | 1,009 |
+| toString | 3,279 |
+| isPresent | 17,647 |
+| isEmpty | 1,021 |
+| ifPresent | 1,057 |
+| ifPresentOrElse | 1,045 |
+| orElse | 1,070 |
+| orElseGet | 1,091 |
+| orElseThrow | 13,429 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2718,8 +2736,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| empty | 1,481 |
-| of | 4,308 |
+| empty | 1,524 |
+| of | 4,288 |
 
 </details>
 
@@ -2727,18 +2745,19 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getAsLong | 1,137 |
-| stream | 1,100 |
-| isPresent | 18,637 |
-| isEmpty | 1,044 |
-| ifPresent | 1,078 |
-| ifPresentOrElse | 1,067 |
-| orElse | 1,078 |
-| orElseGet | 1,101 |
-| orElseThrow | 13,689 |
-| equals | 1,088 |
-| hashCode | 1,030 |
-| toString | 3,268 |
+| getAsLong | 1,162 |
+| stream | 1,092 |
+| equals | 1,086 |
+| hashCode | 1,062 |
+| toString | 3,259 |
+| isPresent | 18,678 |
+| isEmpty | 1,067 |
+| ifPresent | 1,029 |
+| ifPresentOrElse | 1,078 |
+| orElse | 1,058 |
+| orElseGet | 1,137 |
+| orElseThrow | 13,860 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2746,8 +2765,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| empty | 1,627 |
-| of | 4,301 |
+| empty | 1,634 |
+| of | 4,400 |
 
 </details>
 
@@ -2755,18 +2774,19 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getAsDouble | 1,064 |
-| stream | 1,061 |
-| isPresent | 27,738 |
-| isEmpty | 1,044 |
-| ifPresent | 994 |
-| ifPresentOrElse | 1,052 |
-| orElse | 1,008 |
-| orElseGet | 995 |
-| orElseThrow | 18,948 |
-| equals | 1,080 |
-| hashCode | 994 |
-| toString | 10,537 |
+| getAsDouble | 1,102 |
+| stream | 1,085 |
+| equals | 1,055 |
+| hashCode | 1,011 |
+| toString | 10,512 |
+| isPresent | 27,579 |
+| isEmpty | 1,004 |
+| ifPresent | 1,068 |
+| ifPresentOrElse | 1,033 |
+| orElse | 1,052 |
+| orElseGet | 982 |
+| orElseThrow | 18,813 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2774,8 +2794,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| empty | 1,555 |
-| of | 4,319 |
+| empty | 1,586 |
+| of | 4,328 |
 
 </details>
 
@@ -2783,14 +2803,14 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| DISTINCT | 2,064 |
-| SORTED | 2,064 |
-| ORDERED | 2,064 |
-| SIZED | 2,064 |
-| NONNULL | 2,064 |
-| IMMUTABLE | 2,064 |
-| CONCURRENT | 2,064 |
-| SUBSIZED | 2,064 |
+| DISTINCT | 2,088 |
+| SORTED | 2,088 |
+| ORDERED | 2,088 |
+| SIZED | 2,088 |
+| NONNULL | 2,088 |
+| IMMUTABLE | 2,088 |
+| CONCURRENT | 2,088 |
+| SUBSIZED | 2,088 |
 
 </details>
 
@@ -2798,14 +2818,14 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| tryAdvance | 18,915 |
-| forEachRemaining | 26,663 |
-| trySplit | 11,511 |
-| estimateSize | 7,082 |
-| getExactSizeIfKnown | 7,274 |
-| characteristics | 11,300 |
-| hasCharacteristics | 11,341 |
-| getComparator | 7,563 |
+| tryAdvance | 19,014 |
+| forEachRemaining | 26,777 |
+| trySplit | 11,482 |
+| estimateSize | 7,194 |
+| getExactSizeIfKnown | 7,258 |
+| characteristics | 11,250 |
+| hasCharacteristics | 11,444 |
+| getComparator | 7,676 |
 
 </details>
 
@@ -2813,17 +2833,17 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| AbstractSpliterator | 1,898 |
-| AbstractIntSpliterator | 1,849 |
-| AbstractLongSpliterator | 1,920 |
-| AbstractDoubleSpliterator | 1,909 |
-| emptySpliterator | 1,927 |
-| emptyIntSpliterator | 1,946 |
-| emptyLongSpliterator | 1,898 |
-| emptyDoubleSpliterator | 1,942 |
-| spliterator | 7,753 |
-| spliteratorUnknownSize | 1,938 |
-| iterator | 7,860 |
+| AbstractSpliterator | 1,922 |
+| AbstractIntSpliterator | 1,920 |
+| AbstractLongSpliterator | 1,966 |
+| AbstractDoubleSpliterator | 1,908 |
+| emptySpliterator | 1,954 |
+| emptyIntSpliterator | 1,927 |
+| emptyLongSpliterator | 1,926 |
+| emptyDoubleSpliterator | 1,957 |
+| spliterator | 7,761 |
+| spliteratorUnknownSize | 1,968 |
+| iterator | 7,978 |
 
 </details>
 
@@ -2831,14 +2851,15 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| accept | 8,481 |
-| combine | 2,406 |
-| getCount | 5,033 |
-| getSum | 5,018 |
-| getMin | 5,054 |
-| getMax | 5,028 |
-| getAverage | 5,074 |
-| toString | 4,237 |
+| accept | 8,543 |
+| combine | 2,480 |
+| getCount | 5,054 |
+| getSum | 5,061 |
+| getMin | 5,045 |
+| getMax | 5,020 |
+| getAverage | 5,048 |
+| toString | 4,218 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2846,14 +2867,15 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| accept | 8,540 |
-| combine | 2,510 |
-| getCount | 5,171 |
-| getSum | 5,148 |
-| getMin | 5,133 |
-| getMax | 5,217 |
-| getAverage | 5,206 |
-| toString | 4,420 |
+| accept | 8,748 |
+| combine | 2,509 |
+| getCount | 5,252 |
+| getSum | 5,242 |
+| getMin | 5,211 |
+| getMax | 5,272 |
+| getAverage | 5,291 |
+| toString | 4,446 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2861,14 +2883,15 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| accept | 8,569 |
-| combine | 2,450 |
-| getCount | 5,407 |
-| getSum | 5,387 |
-| getMin | 5,412 |
-| getMax | 5,382 |
-| getAverage | 5,318 |
-| toString | 4,735 |
+| accept | 9,520 |
+| combine | 2,846 |
+| getCount | 5,468 |
+| getSum | 5,507 |
+| getMin | 5,561 |
+| getMax | 5,496 |
+| getAverage | 5,729 |
+| toString | 4,846 |
+| [INSPECT] | excluded: JS protocol / brand symbol (INSPECT: the util.inspect hook behind console.log); no reference counterpart |
 
 </details>
 
@@ -2884,7 +2907,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 30,420 |
+| name | 30,363 |
 
 </details>
 
@@ -2892,7 +2915,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 4,214 |
+| name | 4,190 |
 
 </details>
 
@@ -2900,7 +2923,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 83,592 |
+| name | 83,364 |
 
 </details>
 
@@ -2908,7 +2931,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 80 |
+| name | 81 |
 
 </details>
 
@@ -2916,7 +2939,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 24,816 |
+| name | 24,729 |
 
 </details>
 
@@ -2924,7 +2947,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 20,698 |
+| name | 20,696 |
 
 </details>
 
@@ -2932,7 +2955,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 15,829 |
+| name | 15,939 |
 
 </details>
 
@@ -2940,7 +2963,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 191,632 |
+| name | 191,051 |
 
 </details>
 
@@ -2948,7 +2971,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 2,356 |
+| name | 2,402 |
 
 </details>
 
@@ -2956,7 +2979,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 1,969 |
+| name | 1,965 |
 
 </details>
 
@@ -2966,96 +2989,96 @@ Views, iterators, wrappers and stream internals the harness received, with the p
 
 | Implementation | Interfaces | Members called |
 |---|---|---:|
-|  | Collection, Set, Integrator | 2 |
-| ArrayItr | Iterator, ListIterator, Integrator | 10 |
-| ArrayListItr | Iterator, ListIterator, Integrator | 10 |
-| ArraySpliterator | Integrator, Spliterator | 8 |
-| AscendingIterator | Iterator, Integrator | 4 |
-| Builder | StreamBuilder, NumberStreamBuilder, Integrator | 3 |
-| CollectorImpl | Collector, Integrator | 5 |
-| Composite | Gatherer, Integrator, DefinedGatherer | 4 |
-| ConcatSpliterator | Integrator, Spliterator | 7 |
-| CopiesList | Collection, SequencedCollection, List, Integrator | 36 |
-| DelegatingSpliterator | Integrator, Spliterator | 7 |
-| DeqSpliterator | Integrator, Spliterator | 8 |
-| DescendingIterator | Iterator, Integrator | 4 |
-| DescendingItr | Iterator, Integrator | 4 |
-| DoublePipeline | DoubleStream, BaseStream, Integrator | 39 |
-| EmptyList | Collection, SequencedCollection, List, Integrator | 36 |
-| EmptyMap | Map, Integrator | 24 |
-| EmptySet | Collection, Set, Integrator | 21 |
-| EmptySpliterator | Integrator, Spliterator | 8 |
-| EntryIterator | Iterator, Integrator | 3 |
-| EntrySet | Collection, Set, Integrator | 21 |
-| EntrySetView | Collection, SequencedCollection, SequencedSet, Set, Integrator | 27 |
-| GatherSink | Integrator, Downstream | 2 |
-| GathererImpl | Gatherer, Integrator, DefinedGatherer | 5 |
-| HashNode | MapEntry, Integrator | 2 |
-| HashSetIterator | Iterator, Integrator | 3 |
-| IdentityIterator | Iterator, Integrator | 3 |
-| IdentityNode | MapEntry, Integrator | 2 |
-| ImmutableList | Collection, SequencedCollection, List, Integrator | 36 |
-| ImmutableMap | Map, Integrator | 24 |
-| ImmutableSet | Collection, Set, Integrator | 21 |
-| IntPipeline | IntStream, BaseStream, Integrator | 41 |
-| Iterate3Spliterator | Integrator, Spliterator | 7 |
-| IteratorSpliterator | Integrator, Spliterator | 8 |
-| Itr | Iterator, Integrator | 4 |
-| KeyIterator | Iterator, Integrator | 3 |
-| KeySet | Collection, Set, Integrator | 20 |
-| KeySetView | Collection, Set, Integrator | 20 |
-| KeyValueHolder | MapEntry, Integrator | 6 |
-| LLSpliterator | Integrator, Spliterator | 8 |
-| LinkedEntrySet | Collection, SequencedCollection, SequencedSet, Set, Integrator | 28 |
-| LinkedIterator | Iterator, Integrator | 4 |
-| LinkedJsIterator | Integrator | 1 |
-| LinkedKeySet | Collection, SequencedCollection, SequencedSet, Set, Integrator | 27 |
-| LinkedNode | MapEntry, Integrator | 3 |
-| LinkedValues | Collection, SequencedCollection, Integrator | 26 |
-| ListItr | Iterator, ListIterator, Integrator | 10 |
-| LongPipeline | LongStream, BaseStream, Integrator | 40 |
-| NavigableKeySet | Collection, SequencedCollection, SequencedSet, SortedSet, NavigableSet, Set, Integrator | 41 |
-| NumberIterator | Iterator, PrimitiveIteratorOfInt, PrimitiveIteratorOfLong, PrimitiveIteratorOfDouble, Integrator | 7 |
-| Object | Enumeration, Integrator | 14 |
-| OwnedArraySpliterator | Integrator, Spliterator | 8 |
-| Partition | Map, Integrator | 2 |
-| RandomAccessSpliterator | Integrator, Spliterator | 8 |
-| RangeSpliterator | Integrator, Spliterator | 7 |
-| ReadOnlyItr | Iterator, ListIterator, Integrator | 10 |
-| RefPipeline | Stream, BaseStream, Integrator | 43 |
-| ReverseListItr | Iterator, ListIterator, Integrator | 10 |
-| ReverseOrderLinkedListView | Collection, SequencedCollection, Queue, Deque, List, Integrator | 51 |
-| ReverseOrderListView | Collection, SequencedCollection, List, Integrator | 36 |
-| ReversedDeque | Collection, SequencedCollection, Queue, Deque, Integrator | 41 |
-| ReversedLinkedHashMap | SequencedMap, Map, Integrator | 34 |
-| ReversedLinkedHashSet | Collection, SequencedCollection, SequencedSet, Set, Integrator | 27 |
-| ReversedList | Collection, SequencedCollection, List, Integrator | 36 |
-| SequencedEntryView | Collection, SequencedCollection, SequencedSet, Set, Integrator | 1 |
-| SequencedKeyView | Collection, SequencedCollection, SequencedSet, Set, Integrator | 1 |
-| SequencedValuesView | Collection, SequencedCollection, Integrator | 1 |
-| SingletonList | Collection, SequencedCollection, List, Integrator | 36 |
-| SingletonMap | Map, Integrator | 24 |
-| SingletonSet | Collection, Set, Integrator | 21 |
-| SingletonSpliterator | Integrator, Spliterator | 8 |
-| SpliteratorIterator | Iterator, Integrator | 4 |
-| SubList | Collection, SequencedCollection, List, Integrator | 36 |
-| SubMap | SequencedMap, SortedMap, NavigableMap, Map, Integrator | 52 |
-| TreeIter | Iterator, Integrator | 4 |
-| TreeNode | MapEntry, Integrator | 3 |
-| UnmodifiableCollection | Collection, Integrator | 19 |
-| UnmodifiableEntry | MapEntry, Integrator | 3 |
-| UnmodifiableEntrySet | Collection, SequencedCollection, SequencedSet, Set, Integrator | 4 |
-| UnmodifiableList | Collection, SequencedCollection, List, Integrator | 36 |
-| UnmodifiableMap | Map, Integrator | 24 |
-| UnmodifiableNavigableMap | SequencedMap, SortedMap, NavigableMap, Map, Integrator | 51 |
-| UnmodifiableNavigableSet | Collection, SequencedCollection, SequencedSet, SortedSet, NavigableSet, Set, Integrator | 41 |
-| UnmodifiableSequencedCollection | Collection, SequencedCollection, Integrator | 26 |
-| UnmodifiableSequencedMap | SequencedMap, Map, Integrator | 34 |
-| UnmodifiableSequencedSet | Collection, SequencedCollection, SequencedSet, Set, Integrator | 27 |
-| UnmodifiableSet | Collection, Set, Integrator | 20 |
-| UnmodifiableSortedMap | SequencedMap, SortedMap, NavigableMap, Map, Integrator | 40 |
-| ValueIterator | Iterator, Integrator | 3 |
-| Values | Collection, Integrator | 18 |
-| ValuesView | Collection, SequencedCollection, Integrator | 25 |
-| WrappingSpliterator | Integrator, Spliterator | 7 |
+| (anonymous) | Collection, Set | 2 |
+| ArrayItr | Iterator, ListIterator | 10 |
+| ArrayListItr | Iterator, ListIterator | 10 |
+| ArraySpliterator | Spliterator | 8 |
+| AscendingIterator | Iterator | 4 |
+| Builder | StreamBuilder, NumberStreamBuilder | 3 |
+| CollectorImpl | Collector | 5 |
+| CompensatedSum | - | 0 |
+| Composite | Gatherer, DefinedGatherer | 4 |
+| ConcatSpliterator | Spliterator | 7 |
+| CopiesList | Collection, SequencedCollection, List | 36 |
+| DelegatingSpliterator | Spliterator | 7 |
+| DeqSpliterator | Spliterator | 8 |
+| DescendingIterator | Iterator | 4 |
+| DescendingItr | Iterator | 4 |
+| DoublePipeline | DoubleStream, BaseStream | 39 |
+| EmptyList | Collection, SequencedCollection, List | 36 |
+| EmptyMap | Map | 24 |
+| EmptySet | Collection, Set | 21 |
+| EmptySpliterator | Spliterator | 8 |
+| EngineArraySpliterator | Spliterator | 7 |
+| EntryIterator | Iterator | 3 |
+| EntrySet | Collection, Set | 21 |
+| EntrySetView | Collection, SequencedCollection, SequencedSet, Set | 27 |
+| GatherSink | Downstream | 2 |
+| GathererImpl | Gatherer, DefinedGatherer | 5 |
+| HashNode | MapEntry | 2 |
+| HashSetIterator | Iterator | 3 |
+| IdentityIterator | Iterator | 3 |
+| IdentityNode | MapEntry | 2 |
+| ImmutableList | Collection, SequencedCollection, List | 36 |
+| ImmutableMap | Map | 24 |
+| ImmutableSet | Collection, Set | 21 |
+| IntPipeline | IntStream, BaseStream | 41 |
+| Iterate3Spliterator | Spliterator | 7 |
+| IteratorSpliterator | Spliterator | 8 |
+| Itr | Iterator | 4 |
+| KeyIterator | Iterator | 3 |
+| KeySet | Collection, Set | 20 |
+| KeySetView | Collection, Set | 20 |
+| KeyValueHolder | MapEntry | 6 |
+| LLSpliterator | Spliterator | 8 |
+| LinkedEntrySet | Collection, SequencedCollection, SequencedSet, Set | 28 |
+| LinkedIterator | Iterator | 4 |
+| LinkedJsIterator | - | 0 |
+| LinkedKeySet | Collection, SequencedCollection, SequencedSet, Set | 27 |
+| LinkedNode | MapEntry | 3 |
+| LinkedValues | Collection, SequencedCollection | 26 |
+| ListItr | Iterator, ListIterator | 10 |
+| LongPipeline | LongStream, BaseStream | 40 |
+| NavigableKeySet | Collection, SequencedCollection, SequencedSet, SortedSet, NavigableSet, Set | 41 |
+| NumberIterator | Iterator, PrimitiveIteratorOfInt, PrimitiveIteratorOfLong, PrimitiveIteratorOfDouble | 7 |
+| Object | Enumeration | 13 |
+| OwnedArraySpliterator | Spliterator | 8 |
+| Partition | Map | 2 |
+| RandomAccessSpliterator | Spliterator | 8 |
+| RangeSpliterator | Spliterator | 7 |
+| ReadOnlyItr | Iterator, ListIterator | 10 |
+| RefPipeline | Stream, BaseStream | 43 |
+| ReverseOrderLinkedListView | Collection, SequencedCollection, Queue, Deque, List | 51 |
+| ReverseOrderListView | Collection, SequencedCollection, List | 36 |
+| ReversedDeque | Collection, SequencedCollection, Queue, Deque | 41 |
+| ReversedLinkedHashMap | SequencedMap, Map | 34 |
+| ReversedLinkedHashSet | Collection, SequencedCollection, SequencedSet, Set | 27 |
+| SequencedEntryView | Collection, SequencedCollection, SequencedSet, Set | 1 |
+| SequencedKeyView | Collection, SequencedCollection, SequencedSet, Set | 1 |
+| SequencedValuesView | Collection, SequencedCollection | 1 |
+| SingletonList | Collection, SequencedCollection, List | 36 |
+| SingletonMap | Map | 24 |
+| SingletonSet | Collection, Set | 21 |
+| SingletonSpliterator | Spliterator | 8 |
+| SpliteratorIterator | Iterator | 4 |
+| SubList | Collection, SequencedCollection, List | 36 |
+| SubMap | SequencedMap, SortedMap, NavigableMap, Map | 52 |
+| TreeIter | Iterator | 4 |
+| TreeNode | MapEntry | 3 |
+| UnmodifiableCollection | Collection | 19 |
+| UnmodifiableEntry | MapEntry | 3 |
+| UnmodifiableEntrySet | Collection, SequencedCollection, SequencedSet, Set | 4 |
+| UnmodifiableList | Collection, SequencedCollection, List | 36 |
+| UnmodifiableMap | Map | 24 |
+| UnmodifiableNavigableMap | SequencedMap, SortedMap, NavigableMap, Map | 51 |
+| UnmodifiableNavigableSet | Collection, SequencedCollection, SequencedSet, SortedSet, NavigableSet, Set | 41 |
+| UnmodifiableSequencedCollection | Collection, SequencedCollection | 26 |
+| UnmodifiableSequencedMap | SequencedMap, Map | 34 |
+| UnmodifiableSequencedSet | Collection, SequencedCollection, SequencedSet, Set | 27 |
+| UnmodifiableSet | Collection, Set | 20 |
+| UnmodifiableSortedMap | SequencedMap, SortedMap, NavigableMap, Map | 40 |
+| ValueIterator | Iterator | 3 |
+| Values | Collection | 18 |
+| ValuesView | Collection, SequencedCollection | 25 |
+| WrappingSpliterator | Spliterator | 7 |
 
