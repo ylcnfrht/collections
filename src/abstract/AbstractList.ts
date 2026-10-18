@@ -521,10 +521,6 @@ class SubList<E> extends AbstractList<E> {
   }
 }
 
-function checkClosedRange(index: number, size: number): void {
-  if (!Number.isInteger(index) || index < 0 || index > size) throw new IndexOutOfBoundsException(`Index: ${index}, Size: ${size}`);
-}
-
 /**
  * The reference's reverse-ordered list view (List.reversed()); iterators delegate to the base list so they stay
  * fail-fast, and bulk operations run on the base in one pass. An unmodifiable one (List.of lists) throws
@@ -604,7 +600,7 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
 
   override listIterator(index = 0): ListIterator<E> {
     const size = this.base.size();
-    checkClosedRange(index, size);
+    checkPositionIndex(index, size);
     const base = this.base;
     const it = base.listIterator(size - index);
     const check = () => this.checkModifiable();
@@ -660,14 +656,14 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
   protected override addAtIndex(index: number, e: E): void {
     this.checkModifiable();
     const size = this.base.size();
-    checkClosedRange(index, size);
+    checkPositionIndex(index, size);
     this.base.add(size - index, e);
   }
 
   protected override addAllAt(index: number, c: Collection<E>): boolean {
     this.checkModifiable();
     const size = this.base.size();
-    checkClosedRange(index, size);
+    checkPositionIndex(index, size);
     const adds = requireNonNull(c).toArray();
     if (adds.length === 0) return false;
     this.base.addAll(size - index, new ArrayView(adds.reverse()));
