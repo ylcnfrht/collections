@@ -5,6 +5,8 @@ import { SimpleList } from '../support';
 export interface QueueOptions {
   /** insertion order (LinkedList, ArrayDeque); false for priority queues */
   fifo: boolean;
+  /** removeIf is an iterator-removal loop (LinkedList, as the reference): a throw keeps earlier removals */
+  iteratorRemoveIf?: boolean;
 }
 
 /** Queue contract. Elements used are distinct non-null numbers. */
@@ -133,7 +135,7 @@ export function queueContract(name: string, create: () => Queue<any>, opts: Queu
         );
         expect(sorted(q)).toEqual([1, 2, 3, 4, 9]);
       });
-      it('throwing predicate leaves the queue unchanged', () => {
+      (opts.iteratorRemoveIf ? it.skip : it)('throwing predicate leaves the queue unchanged', () => {
         const q = of(1, 2, 3, 4);
         expect(() =>
           q.removeIf((x: number) => {

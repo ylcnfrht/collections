@@ -3,6 +3,8 @@ import { expectThrows, Point, rng, timeIt } from '../helpers';
 
 export interface DequeOptions {
   allowsNull: boolean;
+  /** removeIf is an iterator-removal loop (LinkedList, as the reference): a throw keeps earlier removals */
+  iteratorRemoveIf?: boolean;
 }
 
 /** Deque contract (both ends, stack use, descending iteration, reversed view). */
@@ -257,12 +259,12 @@ export function dequeContract(name: string, create: () => Deque<any>, opts: Dequ
         );
         expect(d.toArray()).toEqual([1, 2, 3, 4, 9]);
       });
-      it('modification on the last element is still detected', () => {
+      (opts.iteratorRemoveIf ? it.skip : it)('modification on the last element is still detected', () => {
         const d = of(1, 2, 3);
         expectThrows(() => d.removeIf((x: number) => (x === 3 && d.addFirst(0), x === 2)), 'ConcurrentModificationException');
         expect(d.toArray()).toEqual([0, 1, 2, 3]);
       });
-      it('throwing predicate leaves the deque unchanged', () => {
+      (opts.iteratorRemoveIf ? it.skip : it)('throwing predicate leaves the deque unchanged', () => {
         const d = of(1, 2, 3, 4);
         expect(() =>
           d.removeIf((x: number) => {

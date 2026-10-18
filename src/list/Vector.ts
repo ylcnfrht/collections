@@ -46,8 +46,15 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   override removeAt(index: number): E {
+    // like the reference, even a bad index fails open iterators
+    this.modCount++;
     if ((index >>> 0) !== index || index >= this.es.length) aioobe(index, this.es.length);
     return super.removeAt(index);
+  }
+
+  /** @internal Vector is not an ArrayList in the reference: its nested sublists start fresh */
+  override nestedSubListsInheritStaleness(): boolean {
+    return false;
   }
 
   override add(e: E): boolean;
@@ -59,7 +66,10 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   protected override addAtIndex(index: number, e: E): void {
-    if ((index >>> 0) !== index || index > this.es.length) aioobe(index, this.es.length);
+    // the reference's order: an index past the end fails first; a negative one only after counting the change
+    if (index > this.es.length) aioobe(index, this.es.length);
+    this.modCount++;
+    if ((index >>> 0) !== index) aioobe(index, this.es.length);
     this.ensure(this.es.length + 1);
     super.addAtIndex(index, e);
   }
@@ -199,6 +209,12 @@ export class Vector<E> extends ArrayList<E> {
 
   addElement(e: E): void {
     this.add(e);
+  }
+
+  /** Like the reference, open iterators fail fast afterwards even when o is not found. */
+  override remove(o: unknown): boolean {
+    this.modCount++;
+    return super.remove(o);
   }
 
   removeElement(o: unknown): boolean {

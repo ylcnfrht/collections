@@ -8,14 +8,14 @@ import { SimpleList, SimpleSeqList } from './support';
 
 collectionContract('LinkedList', () => new LinkedList(), { allowsNull: true, allowsDuplicates: true });
 listContract('LinkedList', () => new LinkedList());
-queueContract('LinkedList', () => new LinkedList(), { fifo: true });
-dequeContract('LinkedList', () => new LinkedList(), { allowsNull: true });
+queueContract('LinkedList', () => new LinkedList(), { fifo: true, iteratorRemoveIf: true });
+dequeContract('LinkedList', () => new LinkedList(), { allowsNull: true, iteratorRemoveIf: true });
 
 // the reverse view is itself a full LinkedList
 collectionContract('LinkedList.reversed()', () => new LinkedList().reversed(), { allowsNull: true, allowsDuplicates: true });
 listContract('LinkedList.reversed()', () => new LinkedList().reversed());
-queueContract('LinkedList.reversed()', () => new LinkedList().reversed(), { fifo: true });
-dequeContract('LinkedList.reversed()', () => new LinkedList().reversed(), { allowsNull: true });
+queueContract('LinkedList.reversed()', () => new LinkedList().reversed(), { fifo: true, iteratorRemoveIf: true });
+dequeContract('LinkedList.reversed()', () => new LinkedList().reversed(), { allowsNull: true, iteratorRemoveIf: true });
 
 const NSEE = 'NoSuchElementException';
 const ISE = 'IllegalStateException';
@@ -142,10 +142,27 @@ describe('LinkedList · implementation', () => {
       l.add(1);
       expect(checkLinks(l)).toEqual([1]);
     });
-    it('clear on empty does not bump modCount', () => {
-      const l = new LinkedList();
-      l.clear();
-      expect(l.modCount).toBe(0);
+    it('removeIf on the list and its reversed view stops where the reference stops', () => {
+      // values from the reference: the reversed view delegates to the base, in base order
+      const run = (rev: boolean, base: number[], pred: (d: any) => (x: number) => boolean) => {
+        const l = LinkedList.of(...base);
+        const d = rev ? l.reversed() : l;
+        try {
+          d.removeIf(pred(d));
+        } catch {
+          // expected
+        }
+        return d.toArray();
+      };
+      const addFirstAt3 = (d: any) => (x: number) => (x === 3 && d.addFirst(0), x === 2);
+      const throwAt3 = () => (x: number) => {
+        if (x === 3) throw new Error('boom');
+        return true;
+      };
+      expect(run(false, [1, 2, 3], addFirstAt3)).toEqual([0, 1, 3]);
+      expect(run(false, [1, 2, 3, 4], throwAt3)).toEqual([3, 4]);
+      expect(run(true, [3, 2, 1], addFirstAt3)).toEqual([0, 1, 2, 3]);
+      expect(run(true, [4, 3, 2, 1], throwAt3)).toEqual([1, 2, 3]);
     });
   });
 
@@ -472,7 +489,7 @@ describe('LinkedList · implementation', () => {
       r.addAll(r);
       expect([r.toArray(), l.toArray()]).toEqual([[2, 1, 2, 1], [1, 2, 1, 2]]);
     });
-    it('sort / replaceAll / removeIf / forEach in view order', () => {
+    it('sort / replaceAll / removeIf / forEach on the reversed view', () => {
       const l = LinkedList.of({ k: 1, i: 0 }, { k: 2, i: 1 }, { k: 1, i: 2 }, { k: 2, i: 3 });
       const r = l.reversed();
       r.sort((a, b) => a.k - b.k);
@@ -483,7 +500,8 @@ describe('LinkedList · implementation', () => {
       const seen: number[] = [];
       rn.replaceAll((x) => (seen.push(x), x * 10));
       rn.forEach((x) => seen.push(x));
-      expect(seen).toEqual([3, 2, 1, 30, 20, 10]);
+      // replaceAll runs on the base in its order, as the reference; forEach goes in view order
+      expect(seen).toEqual([1, 2, 3, 30, 20, 10]);
       expect(rn.removeIf((x) => x === 20)).toBe(true);
       expect(n.toArray()).toEqual([10, 30]);
       expectThrows(() => rn.forEach(() => n.add(1)), CME);
@@ -675,12 +693,12 @@ describe('LinkedList · implementation', () => {
       const l = LinkedList.of(1, 2, 3);
       expectThrows(() => l.removeIf(() => (l.add(9), false)), CME);
     });
-    it('removeIf whose filter modifies the list removes nothing', () => {
+    it('removeIf whose filter modifies the list fails fast, keeping earlier removals (as the reference)', () => {
       const l = LinkedList.of(1, 2, 3, 4);
       expectThrows(() => l.removeIf((x) => (x === 3 && l.pollLast(), true)), CME);
-      expect(checkLinks(l)).toEqual([1, 2, 3]);
+      expect(checkLinks(l)).toEqual([3]);
     });
-    it('removeIf whose filter throws leaves the list unchanged', () => {
+    it('removeIf whose filter throws keeps the elements removed before it, as the reference', () => {
       const l = LinkedList.of(1, 2, 3, 4);
       expect(() =>
         l.removeIf((x) => {
@@ -688,7 +706,15 @@ describe('LinkedList · implementation', () => {
           return true;
         })
       ).toThrow('boom');
-      expect(checkLinks(l)).toEqual([1, 2, 3, 4]);
+      expect(checkLinks(l)).toEqual([3, 4]);
+    });
+    it('clear() of an empty list still fails open iterators and sublists, as the reference', () => {
+      const l = new LinkedList<number>();
+      const it = l.listIterator();
+      const sub = l.subList(0, 0);
+      l.clear();
+      expectThrows(() => it.add(1), CME);
+      expectThrows(() => sub.size(), CME);
     });
     it('toArray(generator) gets size() and fills a typed array', () => {
       const lens: number[] = [];

@@ -58,7 +58,20 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
   override addAll(index: number, c: Collection<E>): boolean;
   override addAll(a: Collection<E> | number, b?: Collection<E>): boolean {
     if (arguments.length >= 2) return this.addAllAt(a as number, b as Collection<E>);
-    return this.addAllAt(this.size(), a as Collection<E>);
+    return this.addAllAt(this.endIndex(), a as Collection<E>);
+  }
+
+  /** Where addAll(c) appends. A sublist reads its own size without a comodification check, as the reference. */
+  protected endIndex(): number {
+    return this.size();
+  }
+
+  /**
+   * @internal How a sublist of a sublist starts: false (the reference's AbstractList) takes the root's current
+   * modification count, so it works even if its parent is stale; ArrayList's takes the parent's, staying stale.
+   */
+  nestedSubListsInheritStaleness(): boolean {
+    return false;
   }
 
   /** Positional bulk insert behind addAll(index, c). Subclasses may override for bulk efficiency. */
@@ -378,7 +391,7 @@ class SubList<E> extends AbstractList<E> {
     super();
     this.offset = parentOffset + fromIndex;
     this._size = toIndex - fromIndex;
-    this.modCount = root.modCount;
+    this.modCount = (parent !== null && root.nestedSubListsInheritStaleness() ? parent : root).modCount;
   }
 
   get [RANDOM_ACCESS](): boolean {
@@ -465,8 +478,13 @@ class SubList<E> extends AbstractList<E> {
     return true;
   }
 
+  protected override endIndex(): number {
+    return this._size;
+  }
+
+  /** Like the reference, no comodification check here (whether the result is stale too depends on the root). */
   override subList(fromIndex: number, toIndex: number): List<E> {
-    subListRangeCheck(fromIndex, toIndex, this.size());
+    subListRangeCheck(fromIndex, toIndex, this._size);
     return new SubList(this.root, this, this.offset, fromIndex, toIndex);
   }
 
@@ -619,8 +637,13 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
     // add() steps the base iterator back with previous(), which would let a following set()/remove() hit the
     // added element (the reference allows that); ListIterator specifies IllegalStateException there
     let afterAdd = false;
+    let addModCount: unknown;
+    const baseModCount = () => (base as { modCount?: unknown }).modCount;
     const checkState = () => {
-      if (afterAdd) throw new IllegalStateException();
+      if (!afterAdd) return;
+      // a change to the base since the add comes first, as for the base iterator
+      if (baseModCount() !== addModCount) throw new ConcurrentModificationException();
+      throw new IllegalStateException();
     };
     return {
       hasNext: () => it.hasPrevious(),
@@ -652,6 +675,7 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
         it.add(e);
         it.previous();
         afterAdd = true;
+        addModCount = baseModCount();
       },
       forEachRemaining(action: (e: E) => void): void {
         requireNonNull(action);
@@ -670,6 +694,18 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
     const size = this.base.size();
     checkPositionIndex(index, size);
     this.base.add(size - index, e);
+  }
+
+  override addAll(c: Collection<E>): boolean;
+  override addAll(index: number, c: Collection<E>): boolean;
+  override addAll(a: Collection<E> | number, b?: Collection<E>): boolean {
+    if (arguments.length >= 2) return this.addAllAt(a as number, b as Collection<E>);
+    // appends at the base's front; with nothing to add the base is not asked anything, as the reference
+    this.checkModifiable();
+    const adds = requireNonNull(a as Collection<E>).toArray();
+    if (adds.length === 0) return false;
+    this.base.addAll(0, new ArrayView(adds.reverse()));
+    return true;
   }
 
   protected override addAllAt(index: number, c: Collection<E>): boolean {

@@ -280,7 +280,6 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
   }
 
   override clear(): void {
-    if (this._size === 0) return;
     // unlink every node so a stray iterator or node reference can't keep the whole chain alive
     for (let x = this.first; x !== null; ) {
       const next = x.next;
@@ -302,19 +301,23 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     }
   }
 
+  /** Like the reference (an iterator-removal loop): elements removed before a throwing predicate stay removed. */
   override removeIf(filter: (e: E) => boolean): boolean {
     requireNonNull(filter);
-    const mc = this.modCount;
-    // two phases: a throwing or list-modifying predicate leaves every element in place
-    let hits: Node<E>[] | null = null;
-    for (let x = this.first; x !== null; x = x.next) {
+    let mc = this.modCount;
+    let removed = false;
+    for (let x = this.first; x !== null; ) {
       const hit = filter(x.item);
       if (this.modCount !== mc) throw new ConcurrentModificationException();
-      if (hit) (hits ??= []).push(x);
+      const next = x.next;
+      if (hit) {
+        this.unlink(x);
+        mc = this.modCount;
+        removed = true;
+      }
+      x = next;
     }
-    if (hits === null) return false;
-    for (let i = 0; i < hits.length; i++) this.unlink(hits[i]);
-    return true;
+    return removed;
   }
 
   override replaceAll(operator: (e: E) => E): void {
@@ -853,14 +856,9 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
     return this.base.removeIf(filter);
   }
 
+  /** On the base, in its order, as the reference (removeIf is delegated the same way). */
   override replaceAll(operator: (e: E) => E): void {
-    requireNonNull(operator);
-    const base = this.base;
-    const mc = base.modCount;
-    for (let x = base.last; x !== null; x = x.prev) {
-      x.item = operator(x.item);
-      if (base.modCount !== mc) throw new ConcurrentModificationException();
-    }
+    this.base.replaceAll(operator);
   }
 
   override iterator(): Iterator<E> {

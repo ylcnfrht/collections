@@ -166,17 +166,7 @@ describe('ArrayList · implementation', () => {
       expect(l.toArray()).toEqual([0]);
     });
     it.each([[-1, 1], [0, 3], [2, 1]])('removeRange(%p, %p) throws', (a, b) => expectThrows(() => ArrayList.of(1, 2).removeRange(a, b), IOOBE));
-    it('removeIf with a throwing predicate loses and duplicates nothing', () => {
-      const l = ArrayList.of(1, 2, 3, 4, 5, 6);
-      expect(() =>
-        l.removeIf((x) => {
-          if (x === 5) throw new Error('boom');
-          return x % 2 === 0;
-        })
-      ).toThrow('boom');
-      expect(l.toArray()).toEqual([1, 3, 5, 6]);
-    });
-    it('removeIf that removed elements before throwing invalidates open iterators and sublists', () => {
+    it('removeIf with a throwing predicate removes nothing and keeps iterators valid, as the reference', () => {
       const l = ArrayList.of(1, 2, 3, 4, 5, 6);
       const it = l.iterator();
       const sub = l.subList(0, 6);
@@ -186,17 +176,16 @@ describe('ArrayList · implementation', () => {
           return x % 2 === 0;
         })
       ).toThrow('boom');
-      expectThrows(() => it.next(), CME);
-      expectThrows(() => sub.size(), CME);
+      expect([l.toArray(), it.next(), sub.size()]).toEqual([[1, 2, 3, 4, 5, 6], 1, 6]);
     });
     it('removeIf that mutates the list throws ConcurrentModificationException', () => {
       const l = ArrayList.of(1, 2, 3);
       expectThrows(() => l.removeIf((x) => (x === 3 && l.add(4), false)), CME);
     });
-    it('removeIf that mutates during compaction throws and keeps the rest', () => {
+    it('removeIf that mutates the list after a hit throws and removes nothing, as the reference', () => {
       const l = ArrayList.of(1, 2, 3, 4);
       expectThrows(() => l.removeIf((x) => (x === 3 && l.add(9), x === 1)), CME);
-      expect(l.toArray()).toEqual([2, 3, 4, 9]);
+      expect(l.toArray()).toEqual([1, 2, 3, 4, 9]);
     });
     it('reversed() bulk operations reach the base list in one call, not per element', () => {
       const l = ArrayList.of(1, 2, 3, 4);

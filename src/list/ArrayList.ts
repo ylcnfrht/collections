@@ -50,6 +50,11 @@ export class ArrayList<E> extends AbstractList<E> {
     return l;
   }
 
+  /** @internal as the reference's ArrayList: a sublist of a stale sublist is stale too */
+  override nestedSubListsInheritStaleness(): boolean {
+    return true;
+  }
+
   get [RANDOM_ACCESS](): true {
     return true;
   }
@@ -218,12 +223,17 @@ export class ArrayList<E> extends AbstractList<E> {
   override removeRange(fromIndex: number, toIndex: number): void {
     const n = this.es.length;
     removeRangeCheck(fromIndex, toIndex, n);
-    if (fromIndex === toIndex) return;
+    // counted even when empty, as the reference (subList(i, i).clear() fails other open views)
     this.modCount++;
+    if (fromIndex === toIndex) return;
     if (toIndex === n) this.es.length = fromIndex;
     else this.es.splice(fromIndex, toIndex - fromIndex);
   }
 
+  /**
+   * Like the reference: every element is tested before anything is removed, so a throwing predicate, or one that
+   * modifies the list (ConcurrentModificationException), leaves the list unchanged.
+   */
   override removeIf(filter: (e: E) => boolean): boolean {
     requireNonNull(filter);
     const a = this.es;
@@ -231,26 +241,22 @@ export class ArrayList<E> extends AbstractList<E> {
     const mc = this.modCount;
     let i = 0;
     while (i < n && !filter(a[i])) i++;
-    if (this.modCount !== mc) throw new ConcurrentModificationException();
-    if (i === n) return false;
-    let w = i++;
-    let seen = mc;
-    try {
-      // single compaction pass: survivors slide left over removed slots
-      for (; i < n; i++) {
-        const x = a[i];
-        if (!filter(x)) a[w++] = x;
-      }
-    } finally {
-      // a throwing or mutating predicate keeps the untested tail, so nothing is lost or duplicated
-      for (const m = a.length; i < m; i++) a[w++] = a[i];
-      a.length = w;
-      // the list shrank even if the predicate threw: open iterators and sublists must notice
-      seen = this.modCount++;
+    if (i === n) {
+      if (this.modCount !== mc) throw new ConcurrentModificationException();
+      return false;
     }
-    if (seen !== mc) throw new ConcurrentModificationException();
+    // hits from the first one on; then one compaction pass
+    const dead = new Uint8Array(n - i);
+    dead[0] = 1;
+    for (let j = i + 1; j < n; j++) if (filter(a[j])) dead[j - i] = 1;
+    if (this.modCount !== mc) throw new ConcurrentModificationException();
+    let w = i;
+    for (let j = i + 1; j < n; j++) if (dead[j - i] === 0) a[w++] = a[j];
+    a.length = w;
+    this.modCount++;
     return true;
   }
+
 
   override replaceAll(operator: (e: E) => E): void {
     requireNonNull(operator);
