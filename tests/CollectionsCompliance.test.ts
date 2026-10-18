@@ -1,5 +1,5 @@
 // Behaviour required by the SE 27 Collections API docs for Collections, Comparator, Objects and the immutable factories.
-import { SimpleEntry } from '../src/abstract/AbstractMap';
+import { AbstractMap, SimpleEntry } from '../src/abstract/AbstractMap';
 import * as C from '../src/Collections';
 import { Collections } from '../src/Collections';
 import { List as IList, Map as IMap, Set as ISet } from '../src/immutable/ImmutableCollections';
@@ -776,6 +776,19 @@ describe('checked wrappers', () => {
     m.put('n', null);
     expect(m.equals(base)).toBe(true);
     expect(m.entrySet().contains(m.entrySet().iterator().next())).toBe(true);
+  });
+  it('checkedMap.putAll inserts exactly the entries it checked', () => {
+    let calls = 0;
+    // a source whose entries differ on every read
+    const flaky = new (class extends AbstractMap<any, any> {
+      entrySet(): any {
+        const v = ++calls === 1 ? 1 : 'BAD';
+        return ISet.of(new SimpleEntry(1, v));
+      }
+    })();
+    const base = new HashMap<any, any>();
+    C.checkedMap(base, isNum, isNum).putAll(flaky);
+    expect([base.toString(), calls]).toEqual(['{1=1}', 1]);
   });
   it('checkedMap checks the sequenced entry set extras', () => {
     const base = new LinkedHashMap<any, any>();
