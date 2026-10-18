@@ -220,7 +220,8 @@ export interface TreeBacked<K, V> extends NavigableMap<K, V> {
  * Red-black tree map ordered by a comparator, or by natural ordering (naturalCompare) when it is null.
  * The comparator defines key equality. O(log n) get/put/remove/navigation.
  */
-export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, TreeBacked<K, V> {
+// structurally a TreeBacked too (not listed: that interface is internal and stays out of the published typings)
+export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V> {
   private root: Node<K, V> | null = null;
   // cached greatest node (null when empty): O(1) lastKey and an append fast path for ascending puts
   private maxNode: Node<K, V> | null = null;
@@ -1480,11 +1481,17 @@ export const NO_ADD: unknown = Object.freeze({});
 /**
  * NavigableSet over the keys of a TreeMap or one of its range views.
  * With addValue !== NO_ADD, add(e) puts (e, addValue): this is how TreeSet is built.
- * @internal
  */
 export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
-  constructor(protected readonly m: TreeBacked<E, unknown>, protected readonly addValue: unknown) {
+  /** @internal */
+  protected readonly m: TreeBacked<E, unknown>;
+  /** @internal */
+  protected readonly addValue: unknown;
+  /** @internal */
+  constructor(m: TreeBacked<E, unknown>, addValue: unknown) {
     super();
+    this.m = m;
+    this.addValue = addValue;
   }
 
   iterator(): Iterator<E> {

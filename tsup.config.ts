@@ -4,7 +4,8 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm', 'cjs'],
-  dts: true,
+  // @internal members (storage fields, node helpers) stay out of the published typings
+  dts: { compilerOptions: { stripInternal: true } },
   sourcemap: true,
   clean: true,
   target: 'es2020',

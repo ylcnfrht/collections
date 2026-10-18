@@ -25,7 +25,7 @@ import { AbstractCollection } from './AbstractCollection';
  * structural change (add/remove) so iterators and subLists fail fast.
  */
 export abstract class AbstractList<E> extends AbstractCollection<E> implements List<E> {
-  /** @internal Structural modification counter used by fail-fast iterators. */
+  /** Structural modification counter used by fail-fast iterators; subclasses increment it on every add/remove. */
   modCount = 0;
 
   abstract get(index: number): E;
