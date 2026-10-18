@@ -137,6 +137,8 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   valueCount = 0;
   /** Structural modification count (new key, removal, clear); iterators compare against it. */
   modCount = 0;
+  /** See hashOfLookup. */
+  private lookupHash: number | undefined = undefined;
   private ks: KeySet<K, V> | undefined;
   private vs: Values<K, V> | undefined;
   private es: EntrySet<K, V> | undefined;
@@ -254,25 +256,44 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
       return n !== undefined || this.fast.size === 0 ? n : this.fast.get(key);
     }
     if (isPlainKey(key)) return this.fast.get(key);
-    if (this.valueCount === 0) return undefined;
-    const b = this.buckets.get(hashCode(key));
+    if (this.valueCount === 0) {
+      this.lookupHash = undefined;
+      return undefined;
+    }
+    const h = hashCode(key);
+    const n = this.bucketNode(key, h);
+    // written last: equals() above may have looked up other keys
+    this.lookupHash = h;
+    return n;
+  }
+
+  private bucketNode(key: unknown, h: number): HashNode<K, V> | undefined {
+    const b = this.buckets.get(h);
     if (b === undefined) return undefined;
     if (!Array.isArray(b)) return equals(key, b.key) ? b : undefined;
     for (let i = 0; i < b.length; i++) if (equals(key, b[i].key)) return b[i];
     return undefined;
   }
 
-  /** Inserts a mapping for a key known to be absent. */
-  private addNode(key: K, value: V): HashNode<K, V> {
+  /**
+   * The hash the last getNode(key) computed, for inserting key without hashing it again. Read it right after that
+   * getNode, before any user code runs; undefined for keys that are not hashed.
+   */
+  private hashOfLookup(key: unknown): number | undefined {
+    return isIndexKey(key) || isPlainKey(key) ? undefined : this.lookupHash;
+  }
+
+  /** Inserts a mapping for a key known to be absent; h is its hashCode when already known. */
+  private addNode(key: K, value: V, h?: number): HashNode<K, V> {
     const n = this.newNode(key, value);
-    this.insertNode(n);
+    this.insertNode(n, h);
     this.modCount++;
     this.afterNodeInsertion(n);
     return n;
   }
 
   /** Puts a node for an absent key into storage; no modCount bump, no hook. */
-  private insertNode(n: HashNode<K, V>): void {
+  private insertNode(n: HashNode<K, V>, hash?: number): void {
     const key = n.key;
     if (isIndexKey(key) && fitsIndexTable(key, this.ints.length, this.intCount)) {
       this.ints[key] = n;
@@ -280,7 +301,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     } else if (isPlainKey(key)) {
       this.fast.set(key, n);
     } else {
-      const h = (n.hash = hashCode(key));
+      const h = (n.hash = hash ?? hashCode(key));
       const b = this.buckets.get(h);
       if (b === undefined) this.buckets.set(h, n);
       else if (Array.isArray(b)) b.push(n);
@@ -419,7 +440,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     }
     const n = this.getNode(key);
     if (n === undefined) {
-      this.addNode(key, value);
+      this.addNode(key, value, this.lookupHash);
       return null;
     }
     const old = n.value;
@@ -519,7 +540,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   override putIfAbsent(key: K, value: V): V | null {
     const n = this.getNode(key);
     if (n === undefined) {
-      this.addNode(key, value);
+      this.addNode(key, value, this.hashOfLookup(key));
       return null;
     }
     this.afterNodeAccess(n);
@@ -549,6 +570,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
+    const h = this.hashOfLookup(key);
     if (n !== undefined && n.value !== null) {
       this.afterNodeAccess(n);
       return n.value;
@@ -557,13 +579,14 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     const v = fn(key);
     if (mc !== this.modCount) throw new ConcurrentModificationException();
     if (v === null || v === undefined) return null;
-    this.store(key, v, n);
+    this.store(key, v, n, h);
     return v;
   }
 
   override computeIfPresent(key: K, fn: (key: K, value: V) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
+    const h = this.hashOfLookup(key);
     if (n === undefined || n.value === null) return null;
     const mc = this.modCount;
     const v = fn(key, n.value);
@@ -572,13 +595,14 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
       this.removeNode(n);
       return null;
     }
-    this.store(key, v, n);
+    this.store(key, v, n, h);
     return v;
   }
 
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
+    const h = this.hashOfLookup(key);
     const mc = this.modCount;
     const v = fn(key, n === undefined ? null : n.value);
     if (mc !== this.modCount) throw new ConcurrentModificationException();
@@ -586,7 +610,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
       if (n !== undefined) this.removeNode(n);
       return null;
     }
-    this.store(key, v, n);
+    this.store(key, v, n, h);
     return v;
   }
 
@@ -594,6 +618,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     requireNonNull(fn);
     requireNonNull(value);
     const n = this.getNode(key);
+    const h = this.hashOfLookup(key);
     const mc = this.modCount;
     const v = n === undefined || n.value === null ? value : fn(n.value, value);
     if (mc !== this.modCount) throw new ConcurrentModificationException();
@@ -601,13 +626,13 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
       this.removeNode(n!); // only fn can return null, and fn runs only on an existing node
       return null;
     }
-    this.store(key, v, n);
+    this.store(key, v, n, h);
     return v;
   }
 
   /** Writes a computed value; n is the node looked up before fn ran (fn made no structural change). */
-  private store(key: K, v: V, n: HashNode<K, V> | undefined): void {
-    if (n === undefined) this.addNode(key, v);
+  private store(key: K, v: V, n: HashNode<K, V> | undefined, h: number | undefined): void {
+    if (n === undefined) this.addNode(key, v, h);
     else {
       n.value = v;
       this.afterNodeAccess(n);

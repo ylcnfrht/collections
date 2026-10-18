@@ -677,3 +677,42 @@ describe('HashMap dense integer table', () => {
     expect([m.size(), m.containsKey(5)]).toEqual([2, true]);
   });
 });
+
+describe('hashCode() calls when inserting a new key', () => {
+  class Counted {
+    static calls = 0;
+    constructor(readonly id: number) {}
+    equals(o: unknown): boolean {
+      return o instanceof Counted && o.id === this.id;
+    }
+    hashCode(): number {
+      Counted.calls++;
+      return this.id % 3;
+    }
+  }
+  const ops: [string, (m: HashMap<Counted, number>, k: Counted) => unknown][] = [
+    ['put', (m, k) => m.put(k, 1)],
+    ['putIfAbsent', (m, k) => m.putIfAbsent(k, 1)],
+    ['computeIfAbsent', (m, k) => m.computeIfAbsent(k, () => 1)],
+    ['compute', (m, k) => m.compute(k, () => 1)],
+    ['merge', (m, k) => m.merge(k, 1, (a, b) => a + b)],
+  ];
+  it.each(ops)('%s hashes the key once', (_name, op) => {
+    for (const m of [new HashMap<Counted, number>(), new LinkedHashMap<Counted, number>()]) {
+      m.put(new Counted(100), 0);
+      Counted.calls = 0;
+      op(m, new Counted(7));
+      expect(Counted.calls).toBe(1);
+      expect(m.containsKey(new Counted(7))).toBe(true);
+    }
+  });
+  it('a mapping function that looks up other keys does not misplace the new one', () => {
+    const m = new HashMap<Counted, number>();
+    for (let i = 0; i < 6; i++) m.put(new Counted(i), i);
+    m.computeIfAbsent(new Counted(10), () => (m.get(new Counted(2)) ?? 0) + (m.containsKey(new Counted(4)) ? 100 : 0));
+    m.merge(new Counted(11), 1, (a, b) => a + b);
+    m.compute(new Counted(12), () => m.get(new Counted(5)));
+    expect([m.get(new Counted(10)), m.get(new Counted(11)), m.get(new Counted(12)), m.size()]).toEqual([102, 1, 5, 9]);
+    for (let i = 0; i < 6; i++) expect(m.get(new Counted(i))).toBe(i);
+  });
+});
