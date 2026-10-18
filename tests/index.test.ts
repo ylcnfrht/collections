@@ -77,3 +77,29 @@ describe('public API', () => {
     expect([...new TreeSet<string>(Comparator.reverseOrder())].length).toBe(0);
   });
 });
+
+describe('set clone() keeps the runtime subclass, as map clone() does', () => {
+  class TaggedHash<E> extends api.HashSet<E> {
+    tag = 'h';
+  }
+  class TaggedLinked<E> extends api.LinkedHashSet<E> {
+    tag = 'l';
+  }
+  class TaggedTree<E> extends api.TreeSet<E> {
+    tag = 't';
+  }
+  it.each([
+    ['HashSet', () => new TaggedHash<unknown>()],
+    ['LinkedHashSet', () => new TaggedLinked<unknown>()],
+    ['TreeSet', () => new TaggedTree<unknown>(api.Comparator.reverseOrder<any>())],
+  ] as [string, () => any][])('%s', (_name, make) => {
+    const s = make();
+    for (const e of [3, 1, 2, 70000, 'x'].filter((e) => !(s instanceof api.TreeSet) || typeof e === 'number')) s.add(e);
+    const c = s.clone();
+    expect([c.constructor, c.tag, c.toString(), c.equals(s)]).toEqual([s.constructor, s.tag, s.toString(), true]);
+    c.add(99);
+    c.remove(3);
+    expect([s.contains(99), s.contains(3), c.contains(99), c.contains(3)]).toEqual([false, true, true, false]);
+    if (s instanceof api.TreeSet) expect((c as any).comparator()).toBe((s as any).comparator());
+  });
+});

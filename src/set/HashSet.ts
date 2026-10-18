@@ -53,13 +53,15 @@ export class HashSet<E> extends AbstractSet<E> {
     return s;
   }
 
+  /** Shallow copy of the same runtime class (subclass fields included). */
   clone(): HashSet<E> {
-    const s = new HashSet<E>();
-    s.ints = this.ints.slice();
-    s.intCount = this.intCount;
-    for (const e of this.fast) s.fast.add(e);
-    for (const [h, b] of this.buckets) s.buckets.set(h, b.slice());
-    s.valueCount = this.valueCount;
+    const s = this.cloneShell();
+    const w = s as unknown as { ints: number[]; fast: globalThis.Set<unknown>; buckets: globalThis.Map<number, E[]>; modCount: number };
+    w.ints = this.ints.slice();
+    w.fast = new globalThis.Set(this.fast);
+    w.buckets = new globalThis.Map();
+    for (const [h, b] of this.buckets) w.buckets.set(h, b.slice());
+    w.modCount = 0;
     return s;
   }
 

@@ -15,6 +15,11 @@ export abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
     return true;
   }
 
+  /** For clone(): a copy of the same runtime class with this set's fields (subclass ones included), storage still shared. */
+  protected cloneShell(): this {
+    return Object.assign(Object.create(Object.getPrototypeOf(this)) as object, this) as this;
+  }
+
   override equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isSet(o) || o.size() !== this.size()) return false;

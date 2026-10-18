@@ -49,8 +49,14 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
     return s;
   }
 
+  /** Shallow copy of the same runtime class (subclass fields included), in the same order. */
   override clone(): LinkedHashSet<E> {
-    return new LinkedHashSet<E>(this);
+    const s = this.cloneShell();
+    const w = s as unknown as { map: LinkedHashMap<E, boolean>; rev: unknown };
+    w.map = new LinkedHashMap<E, boolean>();
+    for (const e of this) w.map.put(e, true);
+    w.rev = undefined;
+    return s;
   }
 
   override size(): number {

@@ -33,10 +33,10 @@ export class TreeSet<E> extends NavigableKeySet<E> implements NavigableSet<E> {
     return s;
   }
 
-  /** Shallow copy with the same comparator. */
+  /** Shallow copy of the same runtime class (subclass fields included) with the same comparator. */
   clone(): TreeSet<E> {
-    const s = new TreeSet<E>(this.comparator());
-    for (const e of this) s.add(e);
+    const s = this.cloneShell();
+    (s as unknown as { m: TreeMap<E, unknown> }).m = (this.m as TreeMap<E, unknown>).clone();
     return s;
   }
 }
