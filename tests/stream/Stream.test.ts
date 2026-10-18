@@ -303,6 +303,14 @@ describe('Stream · factories', () => {
       for (const x of Stream.from(gen()).limit(3)) seen.push(x);
       expect([seen, finished]).toEqual([[1, 2, 3], 1]);
     });
+    it('pull mode: a partly read mapped stream of flatMap is closed with the outer stream', () => {
+      for (const x of Stream.of('a', 'b').flatMap(() => Stream.from(gen()))) if (x === 2) break;
+      expect(finished).toBe(1);
+      const s = Stream.of('a').flatMap(() => Stream.from(gen()));
+      expect(s.iterator().next()).toBe(1);
+      s.close();
+      expect(finished).toBe(2);
+    });
     it('the stream iterator yields nothing after return()', () => {
       const it = Stream.of(1, 2, 3)[Symbol.iterator]();
       it.next();

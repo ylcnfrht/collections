@@ -193,7 +193,11 @@ export abstract class AbstractPipeline<T = any> {
   /** Lazy: elements are pulled through the stages only as the spliterator is advanced. */
   spliterator(): Spliterator<T> {
     const sp = this.open(true);
-    return this.prev === null ? sp : new WrappingSpliterator(this, sp);
+    if (this.prev === null) return sp;
+    const w = new WrappingSpliterator<T>(this, sp);
+    // a flatMap stage may hold a partly read mapped stream between pulls: close() of this stream closes it
+    (this.src.handlers ??= []).push(() => w.closeInners());
+    return w;
   }
 
   /** close(); installed on the prototype below where the runtime has Symbol.dispose. */
@@ -464,6 +468,12 @@ export class FlatMapSink<T> extends ChainedSink<T, any> {
     if (this.pull !== null && this.hasWork()) this.ending = true;
     else this.down.end();
   }
+  /** Pull mode: closes the mapped stream still being read, if any. */
+  closeInner(): void {
+    const inner = this.inner;
+    this.inner = this.innerSp = null;
+    inner?.close();
+  }
   /** Pull mode: something is left for resume(). */
   hasWork(): boolean {
     return this.inner !== null || this.qi < this.queue.length || this.ending;
@@ -544,6 +554,11 @@ class WrappingSpliterator<T> extends BaseSpliterator<T> {
       }
     }
     return true;
+  }
+
+  /** Closes the mapped streams flatMap stages left partly read. */
+  closeInners(): void {
+    runAll(this.flat.map((f) => () => f.closeInner()));
   }
 
   /** The most downstream flatMap with a partly read mapped stream: it continues before anything upstream. */
