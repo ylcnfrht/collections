@@ -1,3 +1,4 @@
+import { AbstractList } from '../src/abstract/AbstractList';
 import { ArrayList } from '../src/list/ArrayList';
 import { LinkedList } from '../src/list/LinkedList';
 import { isRandomAccess, RANDOM_ACCESS } from '../src/util/guards';
@@ -414,6 +415,29 @@ describe('ArrayList · implementation', () => {
       expect(l.toArray()).toEqual([0, 1, 2, 9, 3]);
       l.add(5);
       expectThrows(() => s.get(0), CME);
+    });
+    it('subList removeIf on a random-access root that cannot add loses nothing', () => {
+      class RemoveOnly extends AbstractList<number> {
+        constructor(private readonly a: number[]) {
+          super();
+        }
+        get [RANDOM_ACCESS](): true {
+          return true;
+        }
+        get(i: number): number {
+          return this.a[i];
+        }
+        size(): number {
+          return this.a.length;
+        }
+        override removeAt(i: number): number {
+          this.modCount++;
+          return this.a.splice(i, 1)[0];
+        }
+      }
+      const l = new RemoveOnly([1, 2, 3, 4, 5, 6]);
+      expectThrows(() => l.subList(1, 5).removeIf((x) => x === 3), 'UnsupportedOperationException');
+      expect(l.toArray()).toEqual([1, 2, 3, 4, 5, 6]);
     });
     it('subList removeIf is one pass over the root and keeps nested views in sync', () => {
       const l = ArrayList.of(0, 1, 2, 3, 4, 5, 6, 7);

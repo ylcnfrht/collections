@@ -419,7 +419,8 @@ class SubList<E> extends AbstractList<E> {
 
   /**
    * On an array-backed root, one pass: test every element first, then replace the range with the survivors
-   * (removing one by one would shift the root's tail per hit). A throwing filter removes nothing.
+   * (removing one by one would shift the root's tail per hit). A throwing filter removes nothing; the survivors
+   * go in before the old range comes out, so a root that cannot add loses nothing either.
    */
   override removeIf(filter: (e: E) => boolean): boolean {
     if (!isRandomAccess(this.root)) return super.removeIf(filter);
@@ -429,8 +430,8 @@ class SubList<E> extends AbstractList<E> {
     const keep = a.filter((e) => !filter(e));
     this.checkForComodification();
     if (keep.length === a.length) return false;
-    this.removeRange(0, a.length);
-    this.addAll(0, new ArrayView(keep));
+    if (keep.length !== 0) this.addAll(0, new ArrayView(keep));
+    this.removeRange(keep.length, keep.length + a.length);
     return true;
   }
 
