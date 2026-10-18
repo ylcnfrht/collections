@@ -916,7 +916,8 @@ describe('engine · argument checks', () => {
   });
 });
 
-describe('engine · Symbol.dispose', () => {
+// Symbol.dispose is missing on older runtimes (and in jest's sandbox there); the method is then not installed
+(typeof Symbol.dispose === 'symbol' ? describe : describe.skip)('engine · Symbol.dispose', () => {
   it('runs close()', () => {
     let closed = 0;
     const s = Stream.of(1).onClose(() => closed++);

@@ -78,6 +78,8 @@ describe.each(files.map((f) => [relative(ROOT, f), f]))('%s', (_name, file) => {
     return;
   }
   it.each(bs.map((b) => [b.line, b]))('example at line %i runs and prints what it claims', (_line, b) => {
+    // `using` needs Symbol.dispose, which older runtimes lack
+    if (/^\s*using\s/m.test((b as Block).code) && typeof Symbol.dispose !== 'symbol') return;
     const printed = run(b as Block);
     const expected = expectations((b as Block).code);
     // only lines carrying an expectation are compared; extra logs without one are allowed only if none expect
