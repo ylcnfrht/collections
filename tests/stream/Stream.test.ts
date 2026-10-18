@@ -209,6 +209,61 @@ describe('Stream · factories', () => {
   it('from(array) streams the array', () => expect(Stream.from([1, 2]).toArray()).toEqual([1, 2]));
   it('from(JS Set) streams in insertion order', () => expect(Stream.from(new Set(['x', 'y'])).toArray()).toEqual(['x', 'y']));
   it('from(string) streams code points', () => expect(Stream.from('ab').toArray()).toEqual(['a', 'b']));
+  describe('from(iterable) calls return() like for..of: at most once, never after the end', () => {
+    function source(n: number, opts: { returnThrows?: boolean; nextThrowsAt?: number } = {}) {
+      const log: string[] = [];
+      let i = 0;
+      const iterable = {
+        [Symbol.iterator]: () => ({
+          next: () => {
+            if (i === opts.nextThrowsAt) throw new Error('nextBoom');
+            return i < n ? { value: i++, done: false as const } : { value: undefined, done: true as const };
+          },
+          return: () => {
+            log.push(`return@${i}`);
+            if (opts.returnThrows) throw new Error('returnBoom');
+            return { value: undefined, done: true as const };
+          },
+        }),
+      };
+      return { iterable, log };
+    }
+    it('once after a short circuit, even when the stream is closed too', () => {
+      const { iterable, log } = source(5);
+      const s = Stream.from(iterable);
+      expect(s.findFirst().get()).toBe(0);
+      s.close();
+      expect(log).toEqual(['return@1']);
+    });
+    it('never after the iterable is exhausted', () => {
+      const { iterable, log } = source(3);
+      const s = Stream.from(iterable);
+      expect(s.toList().toArray()).toEqual([0, 1, 2]);
+      s.close();
+      expect(log).toEqual([]);
+    });
+    it('once for an inner stream of flatMap', () => {
+      const { iterable, log } = source(5);
+      expect(Stream.of(1).flatMap(() => Stream.from(iterable)).findFirst().get()).toBe(0);
+      expect(log).toEqual(['return@1']);
+    });
+    it('a throwing return() does not hide the stage failure; it is attached as suppressed', () => {
+      const { iterable } = source(5, { returnThrows: true });
+      try {
+        Stream.from(iterable).forEach((x) => {
+          if (x === 1) throw new Error('primary');
+        });
+        fail('expected throw');
+      } catch (e) {
+        expect([(e as Error).message, ((e as any).suppressed as Error[]).map((x) => x.message)]).toEqual(['primary', ['returnBoom']]);
+      }
+    });
+    it('not when the iterator itself throws from next()', () => {
+      const { iterable, log } = source(5, { nextThrowsAt: 2 });
+      expect(() => Stream.from(iterable).forEach(() => undefined)).toThrow('nextBoom');
+      expect(log).toEqual([]);
+    });
+  });
   describe('from(generator) closes the generator when the stream stops early', () => {
     let finished = 0;
     function* gen() {
@@ -242,6 +297,17 @@ describe('Stream · factories', () => {
       expect(s.iterator().next()).toBe(1);
       s.close();
       expect(finished).toBe(1);
+    });
+    it('a for..of that runs to the end of a short-circuited stream closes the generator', () => {
+      const seen: number[] = [];
+      for (const x of Stream.from(gen()).limit(3)) seen.push(x);
+      expect([seen, finished]).toEqual([[1, 2, 3], 1]);
+    });
+    it('the stream iterator yields nothing after return()', () => {
+      const it = Stream.of(1, 2, 3)[Symbol.iterator]();
+      it.next();
+      it.return!();
+      expect(it.next()).toEqual({ value: undefined, done: true });
     });
     it('an exhausted generator is not closed again', () => {
       let returned = 0;

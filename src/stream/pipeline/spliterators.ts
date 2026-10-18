@@ -3,7 +3,7 @@
 import { requireNonNull } from '../../util/Objects';
 import { BaseSpliterator, Spliterator } from '../Spliterator';
 import { SpliteratorIterator } from '../Spliterators';
-import { Sink } from './Sink';
+import { closeAfterFailure, Sink } from './Sink';
 
 const { ORDERED, SIZED, SUBSIZED, IMMUTABLE, NONNULL, DISTINCT, SORTED } = Spliterator;
 
@@ -247,7 +247,14 @@ export class ConcatSpliterator<T> extends EngineSpliterator<T> {
   }
 }
 
-/** Over a JS iterable; the iterator is requested on first traversal. Size unknown. */
+/** An exhausted or closed source: never calls the iterable again. */
+const DONE: globalThis.Iterator<never> = { next: () => ({ done: true, value: undefined }) };
+
+/**
+ * Over a JS iterable; the iterator is requested on first traversal. Size unknown. Like for..of, it calls the
+ * iterator's return() once if traversal stops early (a short circuit, a throwing stage, close()), never after the
+ * iterator finished, and not when the iterator's own next() threw.
+ */
 export class IterableSpliterator<T> extends EngineSpliterator<T> {
   private it: globalThis.Iterator<T> | null = null;
   constructor(private readonly src: Iterable<T>) {
@@ -259,28 +266,34 @@ export class IterableSpliterator<T> extends EngineSpliterator<T> {
   tryAdvance(action: (t: T) => void): boolean {
     requireNonNull(action);
     const r = this.iter().next();
-    if (r.done) return false;
+    if (r.done) {
+      this.it = DONE;
+      return false;
+    }
     action(r.value);
     return true;
   }
   drainTo(sink: Sink<T>, shortCircuit: boolean): void {
     const it = this.iter();
-    let done = false;
-    try {
-      for (;;) {
-        if (shortCircuit && sink.cancelled) return;
-        const r = it.next();
-        if (r.done) return void (done = true);
-        sink.accept(r.value);
+    for (;;) {
+      if (shortCircuit && sink.cancelled) return this.close();
+      const r = it.next();
+      if (r.done) {
+        this.it = DONE;
+        return;
       }
-    } finally {
-      // stopped early (short circuit or a throw): let a generator run its finally blocks, as for..of does
-      if (!done) it.return?.();
+      try {
+        sink.accept(r.value);
+      } catch (e) {
+        closeAfterFailure(e, this);
+      }
     }
   }
-  /** Closes the source iterator (iterator.return()), for a stream closed before it was exhausted. */
+  /** Closes the source iterator (iterator.return()) unless it finished or was closed already. */
   close(): void {
-    this.it?.return?.();
+    const it = this.it;
+    this.it = DONE;
+    if (it !== null && it !== DONE) it.return?.();
   }
   estimateSize(): number {
     return Infinity;
@@ -328,7 +341,6 @@ export class DelegatingSpliterator<T> extends EngineSpliterator<T> {
   }
 }
 
-/** Iterator (hasNext/next) over a spliterator; remove() is unsupported. */
 /** PrimitiveIterator of the number streams: nextInt / nextLong / nextDouble are next(). */
 export class NumberIterator extends SpliteratorIterator<number> {
   nextInt(): number {
@@ -348,22 +360,29 @@ export class JsIterator<T> implements IterableIterator<T> {
   private readonly take = (t: T) => {
     this.value = t;
   };
+  private finished = false;
   constructor(
     private readonly sp: Spliterator<T>,
-    private readonly onReturn?: () => void
+    /** Runs once, when iteration ends: exhausted, or return() (for..of break or throw). */
+    private readonly onEnd?: () => void
   ) {}
-  /** for..of calls this when it stops early (break, throw). */
   return(): IteratorResult<T> {
-    this.onReturn?.();
+    this.end();
     return { value: undefined, done: true };
   }
   next(): IteratorResult<T> {
-    if (this.sp.tryAdvance(this.take)) {
+    if (!this.finished && this.sp.tryAdvance(this.take)) {
       const v = this.value as T;
       this.value = undefined;
       return { value: v, done: false };
     }
+    this.end();
     return { value: undefined, done: true };
+  }
+  private end(): void {
+    if (this.finished) return;
+    this.finished = true;
+    this.onEnd?.();
   }
   [Symbol.iterator](): IterableIterator<T> {
     return this;
