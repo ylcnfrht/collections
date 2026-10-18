@@ -75,6 +75,18 @@ let closed = false;
 console.log(closed); // → true
 ```
 
+## Bulk removal when the test throws
+
+`removeIf`, `removeAll` and `retainAll` here make one pass over the storage. If the predicate (or `c.contains`) throws
+partway, what has already been removed can differ from the reference. Lists are never left with duplicated or lost
+survivors either way.
+
+| Call | Reference | Here |
+|---|---|---|
+| `ArrayList`/`Vector` `removeIf` | tests every element first, removes nothing on a throw | elements tested before the throw stay removed |
+| `subList(…).removeIf` on an array-backed list | partial removal (`Vector`) or none (`ArrayList`) | nothing removed |
+| `reversed().removeAll`/`retainAll` | removes through the view, testing in view order | one `removeIf` on the base, testing in base order, so a different subset is removed when `contains` throws |
+
 ## Stream differences
 
 | Topic | Reference | Here |
