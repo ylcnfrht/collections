@@ -821,7 +821,14 @@ function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V): MapType<K, V>;
 function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V): MapType<K, V>;
 function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V): MapType<K, V>;
 function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5: K, v5: V): MapType<K, V>;
-function mapOf<K, V>(...keysAndValues: (K | V)[]): MapType<K, V>;
+function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5: K, v5: V, k6: K, v6: V): MapType<K, V>;
+function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5: K, v5: V, k6: K, v6: V, k7: K, v7: V): MapType<K, V>;
+function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5: K, v5: V, k6: K, v6: V, k7: K, v7: V, k8: K, v8: V): MapType<K, V>;
+function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5: K, v5: V, k6: K, v6: V, k7: K, v7: V, k8: K, v8: V, k9: K, v9: V): MapType<K, V>;
+function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5: K, v5: V, k6: K, v6: V, k7: K, v7: V, k8: K, v8: V, k9: K, v9: V, k10: K, v10: V): MapType<K, V>;
+// 11 pairs or more (beyond the reference's overloads): past the 11th pair keys and values are not told apart by
+// type, so ofEntries is the better fit
+function mapOf<K, V>(...keysAndValues: [K, V, K, V, K, V, K, V, K, V, K, V, K, V, K, V, K, V, K, V, K, V, ...(K | V)[]]): MapType<K, V>;
 function mapOf<K, V>(...kvs: unknown[]): MapType<K, V> {
   if (kvs.length % 2 !== 0) throw new IllegalArgumentException('Map.of needs key/value pairs');
   // unchecked entries: buildMap checks each pair (nulls, then a duplicate key) in argument order, as the reference does

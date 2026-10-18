@@ -601,3 +601,13 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
     expect(Map.of(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6).size()).toBe(6);
   });
 });
+
+describe('Map.of typing', () => {
+  it('6 to 10 pairs keep keys and values apart (a compile-time check; it runs too)', () => {
+    const m = Map.of('a', 1, 'b', 2, 'c', 3, 'd', 4, 'e', 5, 'f', 6, 'g', 7, 'h', 8, 'i', 9, 'j', 10);
+    const v: number | null = m.get('j');
+    // @ts-expect-error a value of the wrong type is rejected, as for 1 to 5 pairs
+    const bad = Map.of<string, number>('a', 1, 'b', 2, 'c', 3, 'd', 4, 'e', 5, 'f', 'x');
+    expect([m.size(), v, bad.size()]).toEqual([10, 10, 6]);
+  });
+});
