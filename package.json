@@ -17,7 +17,7 @@
     "typescript"
   ],
   "license": "MIT",
-  "author": "ylcnfrht <ylcnfrht@gmail.com>",
+  "author": "ylcnfrht",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ylcnfrht/ts-collections-framework.git"
