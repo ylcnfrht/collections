@@ -241,6 +241,7 @@ export class ArrayList<E> extends AbstractList<E> {
     if (this.modCount !== mc) throw new ConcurrentModificationException();
     if (i === n) return false;
     let w = i++;
+    let seen = mc;
     try {
       // single compaction pass: survivors slide left over removed slots
       for (; i < n; i++) {
@@ -251,8 +252,10 @@ export class ArrayList<E> extends AbstractList<E> {
       // a throwing or mutating predicate keeps the untested tail, so nothing is lost or duplicated
       for (const m = a.length; i < m; i++) a[w++] = a[i];
       a.length = w;
+      // the list shrank even if the predicate threw: open iterators and sublists must notice
+      seen = this.modCount++;
     }
-    if (this.modCount++ !== mc) throw new ConcurrentModificationException();
+    if (seen !== mc) throw new ConcurrentModificationException();
     return true;
   }
 

@@ -174,6 +174,19 @@ describe('ArrayList · implementation', () => {
       ).toThrow('boom');
       expect(l.toArray()).toEqual([1, 3, 5, 6]);
     });
+    it('removeIf that removed elements before throwing invalidates open iterators and sublists', () => {
+      const l = ArrayList.of(1, 2, 3, 4, 5, 6);
+      const it = l.iterator();
+      const sub = l.subList(0, 6);
+      expect(() =>
+        l.removeIf((x) => {
+          if (x === 5) throw new Error('boom');
+          return x % 2 === 0;
+        })
+      ).toThrow('boom');
+      expectThrows(() => it.next(), CME);
+      expectThrows(() => sub.size(), CME);
+    });
     it('removeIf that mutates the list throws ConcurrentModificationException', () => {
       const l = ArrayList.of(1, 2, 3);
       expectThrows(() => l.removeIf((x) => (x === 3 && l.add(4), false)), CME);
