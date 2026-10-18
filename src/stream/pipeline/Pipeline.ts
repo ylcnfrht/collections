@@ -642,7 +642,11 @@ export class RefPipeline<T> extends AbstractPipeline<T> implements Stream<T> {
 
   /** sorted() is natural order; an explicit null / undefined comparator throws NullPointerException. */
   sorted(comparator?: Comparator<T>): Stream<T> {
-    if (arguments.length === 0) return this.chain(RefPipeline, ORDERED | SORTED, 0, null, (d, sc) => new SortedSink(d, null, sc));
+    if (arguments.length === 0) {
+      // already in natural order (SORTED means natural here): a pass-through stage, as in the reference
+      if ((this.flags & SORTED) !== 0) return this.chain(RefPipeline, ORDERED | SORTED, 0, null, null);
+      return this.chain(RefPipeline, ORDERED | SORTED, 0, null, (d, sc) => new SortedSink(d, null, sc));
+    }
     if (comparator === null || comparator === undefined) {
       this.link(); // like the reference: a used stream fails with IllegalStateException first, and the stage is linked
       requireNonNull(comparator);
@@ -692,7 +696,8 @@ abstract class NumberPipeline extends AbstractPipeline<number> {
   }
 
   sorted(): any {
-    return this.chain(this.self(), ORDERED | SORTED, 0, null, (d, sc) => new NumberSortedSink(d, sc));
+    // already sorted: a pass-through stage, as in the reference
+    return this.chain(this.self(), ORDERED | SORTED, 0, null, (this.flags & SORTED) !== 0 ? null : (d, sc) => new NumberSortedSink(d, sc));
   }
 
   /** Only the three-argument form exists for number streams. */

@@ -1151,3 +1151,17 @@ describe('engine · flatMap after downstream cancellation', () => {
     expect([out, mapped]).toEqual([[1, 1], [1]]);
   });
 });
+
+describe('engine · sorted() on an already sorted stream', () => {
+  it('passes elements through instead of buffering, as the reference (peek count)', () => {
+    let p = 0;
+    const r = Stream.of(5, 3, 1, 4, 2).sorted().peek(() => p++).limit(2).sorted().limit(1).toList().toArray();
+    expect([r, p]).toEqual([[1], 1]);
+    let q = 0;
+    expect([IntStream.range(0, 100).peek(() => q++).sorted().limit(2).boxed().toList().toArray(), q]).toEqual([[0, 1], 2]);
+  });
+  it('still sorts when the order is not natural', () => {
+    expect(Stream.of(1, 2, 3).sorted((a, b) => b - a).sorted().toList().toArray()).toEqual([1, 2, 3]);
+    expect(TreeSet.of(3, 1, 2).stream().sorted().toList().toArray()).toEqual([1, 2, 3]);
+  });
+});
