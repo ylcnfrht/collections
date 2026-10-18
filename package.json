@@ -1,7 +1,7 @@
 {
   "name": "@nodestd/collections",
   "version": "1.0.0",
-  "description": "Collections framework for TypeScript: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue and more, with value equality, fail-fast iterators and live views.",
+  "description": "Collections framework for TypeScript and JS, inspired by Java's Collections Framework and Stream API: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue, Stream and more, with value equality, fail-fast iterators and live views.",
   "keywords": [
     "collections",
     "data-structures",

@@ -1,8 +1,8 @@
 # @nodestd/collections
 
-A production-grade collections framework for TypeScript and JS, inspired by **Java's Collections Framework and
-Stream API**: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`, `Stream`, `Collectors` and the rest,
-following the same interfaces and documented behaviour.
+A production-grade collections framework for TypeScript and JavaScript, inspired by the **Java Collections
+Framework** and its Stream API: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`, `Stream`,
+`Collectors` and the rest, following the same interfaces and documented behaviour.
 
 ## Why
 
@@ -22,7 +22,8 @@ own API and semantics. This library is one coherent framework instead. It has:
 npm install @nodestd/collections
 ```
 
-Zero dependencies, ESM and CommonJS, full type definitions, Node 18+ and modern browsers.
+Zero dependencies, ESM and CommonJS, full type definitions. Runs anywhere JavaScript runs: Node 18+, Deno, Bun and
+modern browsers.
 
 ## Example
 
@@ -76,4 +77,5 @@ console.log(counts.get('apple')); // → 2
 
 ## License
 
-MIT
+MIT. `@nodestd` is an independent project, not affiliated with Node.js, Oracle or OpenJDK. Java is a trademark of
+Oracle and/or its affiliates.
