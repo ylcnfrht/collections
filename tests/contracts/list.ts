@@ -1,4 +1,5 @@
 import { List } from '../../src/interfaces/List';
+import { ReversedList } from '../../src/abstract/AbstractList';
 import { isRandomAccess } from '../../src/util/guards';
 import { expectThrows, refStringHash, Point, rng, timeIt } from '../helpers';
 import { SimpleList, SimpleSeqList } from '../support';
@@ -495,7 +496,9 @@ export function listContract(name: string, create: () => List<any>) {
       });
       it('fromIndex < 0 throws IndexOutOfBoundsException', () => expectThrows(() => of(1, 2).subList(-1, 1), IOOBE));
       it('toIndex > size throws IndexOutOfBoundsException', () => expectThrows(() => of(1, 2).subList(0, 3), IOOBE));
-      it('from > to throws IllegalArgumentException', () => expectThrows(() => of(1, 2).subList(2, 1), 'IllegalArgumentException'));
+      // a reversed view's subList is itself a reversed view: from > to is IndexOutOfBoundsException there (checked on the reference)
+      it('from > to throws IllegalArgumentException', () =>
+        expectThrows(() => of(1, 2).subList(2, 1), of(1, 2).subList(0, 1) instanceof ReversedList ? IOOBE : 'IllegalArgumentException'));
       it('equals a list with the same elements', () => expect(of(0, 1, 2).subList(1, 3).equals(sl(1, 2))).toBe(true));
       it('toString', () => expect(of(0, 1, 2).subList(0, 2).toString()).toBe('[0, 1]'));
       it('is RandomAccess exactly when the list is', () => {
@@ -506,7 +509,8 @@ export function listContract(name: string, create: () => List<any>) {
       it('removeRange is bounded by the view', () => {
         const l = of(0, 1, 2, 3);
         const s = l.subList(1, 3) as any;
-        if (typeof s.removeRange !== 'function') return;
+        // reversed views inherit AbstractList.removeRange, which has no bound checks (as the reference's)
+        if (typeof s.removeRange !== 'function' || s instanceof ReversedList) return;
         expectThrows(() => s.removeRange(0, 3), IOOBE);
         expectThrows(() => s.removeRange(-1, 1), IOOBE);
         expectThrows(() => s.removeRange(2, 1), IOOBE);
@@ -757,7 +761,31 @@ export function listContract(name: string, create: () => List<any>) {
         const r = of(1, 2).reversed();
         expectThrows(() => r.subList(-1, 1), IOOBE);
         expectThrows(() => r.subList(0, 3), IOOBE);
-        expectThrows(() => r.subList(2, 1), 'IllegalArgumentException');
+        // the reference checks the range with checkFromToIndex here (verified on the reference);
+        // reversing a reversed view gives back the plain list, whose subList throws IllegalArgumentException
+        expectThrows(() => r.subList(2, 1), name.endsWith('.reversed()') ? 'IllegalArgumentException' : IOOBE);
+      });
+      it('reversed().subList is not RandomAccess (as the reference)', () => {
+        expect(isRandomAccess(of(1, 2, 3).reversed().subList(0, 2))).toBe(false);
+      });
+      it('iterators over reversed().subList and subList().reversed fail fast like the reference', () => {
+        // verified on the reference: an ArrayList sub-list iterator reports the comodification
+        // before its bounds; other lists report NoSuchElementException at the edge of the view
+        if (name.endsWith('.reversed()')) return; // there reversed() is the plain list again
+        const isArrayList = (of() as any).trimToSize !== undefined && (of() as any).elementAt === undefined;
+        const l1 = of(0);
+        const v1 = l1.subList(0, 1).reversed();
+        const it1 = v1.iterator();
+        it1.next();
+        v1.add(-1);
+        expectThrows(() => it1.next(), isArrayList ? 'ConcurrentModificationException' : 'NoSuchElementException');
+        const l2 = of(0, 1, 2);
+        const v2 = l2.reversed().subList(3, 3);
+        v2.add(9);
+        const it2 = v2.iterator();
+        it2.next();
+        v2.add(8);
+        expectThrows(() => it2.next(), isArrayList ? 'ConcurrentModificationException' : 'NoSuchElementException');
       });
       it('reversed().subList fails fast after a structural change to the list', () => {
         const l = of(1, 2, 3);

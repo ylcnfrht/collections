@@ -8,8 +8,7 @@ export class Stack<E> extends Vector<E> {
   }
 
   push(e: E): E {
-    this.es.push(e);
-    this.modCount++;
+    this.add(e);
     return e;
   }
 

@@ -171,8 +171,12 @@ describe('C-5 unmodifiableSequencedSet / unmodifiableSequencedMap', () => {
       expectThrows(f, UOE);
     }
     expect(C.unmodifiableSequencedSet(s)).toBe(s);
-    const sorted = C.unmodifiableSortedSet(TreeSet.of(1));
-    expect(C.unmodifiableSequencedSet(sorted)).toBe(sorted);
+    // verified on the reference: only its own wrapper class is returned as-is, so a sorted wrapper is wrapped again,
+    // and the sequenced wrapper's removeFirst throws UnsupportedOperationException even when empty
+    const sorted = C.unmodifiableSortedSet(TreeSet.of<number>());
+    expect(C.unmodifiableSequencedSet(sorted)).not.toBe(sorted);
+    expectThrows(() => sorted.removeFirst(), 'NoSuchElementException');
+    expectThrows(() => C.unmodifiableSequencedSet(sorted).removeFirst(), UOE);
     base.add(4);
     expect(s.getLast()).toBe(4);
   });
@@ -476,7 +480,7 @@ describe('C-18 ofLazy (preview)', () => {
     expectThrows(() => l.set(0, 1), UOE);
     expectThrows(() => l.add(1), UOE);
     expectThrows(() => l.subList(0, 1).set(0, 1), UOE);
-    expect(C.unmodifiableList(l)).toBe(l);
+    expect(C.unmodifiableList(l)).not.toBe(l); // only the wrapper's own class is returned as-is
   });
   it('List.ofLazy argument checks', () => {
     expectThrows(() => IList.ofLazy(-1, (i) => i), IAE);
@@ -573,7 +577,7 @@ describe('C-18 ofLazy (preview)', () => {
     expectThrows(() => m.containsKey(null), NPE);
     expectThrows(() => m.containsValue(null), NPE);
     expectThrows(() => m.put('a', 1), UOE);
-    expect(C.unmodifiableMap(m)).toBe(m);
+    expect(C.unmodifiableMap(m)).not.toBe(m); // only the wrapper's own class is returned as-is
     expectThrows(() => IMap.ofLazy(N, (k) => k), NPE);
     expectThrows(() => IMap.ofLazy(HashSet.of(1), N), NPE);
     expectThrows(() => IMap.ofLazy(HashSet.of<number | null>(null), (k) => k), NPE);

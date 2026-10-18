@@ -1067,3 +1067,23 @@ describe('Stream · over collections', () => {
     expect(Optional.empty<number>().stream().count()).toBe(0);
   });
 });
+
+// characteristics verified on the reference for every source kind
+describe('Stream sources · spliterator characteristics (as the reference)', () => {
+  const { ORDERED, SIZED, SUBSIZED, IMMUTABLE } = Spliterator;
+  const built = <S>(b: { add(x: number): unknown; build(): S }, xs: number[]): S => {
+    for (const x of xs) b.add(x);
+    return b.build();
+  };
+  it('of/concat are IMMUTABLE; builders with 2+ elements are not', () => {
+    expect(Stream.of(1, 2, 3).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED | IMMUTABLE);
+    expect(Stream.concat(Stream.of(1), Stream.of(2)).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED | IMMUTABLE);
+    expect(built(Stream.builder<number>(), [1, 2]).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED);
+    expect(built(Stream.builder<number>(), [1]).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED | IMMUTABLE);
+    expect(built(Stream.builder<number>(), []).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED | IMMUTABLE);
+    expect(built(IntStream.builder(), [1, 2]).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED);
+    expect(built(LongStream.builder(), [1, 2]).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED);
+    expect(built(DoubleStream.builder(), [1, 2]).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED);
+    expect(built(LongStream.builder(), [1]).spliterator().characteristics()).toBe(ORDERED | SIZED | SUBSIZED | IMMUTABLE);
+  });
+});

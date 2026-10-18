@@ -661,3 +661,59 @@ describe('TreeMap · interfaces and views', () => {
     expect(m.descendingMap().entrySet().toArray((n) => new Array<MapEntry<number, string>>(n)).map((e) => e.getKey())).toEqual([3, 2, 1]);
   });
 });
+
+// every result below was verified on the reference
+describe('TreeMap · check order (as the reference)', () => {
+  const t = (f: () => unknown): unknown => {
+    try {
+      return f();
+    } catch (e) {
+      return (e as Error).name;
+    }
+  };
+  it('an empty map never compares the key in compute/computeIfAbsent', () => {
+    const m = new TreeMap<number, number>();
+    expect(t(() => m.compute(null as unknown as number, () => null))).toBeNull();
+    expect(t(() => m.computeIfAbsent(null as unknown as number, () => null))).toBeNull();
+    expect(t(() => m.compute(null as unknown as number, () => 1))).toBe('NullPointerException');
+    expect(t(() => m.merge(null as unknown as number, 1, (x) => x))).toBe('NullPointerException');
+  });
+  it('range views report the range before a null argument', () => {
+    const h = new TreeMap<number, number>().headMap(6, true);
+    const nul = null as unknown as never;
+    expect(t(() => h.merge(7, nul, (x) => x))).toBe('IllegalArgumentException');
+    expect(t(() => h.merge(7, 1, nul))).toBe('IllegalArgumentException');
+    expect(t(() => h.merge(5, nul, (x) => x))).toBe('NullPointerException');
+    expect(t(() => h.computeIfPresent(7, nul))).toBeNull();
+    expect(t(() => h.compute(7, nul))).toBe('NullPointerException');
+    expect(t(() => h.computeIfAbsent(7, nul))).toBe('NullPointerException');
+    expect(t(() => h.compute(5, nul))).toBe('NullPointerException');
+  });
+  it('a descending view checks its fromKey first', () => {
+    const s = new TreeMap<string, number>().descendingMap().headMap('a', false).navigableKeySet();
+    expect(t(() => s.subSet('a', true, null as unknown as string, false))).toBe('IllegalArgumentException');
+    expect(t(() => s.subSet('b', true, null as unknown as string, true))).toBe('NullPointerException');
+    expect(t(() => s.subSet(null as unknown as string, true, 'a', true))).toBe('NullPointerException');
+    const d = new TreeMap<string, number>().descendingMap().headMap('m', true);
+    expect(t(() => d.subMap('n', true, 'a', true))).toBe('IllegalArgumentException');
+    expect(t(() => d.subMap('z', true, 'q', true).size())).toBe(0);
+  });
+});
+
+describe('TreeMap · sequenced views (as the reference)', () => {
+  // verified on the reference: SequencedMap's default views refuse add/addAll even when nothing would change
+  it('sequencedKeySet/Values/EntrySet().addAll(empty) throw; the plain views do not', () => {
+    const m = new TreeMap<number, number>();
+    m.put(1, 1);
+    m.put(2, 2);
+    expectThrows(() => m.sequencedKeySet().addAll(new TreeMap<number, number>().keySet()), 'UnsupportedOperationException');
+    expectThrows(() => m.sequencedValues().addAll(new TreeMap<number, number>().values()), 'UnsupportedOperationException');
+    expectThrows(() => m.sequencedEntrySet().addAll(new TreeMap<number, number>().entrySet()), 'UnsupportedOperationException');
+    expectThrows(() => m.sequencedKeySet().reversed().addAll(new TreeMap<number, number>().keySet()), 'UnsupportedOperationException');
+    expectThrows(() => m.descendingMap().sequencedValues().addAll(new TreeMap<number, number>().values()), 'UnsupportedOperationException');
+    expect(m.keySet().addAll(new TreeMap<number, number>().keySet())).toBe(false);
+    expect(m.sequencedKeySet().reversed().toString()).toBe('[2, 1]');
+    expect(m.sequencedKeySet().removeFirst()).toBe(1);
+    expect(m.toString()).toBe('{2=2}');
+  });
+});

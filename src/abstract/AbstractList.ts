@@ -13,7 +13,7 @@ import { BaseSpliterator, Spliterator } from '../stream/Spliterator';
 import { IteratorSpliterator } from '../stream/Spliterators';
 import { Comparator, stableSort } from '../util/Comparator';
 import { isList, isRandomAccess, RANDOM_ACCESS } from '../util/guards';
-import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from '../util/Objects';
+import { checkFromToIndex, checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from '../util/Objects';
 import { AbstractCollection } from './AbstractCollection';
 
 /**
@@ -441,14 +441,24 @@ class SubList<E> extends AbstractList<E> {
     const it = this.root.listIterator(this.offset + index);
     const offset = this.offset;
     const self = this;
+    const root = this.root as AbstractList<E> & { trimToSize?: unknown; elementAt?: unknown };
+    // The reference's ArrayList sub-list iterator checks for comodification before its bounds;
+    // other lists (Vector included) use AbstractList's, which checks bounds first.
+    const checkFirst = root.trimToSize !== undefined && root.elementAt === undefined;
+    let expectedModCount = root.modCount;
+    const check = () => {
+      if (checkFirst && root.modCount !== expectedModCount) throw new ConcurrentModificationException();
+    };
     return {
       hasNext: () => it.nextIndex() - offset < self._size,
       next() {
+        check();
         if (it.nextIndex() - offset >= self._size) throw new NoSuchElementException();
         return it.next();
       },
       hasPrevious: () => it.previousIndex() - offset >= 0,
       previous() {
+        check();
         if (it.previousIndex() - offset < 0) throw new NoSuchElementException();
         return it.previous();
       },
@@ -456,11 +466,13 @@ class SubList<E> extends AbstractList<E> {
       previousIndex: () => it.previousIndex() - offset,
       remove() {
         it.remove();
+        expectedModCount = root.modCount;
         self.updateSizeAndModCount(-1);
       },
       set: (e: E) => it.set(e),
       add(e: E) {
         it.add(e);
+        expectedModCount = root.modCount;
         self.updateSizeAndModCount(1);
       },
       forEachRemaining(action: (e: E) => void) {
@@ -484,12 +496,13 @@ class SubList<E> extends AbstractList<E> {
 
 /** Live reverse-ordered view (List.reversed()). Iterators delegate to the base list so they stay fail-fast. */
 export class ReversedList<E> extends AbstractList<E> {
-  constructor(protected readonly base: List<E>) {
+  // the reference's reversed().subList(..) view is never RandomAccess, whatever its base
+  constructor(protected readonly base: List<E>, private readonly randomAccess = true) {
     super();
   }
 
   get [RANDOM_ACCESS](): boolean {
-    return isRandomAccess(this.base);
+    return this.randomAccess && isRandomAccess(this.base);
   }
 
   size(): number {
@@ -527,8 +540,8 @@ export class ReversedList<E> extends AbstractList<E> {
 
   override subList(fromIndex: number, toIndex: number): List<E> {
     const n = this.size();
-    subListRangeCheck(fromIndex, toIndex, n);
-    return this.base.subList(n - toIndex, n - fromIndex).reversed();
+    checkFromToIndex(fromIndex, toIndex, n);
+    return new ReversedList(this.base.subList(n - toIndex, n - fromIndex), false);
   }
 
   /** ORDERED|SIZED|SUBSIZED over iterator(), as the reference's reverse-ordered list view. */

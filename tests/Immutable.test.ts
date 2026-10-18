@@ -87,6 +87,28 @@ const mapMutators: Call[] = [
 ];
 
 describe('List.of / List.copyOf', () => {
+  // verified on the reference: reversed() is an unmodifiable reverse view (UnsupportedOperationException before
+  // anything else), but removeFirst/removeLast are List's defaults and look at emptiness first; its subList checks
+  // the range with IndexOutOfBoundsException and is not RandomAccess
+  it('reversed view: check order of the reference', () => {
+    expectThrows(() => List.of().reversed().removeFirst(), NSEE);
+    expectThrows(() => List.of(1, 2).subList(1, 1).reversed().removeLast(), NSEE);
+    expectThrows(() => List.of(1, 2).reversed().removeFirst(), UOE);
+    expectThrows(() => List.of().removeFirst(), UOE);
+    expectThrows(() => List.of().reversed().addAll(new ArrayList()), UOE);
+    expectThrows(() => List.of(1).reversed().set(5, 1), UOE);
+    expectThrows(() => List.of(1, 2).reversed().subList(2, 1), IOOBE);
+    expect(isRandomAccess(List.of(1, 2).reversed())).toBe(true);
+    expect(isRandomAccess(List.of(1, 2).reversed().subList(0, 1))).toBe(false);
+    const r = List.of(1, 2, 3).reversed();
+    expect(r.toArray()).toEqual([3, 2, 1]);
+    expect(r.reversed().toArray()).toEqual([1, 2, 3]);
+    expect(r.indexOf(3)).toBe(0);
+    expectThrows(() => r.indexOf(null), NPE);
+    const it = r.listIterator();
+    expectThrows(() => it.remove(), UOE);
+  });
+
   const lists: [string, () => any][] = [
     ['List.of', () => List.of(1, 2, 3)],
     ['List.copyOf', () => List.copyOf(LinkedList.of(1, 2, 3))],
@@ -388,11 +410,11 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
     ['entrySet', (m) => m.entrySet()],
   ];
   describe.each(views)('%s view is read-only', (_n, view) => {
-    // as in the reference, view removals throw only when something would be removed; adds always throw
+    // as in the reference, view removals throw only when something would be removed; add throws, addAll of nothing
+    // returns false (all verified on the reference)
     const removes = (c: { size(): number }) => c.size() > 0;
     const changing: Call[] = [
       ['add', (c) => c.add(9)],
-      ['addAll empty', (c) => c.addAll(new ArrayList())],
       ['remove present', (c) => c.remove([...c][0])],
       ['removeIf all', (c) => c.removeIf(() => true)],
       ['retainAll none', (c) => c.retainAll(new ArrayList())],
@@ -400,6 +422,7 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
       ['clear', (c) => c.clear()],
     ];
     const noOps: Call[] = [
+      ['addAll empty', (c) => c.addAll(new ArrayList())],
       ['remove absent', (c) => c.remove(42)],
       ['removeIf none', (c) => c.removeIf(() => false)],
       ['retainAll all', (c) => c.retainAll(ArrayList.of(...c))],
@@ -416,9 +439,17 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
       expect(call(view(m))).toBe(false);
       expect(m.size()).toBe(2);
     });
-    it('clear on an empty view is a no-op', () => expect(() => view(Map.of()).clear()).not.toThrow());
-    it.each(noOps)('one-entry map: %s still throws (fully immutable views)', (_m, call) => {
-      expectThrows(() => call(view(Map.of('a', 1))), UOE);
+    // verified on the reference: keySet()/values() clear() is the map's clear(), which throws even when empty;
+    // the entry set's clear() walks the (empty) iterator and does nothing
+    it('clear on an empty view', () => {
+      if (_n === 'entrySet') expect(() => view(Map.of()).clear()).not.toThrow();
+      else expectThrows(() => view(Map.of()).clear(), UOE);
+    });
+    // verified on the reference: a one-entry map's entrySet() is Set.of(entry), fully immutable; its keySet() and
+    // values() are the same lenient views as for larger maps
+    it.each(noOps)('one-entry map: %s', (_m, call) => {
+      if (_n === 'entrySet') expectThrows(() => call(view(Map.of('a', 1))), UOE);
+      else expect(call(view(Map.of('a', 1)))).toBe(false);
     });
     it('iterator.remove', () => {
       const it = view(Map.of('a', 1)).iterator();
@@ -445,6 +476,15 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
 
   it('odd argument count', () => {
     expectThrows(() => (Map.of as any)('a', 1, 'b'), IAE);
+  });
+
+  // verified on the reference: pairs are checked in argument order, each for a null key, a null value, then a repeat
+  it('reports the first bad pair: a duplicate key before a later null', () => {
+    expectThrows(() => (Map.of as any)(4, 7, 4, 0, null, 1), IAE);
+    expectThrows(() => (Map.of as any)(4, 7, 4, null), NPE);
+    expectThrows(() => (Map.of as any)(4, null, 4, 0), NPE);
+    expectThrows(() => Map.ofEntries(Map.entry(1, 1), Map.entry(1, 2), new SimpleEntry<any, any>(null, 1)), IAE);
+    expectThrows(() => Map.ofEntries(new SimpleEntry<any, any>(1, null), Map.entry(1, 2)), NPE);
   });
 
   it('duplicate keys', () => {
@@ -483,7 +523,10 @@ describe('Map.of / ofEntries / entry / copyOf', () => {
     expectThrows(() => m.getOrDefault(null, 'd'), NPE);
     expectThrows(() => m.keySet().contains(null), NPE);
     expectThrows(() => m.values().contains(undefined), NPE);
-    expectThrows(() => m.entrySet().contains(null), NPE);
+    // verified on the reference: a 2+ entry map's entry set is a plain AbstractSet (contains(null) is false), a
+    // one-entry map's is Set.of(entry) (contains(null) throws)
+    expect(m.entrySet().contains(null)).toBe(false);
+    expectThrows(() => Map.of(1, 2).entrySet().contains(null), NPE);
     expect(m.entrySet().contains(new SimpleEntry(null, 'p'))).toBe(false);
     for (const q of [Map.ofEntries(Map.entry(1, 2)), Map.copyOf(HashMap.of([1, 2]))]) expectThrows(() => q.get(null), NPE);
     expect(m.containsValue('seven')).toBe(true);

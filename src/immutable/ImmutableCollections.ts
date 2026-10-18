@@ -19,11 +19,11 @@ import { Set as SetType } from '../interfaces/Set';
 import { HashMap, isPlainKey, jsIterator } from '../map/HashMap';
 import { HashSet } from '../set/HashSet';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
-import { naturalCompare } from '../util/Comparator';
+import { Comparator, naturalCompare, reverseOrder } from '../util/Comparator';
 import { Spliterator } from '../stream/Spliterator';
-import { ArraySpliterator } from '../stream/Spliterators';
-import { isEntry, isList, RANDOM_ACCESS } from '../util/guards';
-import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
+import { ArraySpliterator, IteratorSpliterator } from '../stream/Spliterators';
+import { isEntry, isList, isRandomAccess, RANDOM_ACCESS } from '../util/guards';
+import { checkFromToIndex, checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 
 /** Thrown by every mutator of an unmodifiable collection, whether or not the call would change anything. */
 export function uoe(): never {
@@ -239,14 +239,14 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
     return this.es[Symbol.iterator]() as unknown as Generator<E>;
   }
 
-  // shortcut: subList/reversed copy (O(k)) instead of viewing; contents can never change, so it is indistinguishable
+  // shortcut: subList copies (O(k)) instead of viewing; contents can never change, so it is indistinguishable
   override subList(fromIndex: number, toIndex: number): ListType<E> {
     subListRangeCheck(fromIndex, toIndex, this.es.length);
     return new ImmutableList(this.es.slice(fromIndex, toIndex), this.nullFree, this.nullHostile);
   }
 
   override reversed(): ListType<E> {
-    return new ImmutableList(this.es.slice().reverse(), this.nullFree, this.nullHostile);
+    return ReverseOrderListView.of(this, false);
   }
 
   override equals(o: unknown): boolean {
@@ -281,6 +281,224 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
     for (let i = 0; i < a.length; i++) s += (i > 0 ? ', ' : '') + toString(a[i]);
     return s + ']';
   }
+}
+
+const ORDERED_SIZED = Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
+
+function checkClosedRange(index: number, size: number): void {
+  if (!Number.isInteger(index) || index < 0 || index > size) throw new IndexOutOfBoundsException(`Index: ${index}, Size: ${size}`);
+}
+
+/**
+ * The reference's reverse-ordered list view (List.reversed()). An unmodifiable one (List.of lists) throws
+ * UnsupportedOperationException from every mutator before anything else; a modifiable one (the default
+ * reversed() of Collections.unmodifiableList, emptyList, singletonList, nCopies) validates and delegates,
+ * so the base decides whether the call fails.
+ */
+export class ReverseOrderListView<E> extends AbstractList<E> {
+  static of<E>(list: ListType<E>, modifiable: boolean): ListType<E> {
+    return list instanceof ReverseOrderListView ? list.base : new ReverseOrderListView(list, modifiable, isRandomAccess(list));
+  }
+
+  private constructor(readonly base: ListType<E>, private readonly modifiable: boolean, private readonly randomAccess: boolean) {
+    super();
+  }
+
+  get [RANDOM_ACCESS](): boolean {
+    return this.randomAccess;
+  }
+
+  private checkModifiable(): void {
+    if (!this.modifiable) uoe();
+  }
+
+  size(): number {
+    return this.base.size();
+  }
+  override isEmpty(): boolean {
+    return this.base.isEmpty();
+  }
+  get(index: number): E {
+    const n = this.base.size();
+    checkIndex(index, n);
+    return this.base.get(n - index - 1);
+  }
+  override contains(o: unknown): boolean {
+    return this.base.contains(o);
+  }
+  override containsAll(c: Collection<unknown>): boolean {
+    return this.base.containsAll(c);
+  }
+  override indexOf(o: unknown): number {
+    const i = this.base.lastIndexOf(o);
+    return i === -1 ? -1 : this.base.size() - i - 1;
+  }
+  override lastIndexOf(o: unknown): number {
+    const i = this.base.indexOf(o);
+    return i === -1 ? -1 : this.base.size() - i - 1;
+  }
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    const a = this.base.toArray().reverse();
+    return arguments.length > 0 ? toArrayWith(a, generator as (length: number) => A) : a;
+  }
+  // for-each over this: the action is only dereferenced once there is an element
+  override forEach(action: (e: E) => void): void {
+    const it = this.iterator();
+    while (it.hasNext()) requireNonNull(action)(it.next());
+  }
+
+  override iterator(): Iterator<E> {
+    const it = this.base.listIterator(this.base.size());
+    return {
+      hasNext: () => it.hasPrevious(),
+      next: () => it.previous(),
+      remove: () => {
+        this.checkModifiable();
+        it.remove();
+      },
+      forEachRemaining(action: (e: E) => void): void {
+        requireNonNull(action);
+        while (it.hasPrevious()) action(it.previous());
+      },
+    };
+  }
+
+  override listIterator(index = 0): ListIterator<E> {
+    const size = this.base.size();
+    checkClosedRange(index, size);
+    const base = this.base;
+    const it = base.listIterator(size - index);
+    const check = () => this.checkModifiable();
+    return {
+      hasNext: () => it.hasPrevious(),
+      next: () => it.previous(),
+      hasPrevious: () => it.hasNext(),
+      previous: () => it.next(),
+      nextIndex: () => base.size() - it.nextIndex(),
+      previousIndex: () => base.size() - it.nextIndex() - 1,
+      remove(): void {
+        check();
+        it.remove();
+      },
+      set(e: E): void {
+        check();
+        it.set(e);
+      },
+      add(e: E): void {
+        check();
+        it.add(e);
+        it.previous();
+      },
+      forEachRemaining(action: (e: E) => void): void {
+        requireNonNull(action);
+        while (it.hasPrevious()) action(it.previous());
+      },
+    };
+  }
+
+  override spliterator(): Spliterator<E> {
+    return new IteratorSpliterator(this, null, -1, ORDERED_SIZED);
+  }
+
+  // add(e) and add(index, e) both land here: add(e) is base.add(0, e)
+  protected override addAtIndex(index: number, e: E): void {
+    this.checkModifiable();
+    const size = this.base.size();
+    checkClosedRange(index, size);
+    this.base.add(size - index, e);
+  }
+
+  protected override addAllAt(index: number, c: Collection<E>): boolean {
+    this.checkModifiable();
+    const size = this.base.size();
+    checkClosedRange(index, size);
+    const adds = c.toArray();
+    if (adds.length === 0) return false;
+    this.base.addAll(size - index, new ImmutableList(adds.reverse(), false));
+    return true;
+  }
+
+  override clear(): void {
+    this.checkModifiable();
+    this.base.clear();
+  }
+
+  override remove(o: unknown): boolean {
+    this.checkModifiable();
+    return super.remove(o);
+  }
+
+  override removeAll(c: Collection<unknown>): boolean {
+    this.checkModifiable();
+    requireNonNull(c);
+    return removeWhere(this, (e) => c.contains(e));
+  }
+
+  override retainAll(c: Collection<unknown>): boolean {
+    this.checkModifiable();
+    requireNonNull(c);
+    return removeWhere(this, (e) => !c.contains(e));
+  }
+
+  override removeIf(filter: (e: E) => boolean): boolean {
+    this.checkModifiable();
+    return this.base.removeIf(filter);
+  }
+
+  override replaceAll(operator: (e: E) => E): void {
+    this.checkModifiable();
+    this.base.replaceAll(operator);
+  }
+
+  override sort(c: Comparator<E> | null = null): void {
+    this.checkModifiable();
+    this.base.sort(reverseOrder(c));
+  }
+
+  override set(index: number, e: E): E {
+    this.checkModifiable();
+    const n = this.base.size();
+    checkIndex(index, n);
+    return this.base.set(n - index - 1, e);
+  }
+
+  override removeAt(index: number): E {
+    this.checkModifiable();
+    const n = this.base.size();
+    checkIndex(index, n);
+    return this.base.removeAt(n - index - 1);
+  }
+
+  override subList(fromIndex: number, toIndex: number): ListType<E> {
+    const n = this.base.size();
+    checkFromToIndex(fromIndex, toIndex, n);
+    // a plain view: the reference does not mark it RandomAccess
+    return new ReverseOrderListView(this.base.subList(n - toIndex, n - fromIndex), this.modifiable, false);
+  }
+
+  override reversed(): ListType<E> {
+    return this.base;
+  }
+
+  override removeRange(fromIndex: number, toIndex: number): void {
+    this.checkModifiable();
+    super.removeRange(fromIndex, toIndex);
+  }
+}
+
+/** The reference's iterator-based removal loop (AbstractCollection.removeAll/retainAll), bypassing removeIf overrides. */
+export function removeWhere<E>(c: Collection<E>, pred: (e: E) => boolean): boolean {
+  const it = c.iterator();
+  let modified = false;
+  while (it.hasNext()) {
+    if (pred(it.next())) {
+      it.remove();
+      modified = true;
+    }
+  }
+  return modified;
 }
 
 /**
@@ -422,7 +640,8 @@ export class ImmutableMap<K, V> extends ImmutableMapBase<K, V> {
   }
 
   entrySet(): SetType<MapEntry<K, V>> {
-    return (this.ens ??= new EntrySetView(this));
+    // a one-entry Map.of answers Set.of(entry)
+    return (this.ens ??= this.nullHostile && this.entries.length === 1 ? buildSet(this.entries.slice(), false, true, true) : new EntrySetView(this));
   }
 
   override keySet(): SetType<K> {
@@ -444,7 +663,11 @@ export class ImmutableMap<K, V> extends ImmutableMapBase<K, V> {
   }
 }
 
-class EntrySetView<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
+// The reference's Map.of/copyOf views. keySet()/values() are AbstractMap's: clear() calls the map's clear() (which
+// throws even when empty) and removal goes through an iterator whose remove() throws, so a call that removes nothing
+// returns false. entrySet() is a plain AbstractSet over the entries (clear() of an empty one does nothing), except
+// for a one-entry map, whose entrySet() is a Set.of(entry): every mutator throws and contains(null) is rejected.
+class EntrySetView<K, V> extends AbstractSet<MapEntry<K, V>> {
   constructor(private readonly map: ImmutableMap<K, V>) {
     super();
   }
@@ -458,10 +681,9 @@ class EntrySetView<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
     return this.map.entries.length;
   }
   override contains(o: unknown): boolean {
-    if (o == null && this.map.nullHostile) nullQuery();
     if (!isEntry(o)) return false;
     const k = o.getKey();
-    if (k == null && this.map.nullHostile) return false;
+    if (k == null) return false;
     return this.map.containsKey(k) && equals(this.map.get(k), o.getValue());
   }
   override toArray(): MapEntry<K, V>[];
@@ -471,7 +693,7 @@ class EntrySetView<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
   }
 }
 
-class KeySetView<K, V> extends ImmutableSetBase<K> {
+class KeySetView<K, V> extends AbstractSet<K> {
   constructor(private readonly map: ImmutableMap<K, V>) {
     super();
   }
@@ -487,9 +709,12 @@ class KeySetView<K, V> extends ImmutableSetBase<K> {
   override contains(o: unknown): boolean {
     return this.map.containsKey(o);
   }
+  override clear(): void {
+    this.map.clear();
+  }
 }
 
-class ValuesView<K, V> extends ImmutableCollectionBase<V> {
+class ValuesView<K, V> extends AbstractCollection<V> {
   constructor(private readonly map: ImmutableMap<K, V>) {
     super();
   }
@@ -505,54 +730,29 @@ class ValuesView<K, V> extends ImmutableCollectionBase<V> {
   override contains(o: unknown): boolean {
     return this.map.containsValue(o);
   }
+  override clear(): void {
+    this.map.clear();
+  }
 }
 
-// Map views are read-only collections built on an iterator whose remove() is unsupported, so in the reference
-// the removal methods throw only when they would actually remove something; otherwise they report no change.
-// Exception: a one-entry Map.of has fully immutable views (Set.of/List.of in the reference), which always throw.
-const alwaysLocked = (view: unknown) => {
-  const m = (view as { map: ImmutableMap<unknown, unknown> }).map;
-  if (m.nullHostile && m.entries.length === 1) uoe();
-};
-for (const View of [EntrySetView, KeySetView, ValuesView]) {
-  const p = View.prototype as unknown as Collection<unknown>;
-  p.remove = function (this: Collection<unknown>, o: unknown): boolean {
-    alwaysLocked(this);
-    for (const e of this.toArray()) if (equals(o, e)) uoe();
-    return false;
-  };
-  p.removeIf = function (this: Collection<unknown>, filter: (e: unknown) => boolean): boolean {
-    alwaysLocked(this);
-    requireNonNull(filter);
-    for (const e of this.toArray()) if (filter(e)) uoe();
-    return false;
-  };
-  p.removeAll = function (this: Collection<unknown>, c: Collection<unknown>): boolean {
-    alwaysLocked(this);
-    requireNonNull(c);
-    return this.removeIf((e) => c.contains(e));
-  };
-  p.retainAll = function (this: Collection<unknown>, c: Collection<unknown>): boolean {
-    alwaysLocked(this);
-    requireNonNull(c);
-    return this.removeIf((e) => !c.contains(e));
-  };
-  p.clear = function (this: Collection<unknown>): void {
-    alwaysLocked(this);
-    if (!this.isEmpty()) uoe();
-  };
-}
-
-/** @internal Builds a map from immutable entries; a repeated key throws IllegalArgumentException. */
+/**
+ * @internal Builds a map from entries, checking each in turn the way the reference does: with nullFree, a null key
+ * then a null value throws NullPointerException; a repeated key throws IllegalArgumentException.
+ */
 export function buildMap<K, V>(entries: MapEntry<K, V>[], nullFree: boolean, nullHostile = false): ImmutableMap<K, V> {
   const plain = new globalThis.Map<unknown, V>();
   const other = new HashMap<K, V>();
   for (let i = 0; i < entries.length; i++) {
     const k = entries[i].getKey();
+    const v = entries[i].getValue();
+    if (nullFree) {
+      requireNonNull(k);
+      requireNonNull(v);
+    }
     const p = isPlainKey(k);
     if (p ? plain.has(k) : other.containsKey(k)) throw new IllegalArgumentException(`duplicate key: ${toString(k)}`);
-    if (p) plain.set(k, entries[i].getValue());
-    else other.put(k, entries[i].getValue());
+    if (p) plain.set(k, v);
+    else other.put(k, v);
   }
   return new ImmutableMap(entries, plain, other, nullFree, nullHostile);
 }
@@ -840,8 +1040,9 @@ function mapOf<K, V>(k1: K, v1: V, k2: K, v2: V, k3: K, v3: V, k4: K, v4: V, k5:
 function mapOf<K, V>(...keysAndValues: (K | V)[]): MapType<K, V>;
 function mapOf<K, V>(...kvs: unknown[]): MapType<K, V> {
   if (kvs.length % 2 !== 0) throw new IllegalArgumentException('Map.of needs key/value pairs');
+  // unchecked entries: buildMap checks each pair (nulls, then a duplicate key) in argument order, as the reference does
   const entries: MapEntry<K, V>[] = [];
-  for (let i = 0; i < kvs.length; i += 2) entries.push(immutableEntry(kvs[i] as K, kvs[i + 1] as V));
+  for (let i = 0; i < kvs.length; i += 2) entries.push(new KeyValueHolder(kvs[i] as K, kvs[i + 1] as V));
   return buildMap(entries, true, true);
 }
 
@@ -873,7 +1074,7 @@ export const Map = {
   of: mapOf,
   ofEntries<K, V>(...entries: MapEntry<K, V>[]): MapType<K, V> {
     const es: MapEntry<K, V>[] = [];
-    for (const e of entries) es.push(immutableEntry(requireNonNull(e).getKey(), e.getValue()));
+    for (const e of entries) es.push(new KeyValueHolder(requireNonNull(e).getKey(), e.getValue()));
     return buildMap(es, true, true);
   },
   /** Immutable entry; setValue throws UnsupportedOperationException. */
@@ -883,7 +1084,7 @@ export const Map = {
   copyOf<K, V>(m: MapType<K, V>): MapType<K, V> {
     if (m instanceof ImmutableMap && m.nullHostile) return m;
     const es: MapEntry<K, V>[] = [];
-    for (const e of requireNonNull(m).entrySet().toArray()) es.push(immutableEntry(e.getKey(), e.getValue()));
+    for (const e of requireNonNull(m).entrySet().toArray()) es.push(new KeyValueHolder(e.getKey(), e.getValue()));
     return buildMap(es, true, true);
   },
   /**

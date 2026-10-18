@@ -5,6 +5,8 @@ import {
   Collections,
   copy,
   disjoint,
+  EMPTY_LIST,
+  EMPTY_SET,
   emptyList,
   emptyMap,
   emptySet,
@@ -31,6 +33,7 @@ import {
   unmodifiableNavigableMap,
   unmodifiableNavigableSet,
   unmodifiableSequencedCollection,
+  unmodifiableSequencedMap,
   unmodifiableSet,
   unmodifiableSortedMap,
   unmodifiableSortedSet,
@@ -40,6 +43,7 @@ import { List } from '../src/interfaces/List';
 import { ArrayList } from '../src/list/ArrayList';
 import { LinkedList } from '../src/list/LinkedList';
 import { HashMap } from '../src/map/HashMap';
+import { LinkedHashMap } from '../src/map/LinkedHashMap';
 import { TreeMap } from '../src/map/TreeMap';
 import { HashSet } from '../src/set/HashSet';
 import { TreeSet } from '../src/set/TreeSet';
@@ -441,7 +445,9 @@ describe('empty and singleton collections', () => {
     expect(emptyList()).toBe(emptyList());
     expect(emptySet().isEmpty()).toBe(true);
     expect(emptyMap().isEmpty()).toBe(true);
-    expectThrows(() => emptyList().clear(), UOE);
+    // verified on the reference: clear() of an empty list changes nothing, so it does not throw
+    emptyList().clear();
+    expectThrows(() => emptyList().add(1), UOE);
     expectThrows(() => emptySet().add(1), UOE);
     expectThrows(() => emptyMap().put(1, 1), UOE);
     expect(emptyList().equals(new LinkedList())).toBe(true);
@@ -478,6 +484,113 @@ describe('empty and singleton collections', () => {
     expect(n.containsKey(null)).toBe(true);
     expect(n.get(null)).toBeNull();
     expectThrows(() => IMap.copyOf(n), NPE);
+  });
+});
+
+// Every expectation below was verified on the reference runtime (the differential harness and a direct check).
+describe('empty / singleton / nCopies follow the reference classes method by method', () => {
+  const ok = (f: () => unknown, v: unknown) => expect(f()).toBe(v);
+  it('emptyList: inherited mutators fail only when they would change something', () => {
+    const l = emptyList<number>();
+    ok(() => l.remove(1), false);
+    ok(() => l.removeAll(ArrayList.of(1)), false);
+    ok(() => l.retainAll(new ArrayList()), false);
+    ok(() => l.removeIf(() => true), false);
+    ok(() => l.addAll(new ArrayList()), false);
+    l.sort(null);
+    l.replaceAll((x) => x);
+    expectThrows(() => l.replaceAll(null as any), NPE);
+    expectThrows(() => l.removeIf(null as any), NPE);
+    expectThrows(() => l.removeFirst(), NSEE);
+    expectThrows(() => l.addAll(1, new ArrayList()), IOOBE);
+    expectThrows(() => l.add(5, 1), UOE);
+    expectThrows(() => l.iterator().remove(), 'IllegalStateException');
+    l.reversed().clear();
+    ok(() => l.reversed().remove(1), false);
+    ok(() => EMPTY_LIST.remove(1), false);
+  });
+  it('emptySet / emptyMap', () => {
+    const s = emptySet<number>();
+    ok(() => s.remove(1), false);
+    ok(() => s.removeIf(() => true), false);
+    ok(() => s.retainAll(new ArrayList()), false);
+    s.clear();
+    expectThrows(() => s.add(1), UOE);
+    const m = emptyMap<number, number>();
+    ok(() => m.remove(1), null);
+    m.clear();
+    m.replaceAll((_k, v) => v);
+    m.putAll(new HashMap());
+    expectThrows(() => m.remove(1, 2), UOE);
+    expectThrows(() => m.putIfAbsent(1, 2), UOE);
+    expectThrows(() => m.computeIfAbsent(1, () => null), UOE);
+    expectThrows(() => m.merge(1, 1, (a) => a), UOE);
+    expect(m.keySet()).toBe(EMPTY_SET);
+  });
+  it('singletonList: removeIf/replaceAll always throw, sort does nothing, the rest is lenient', () => {
+    const l = singletonList(1);
+    ok(() => l.remove(2), false);
+    ok(() => l.removeAll(ArrayList.of(2)), false);
+    ok(() => l.retainAll(ArrayList.of(1)), false);
+    expectThrows(() => l.removeAll(ArrayList.of(1)), UOE);
+    expectThrows(() => l.removeIf(() => false), UOE);
+    expectThrows(() => l.replaceAll((x) => x), UOE);
+    l.sort(null);
+    l.reversed().sort(null);
+    ok(() => l.reversed().remove(2), false);
+    expectThrows(() => l.clear(), UOE);
+    expectThrows(() => l.get(1), IOOBE);
+    const it = l.listIterator();
+    expectThrows(() => it.remove(), 'IllegalStateException');
+    expectThrows(() => it.set(2), 'IllegalStateException');
+  });
+  it('singleton set: removeIf always throws, removeAll/retainAll go through the iterator', () => {
+    const s = singleton(1);
+    ok(() => s.remove(2), false);
+    ok(() => s.removeAll(ArrayList.of(2)), false);
+    ok(() => s.removeAll(new ArrayList()), false);
+    ok(() => s.retainAll(ArrayList.of(1)), false);
+    expectThrows(() => s.removeAll(ArrayList.of(1)), UOE);
+    expectThrows(() => s.removeIf(() => false), UOE);
+  });
+  it('singletonMap: remove(key) is lenient, compute*/merge/replace*/remove(k, v) and entrySet().removeIf throw', () => {
+    const m = singletonMap(1, 2);
+    ok(() => m.remove(9), null);
+    expectThrows(() => m.remove(1), UOE);
+    expectThrows(() => m.remove(9, 9), UOE);
+    expectThrows(() => m.replaceAll((_k, v) => v), UOE);
+    expectThrows(() => m.compute(9, () => null), UOE);
+    expectThrows(() => m.clear(), UOE);
+    m.putAll(new HashMap());
+    // the predicate is never called
+    expectThrows(() => m.entrySet().removeIf(() => { throw new Error('called'); }), UOE);
+  });
+  it('nCopies: AbstractList defaults (validation first), reversed and subList views', () => {
+    const l = nCopies(2, 'x');
+    ok(() => l.remove('y'), false);
+    ok(() => l.removeIf(() => false), false);
+    ok(() => l.reversed().removeIf(() => false), false);
+    expectThrows(() => l.replaceAll(null as any), NPE);
+    expectThrows(() => l.addAll(5, new ArrayList()), IOOBE);
+    expectThrows(() => l.reversed().set(5, 'y'), IOOBE);
+    expectThrows(() => l.reversed().set(0, 'y'), UOE);
+    expectThrows(() => l.subList(1, 1).removeFirst(), NSEE);
+    expectThrows(() => l.subList(2, 1), IAE);
+    const it = l.iterator();
+    expectThrows(() => it.remove(), 'IllegalStateException');
+    expect(l.subList(0, 1).toArray()).toEqual(['x']);
+  });
+  it('shuffle of a 0-1 element unmodifiable non-RandomAccess list writes nothing', () => {
+    shuffle(unmodifiableList(LinkedList.of(1)), seeded(1));
+    shuffle(unmodifiableList(new LinkedList<number>()), seeded(1));
+    expectThrows(() => shuffle(unmodifiableList(LinkedList.of(1, 2, 3)), seeded(1)), UOE);
+  });
+  it('unmodifiable sequenced map views reject addAll even of nothing', () => {
+    const m = unmodifiableSequencedMap(new LinkedHashMap<number, number>());
+    expectThrows(() => m.sequencedKeySet().addAll(new ArrayList()), UOE);
+    expectThrows(() => m.sequencedValues().addAll(new ArrayList()), UOE);
+    expectThrows(() => m.sequencedEntrySet().addAll(new ArrayList()), UOE);
+    expectThrows(() => m.sequencedKeySet().removeFirst(), NSEE);
   });
 });
 
@@ -559,10 +672,13 @@ describe('unmodifiableList', () => {
       expectThrows(() => call(v), UOE);
       expect(base.toArray()).toEqual([1, 2, 3]);
     });
-    it.each(listMutators)('subList and reversed reject %s', (_m, call) => {
+    it.each(listMutators)('subList and reversed reject %s', (m, call) => {
       const v = unmodifiableList(of(0, 1, 2, 3, 4));
       expectThrows(() => call(v.subList(1, 4)), UOE);
-      expectThrows(() => call(v.reversed()), UOE);
+      // verified on the reference: reversed() is List's default modifiable reverse view over the wrapper, so calls
+      // that change nothing (and never reach the wrapper's mutators) return false
+      if (m === 'addAll empty' || m === 'remove absent') expect(call(v.reversed())).toBe(false);
+      else expectThrows(() => call(v.reversed()), UOE);
     });
     it('is a live read-through view', () => {
       const base = of(1, 2);
@@ -608,8 +724,11 @@ describe('unmodifiableList', () => {
   it('wrapping an unmodifiable list returns it', () => {
     const v = unmodifiableList(ArrayList.of(1));
     expect(unmodifiableList(v)).toBe(v);
+    // verified on the reference: only its own wrapper class is returned as-is; List.of is wrapped
     const im = IList.of(1);
-    expect(unmodifiableList(im)).toBe(im);
+    expect(unmodifiableList(im)).not.toBe(im);
+    expectThrows(() => IList.of().removeFirst(), UOE);
+    expectThrows(() => unmodifiableList(IList.of()).removeFirst(), NSEE);
     expectThrows(() => unmodifiableList(null as any), NPE);
   });
 
@@ -670,8 +789,11 @@ describe('unmodifiableCollection / Set / SequencedCollection', () => {
     expect(HashSet.of(1, 2).equals(v)).toBe(true);
     expect(v.hashCode()).toBe(HashSet.of(1, 2).hashCode());
     expect(unmodifiableSet(v)).toBe(v);
+    // verified on the reference: Set.of and emptySet() are wrapped, and the wrapper rejects every mutator
     const im = ISet.of(1);
-    expect(unmodifiableSet(im)).toBe(im);
+    expect(unmodifiableSet(im)).not.toBe(im);
+    expect(emptySet().remove(1)).toBe(false);
+    expectThrows(() => unmodifiableSet(emptySet()).remove(1), UOE);
   });
 
   it('sequenced collection', () => {
@@ -773,8 +895,11 @@ describe('unmodifiableMap / SortedMap / NavigableMap', () => {
     expect(m.entrySet().iterator().next().getValue()).toBe(base.get(m.entrySet().iterator().next().getKey()));
     expect(unmodifiableMap(m)).toBe(m);
     expect(m.keySet()).toBe(m.keySet());
+    // verified on the reference: Map.of and emptyMap() are wrapped, and the wrapper rejects every mutator
     const im = IMap.of(1, 'a');
-    expect(unmodifiableMap(im)).toBe(im);
+    expect(unmodifiableMap(im)).not.toBe(im);
+    emptyMap().clear();
+    expectThrows(() => unmodifiableMap(emptyMap()).clear(), UOE);
     expectThrows(() => unmodifiableMap(null as any), NPE);
   });
 

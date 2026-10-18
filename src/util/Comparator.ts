@@ -75,6 +75,27 @@ function chain<T>(first: Comparator<T>, second: Comparator<T>): Comparator<T> {
   return (a, b) => first(a, b) || second(a, b);
 }
 
+// nullsFirst/nullsLast comparators remember how they were made, so composing them stays null-friendly
+// as the reference's NullComparator does (thenComparing/reversed wrap the inner comparator instead)
+const NULLS: unique symbol = Symbol('nulls');
+type NullsComparator<T> = Comparator<T> & { [NULLS]?: { first: boolean; real: Comparator<T> | null } };
+
+function nulls<T>(first: boolean, real: Comparator<T> | null): Comparator<T | null | undefined> {
+  const r = (first
+    ? (a, b) => (a == null ? (b == null ? 0 : -1) : b == null ? 1 : real === null ? 0 : real(a, b))
+    : (a, b) => (a == null ? (b == null ? 0 : 1) : b == null ? -1 : real === null ? 0 : real(a, b))) as NullsComparator<T | null | undefined>;
+  r[NULLS] = { first, real: real as Comparator<T | null | undefined> | null };
+  return r;
+}
+
+/** c.thenComparing(other), dispatching like the reference's override on null-friendly comparators. */
+function then<T>(c: Comparator<T>, other: Comparator<T>): Comparator<T> {
+  requireNonNull(other);
+  const n = (c as NullsComparator<T>)[NULLS];
+  if (n === undefined) return chain(c, other);
+  return nulls(n.first, n.real === null ? other : then(n.real, other)) as Comparator<T>;
+}
+
 /**
  * Comparator factories and combinators. Comparators are plain functions, so the reference's default
  * methods become functions taking the comparator first:
@@ -92,7 +113,9 @@ export const Comparator = {
   },
   /** reversed(reversed(c)) === c. @throws NullPointerException if c is null */
   reversed<T>(c: Comparator<T>): Comparator<T> {
-    return reverseOrder(requireNonNull(c));
+    const n = (requireNonNull(c) as NullsComparator<T>)[NULLS];
+    if (n === undefined) return reverseOrder(c);
+    return nulls(!n.first, n.real === null ? null : Comparator.reversed(n.real)) as Comparator<T>;
   },
   /** Compares by key; keyComparator defaults to natural ordering. @throws NullPointerException for a null key or an explicitly null keyComparator */
   comparing<T, U>(key: (t: T) => U, keyComparator?: Comparator<U>): Comparator<T> {
@@ -115,36 +138,34 @@ export const Comparator = {
   /** first, then each of rest to break ties. @throws NullPointerException if any comparator is null */
   thenComparing<T>(first: Comparator<T>, ...rest: Comparator<T>[]): Comparator<T> {
     let c = requireNonNull(first);
-    for (const r of rest) c = chain(c, requireNonNull(r));
+    for (const r of rest) c = then(c, r);
     return c;
   },
   /** c.thenComparing(key[, keyComparator]). @throws NullPointerException for a null argument */
   thenComparingBy<T, U>(c: Comparator<T>, key: (t: T) => U, keyComparator?: Comparator<U>): Comparator<T> {
     requireNonNull(c);
     const k = arguments.length > 2 ? Comparator.comparing(key, keyComparator) : Comparator.comparing(key);
-    return chain(c, k);
+    return then(c, k);
   },
   thenComparingInt<T>(c: Comparator<T>, key: (t: T) => number): Comparator<T> {
-    return chain(requireNonNull(c), Comparator.comparingInt(key));
+    return then(requireNonNull(c), Comparator.comparingInt(key));
   },
   thenComparingLong<T>(c: Comparator<T>, key: (t: T) => number | bigint): Comparator<T> {
-    return chain(requireNonNull(c), Comparator.comparingLong(key));
+    return then(requireNonNull(c), Comparator.comparingLong(key));
   },
   thenComparingDouble<T>(c: Comparator<T>, key: (t: T) => number): Comparator<T> {
-    return chain(requireNonNull(c), Comparator.comparingDouble(key));
+    return then(requireNonNull(c), Comparator.comparingDouble(key));
   },
   /**
    * Nulls (and undefined) before everything else. Omitted c = natural ordering;
    * an explicit null c makes all non-null values equal.
    */
   nullsFirst<T>(c?: Comparator<T> | null): Comparator<T | null | undefined> {
-    const cmp = arguments.length === 0 ? naturalCompare : c;
-    return (a, b) => (a == null ? (b == null ? 0 : -1) : b == null ? 1 : cmp == null ? 0 : cmp(a, b));
+    return nulls(true, arguments.length === 0 ? (naturalCompare as Comparator<T>) : (c ?? null));
   },
   /** Like nullsFirst, with nulls last. */
   nullsLast<T>(c?: Comparator<T> | null): Comparator<T | null | undefined> {
-    const cmp = arguments.length === 0 ? naturalCompare : c;
-    return (a, b) => (a == null ? (b == null ? 0 : 1) : b == null ? -1 : cmp == null ? 0 : cmp(a, b));
+    return nulls(false, arguments.length === 0 ? (naturalCompare as Comparator<T>) : (c ?? null));
   },
   /** The greater of a and b by c; a when they compare equal. */
   max<T>(c: Comparator<T>, a: T, b: T): T {

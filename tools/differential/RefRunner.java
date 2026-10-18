@@ -1401,13 +1401,13 @@ public class RefRunner {
 
     Object source(String[] a) {
       switch (a[0]) {
-        case "of": return list(a[1]).stream();
+        case "of": return Stream.of(list(a[1]).toArray());
         case "ofNullable": return Stream.ofNullable(el(a[1]));
         case "empty": return Stream.empty();
         case "iterate2": { String f = a[2]; return Stream.iterate(el(a[1]), x -> un(f, x)); }
         case "iterate3": { String p = a[2], f = a[3]; return Stream.iterate(el(a[1]), x -> po(p, x), x -> un(f, x)); }
         case "generate": { Object v = el(a[1]); return Stream.generate(() -> v); }
-        case "concat": return Stream.concat(list(a[1]).stream(), list(a[2]).stream());
+        case "concat": return Stream.concat(Stream.of(list(a[1]).toArray()), Stream.of(list(a[2]).toArray()));
         case "builder": { Stream.Builder<Object> b = Stream.builder(); for (Object x : list(a[1])) b.add(x); return b.build(); }
         case "coll": { Collection<Object> c = newColl(a[1]); for (Object x : list(a[2])) c.add(x); return c.stream(); }
         case "listOf": return List.of(list(a[1]).toArray()).stream();

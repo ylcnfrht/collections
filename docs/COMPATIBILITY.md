@@ -11,12 +11,12 @@ This library and the reference runtime were run on the same randomly generated o
 | Reference runtime | openjdk version "23.0.2" 2025-01-21 |
 | Seeds | 1..40 (40 batches of 5000) |
 | Scripts | 200,000 |
-| Operations compared | 1,585,777 |
+| Operations compared | 1,693,921 |
 | Comparable API covered | 1602 / 1602 (100.0%) |
 | Excluded API rows (justified below) | 107 |
-| Divergent scripts | 17,548 in 359 signature(s) |
-| Divergence assessment | library: 335, intentional: 11, reference-quirk: 13 |
-| Run time | 43s on 8 worker process(es) |
+| Divergent scripts | 58 in 22 signature(s) |
+| Divergence assessment | intentional: 9, reference-quirk: 13 |
+| Run time | 37s on 8 worker process(es) |
 
 ## Scripts per target
 
@@ -100,1568 +100,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 
 ## Divergences
 
-### Singleton remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 832; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-220 Singleton
-   init []
->> remove 8
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptySetConst remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 633; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @2-443 EmptySetConst
-   init []
->> remove 'c
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySet remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 594; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @6-843 EmptySet
-   init []
->> remove 'bb
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonMap removeKey result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 516; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @1-265 SingletonMap
-   init {}
->> removeKey 'c
-   ref : null ;; {null=null}
-   ours: EXC:UnsupportedOperationException ;; {null=null}
-```
-
-### EmptyMapConst clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 506; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-1279 EmptyMapConst
-   init {}
->> clear
-   ref : "void" ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### EmptyMapConst mreplaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 491; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-951 EmptyMapConst
-   init {}
->> mreplaceAll kOnly
-   ref : "void" ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### EmptyMapConst removeKey result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 483; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-527 EmptyMapConst
-   init {}
->> removeKey 7
-   ref : null ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### EmptyMap removeKey result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 458; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-414 EmptyMap
-   init {}
->> removeKey 'bb
-   ref : null ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### EmptyMap mreplaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 457; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-139 EmptyMap
-   init {}
->> mreplaceAll sumKV
-   ref : "void" ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### EmptyMap clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 451; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-590 EmptyMap
-   init {}
->> clear
-   ref : "void" ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### Singleton removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 400; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-55 Singleton
-   init []
->> removeAll []
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### SingletonList remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 396; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-667 SingletonList
-   init []
->> remove 'ba
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptyListConst remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 369; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @1-1153 EmptyListConst
-   init []
->> remove -1
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyList remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 363; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-630 EmptyList
-   init []
->> remove 6
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySet removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 334; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @6-1769 EmptySet
-   init []
->> removeAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySet retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 324; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-1623 EmptySet
-   init []
->> retainAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySetConst retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 313; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-934 EmptySetConst
-   init []
->> retainAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySetConst removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 313; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-4395 EmptySetConst
-   init []
->> removeIf isZero
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySet removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 304; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-138 EmptySet
-   init []
->> removeIf odd
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySetConst removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 303; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-2949 EmptySetConst
-   init []
->> removeAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySetConst clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 283; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-75 EmptySetConst
-   init []
->> clear
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySet clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 281; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @6-423 EmptySet
-   init []
->> clear
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonMap entryRemoveIf result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 254; assessment: **library**. Collections.singletonMap(..).entrySet().removeIf(..): the reference always throws UnsupportedOperationException (before calling the predicate); ours returns false or calls the predicate first.
-
-```
-   @6-1202 SingletonMap
-   init {'abc=3}
->> entryRemoveIf even
-   ref : EXC:UnsupportedOperationException ;; {"abc"=3}
-   ours: false ;; {"abc"=3}
-```
-
-### SingletonList sort result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 223; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-1464 SingletonList
-   init []
->> sort rev
-   ref : "void" ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### NCopies remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 198; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-1285 NCopies
-   init []
->> remove 3
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonList sortBsearch result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 184; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-23 SingletonList
-   init [2]
->> sortBsearch 7
-   ref : -2 ;; [2]
-   ours: EXC:UnsupportedOperationException ;; [2]
-```
-
-### SingletonList bsearchCmp result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 184; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-508 SingletonList
-   init []
->> bsearchCmp 12 nullsFirst
-   ref : -2 ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptyList removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 182; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @15-257 EmptyList
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 181; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-330 EmptyListConst
-   init []
->> retainAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 180; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-755 EmptyListConst
-   init []
->> removeIf empty
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonList removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 179; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @15-1688 SingletonList
-   init []
->> removeAll []
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptyList retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 175; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @6-3864 EmptyList
-   init []
->> retainAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 175; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-3987 EmptyListConst
-   init []
->> clear
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyList replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 173; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-850 EmptyList
-   init []
->> replaceAll neg
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyList removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 172; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @6-2890 EmptyList
-   init []
->> removeAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyList removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 171; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @5-105 EmptyList
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 169; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-920 EmptyListConst
-   init []
->> removeAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 169; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @2-2371 EmptyListConst
-   init []
->> replaceAll id
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 167; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @1-1089 EmptyListConst
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 166; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @4-1833 EmptyListConst
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyList removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 164; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-372 EmptyList
-   init []
->> removeIf isZero
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonList addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 158; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @6-1329 SingletonList
-   init []
->> addAllAt 4 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptyList clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 158; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-4127 EmptyList
-   init []
->> clear
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### LinkedHashMapLru putFirst state ref=value ours=value
-
-- scripts: 154; assessment: **library**. LinkedHashMap.putFirst with a removeEldestEntry override: the reference moves the new entry to the front before asking removeEldestEntry, so it evicts the entry it just inserted; ours evicts the previous eldest.
-
-```
-   @12-3206 LinkedHashMapLru
-   init {0=5,1=5,-2=-1}
->> putFirst 5 4
-   ref : null ;; {0=5,1=5,-2=-1}
-   ours: null ;; {5=4,1=5,-2=-1}
-```
-
-### EmptyList addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 146; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @11-4139 EmptyList
-   init []
->> addAllAt 1 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptyListConst addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 139; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @4-2041 EmptyListConst
-   init []
->> addAllAt 6 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### VectorCap capacity result ref=value ours=value
-
-- scripts: 138; assessment: **intentional**. Vector with a capacityIncrement: the reference grows to max(needed, capacity + capacityIncrement) (capacity 5 with 9 elements needed becomes 9); ours replays the growth one element at a time for bulk adds, adding the increment repeatedly (5 becomes 11), and a bulk add followed by removals never records the growth at all (10 instead of 20). This is the documented shortcut in capacity() in src/list/Vector.ts: growth is replayed lazily, one element at a time.
-
-```
-   @7-4077 VectorCap
-   init ['a,'ba,'b]
-   clear
->> capacity
-   ref : 5 ;; []
-   ours: 2 ;; []
-```
-
-### UnmodList/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 117; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @3-968 UnmodList/reversed/subList:4:0
->> init []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### ListOf/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 114; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @3-3075 ListOf/reversed/subList:2:1
->> init ['b]
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### AbsList/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 113; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @2-2335 AbsList/reversed/subList:4:0
->> init []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### AbsSeqList/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 113; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @3-4510 AbsSeqList/reversed/subList:3:2
->> init [7,null]
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### Stack/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 112; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @2-2808 Stack/reversed/subList:3:0
->> init []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### ListCopyOf/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 108; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @13-3016 ListCopyOf/reversed/subList:3:2
->> init [1,5]
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### NCopies/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 105; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @1-4993 NCopies/reversed/subList:1:0
->> init []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### Stream pipe:splwT result ref=value ours=value
-
-- scripts: 102; assessment: **library**. spliterator() of a Stream.of/concat/builder stream reports IMMUTABLE in ours; the reference does not.
-
-```
-   @7-795 Stream
->> pipe of [] | splwT t,c
-   ref : [false,ORDERED|SIZED|SUBSIZED]
-   ours: [false,ORDERED|SIZED|IMMUTABLE|SUBSIZED]
-```
-
-### MapCopyOf keySetRemove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 98; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @9-1422 MapCopyOf
-   init {8=-3}
->> keySetRemove 6
-   ref : false ;; {8=-3}
-   ours: EXC:UnsupportedOperationException ;; {8=-3}
-```
-
-### Vector/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 97; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @3-4573 Vector/reversed/subList:4:2
->> init [5,20]
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### SingletonMap putAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 91; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-1411 SingletonMap
-   init {}
->> putAll {}
-   ref : "void" ;; {null=null}
-   ours: EXC:UnsupportedOperationException ;; {null=null}
-```
-
-### NCopies removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 85; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @21-4055 NCopies
-   init []
->> removeAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### Singleton addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 79; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @1-4851 Singleton
-   init []
->> addAll []
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptyMapConst putAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 78; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-2907 EmptyMapConst
-   init {}
->> putAll {}
-   ref : "void" ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### MapOfPairs keySetRemove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 78; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @5-3587 MapOfPairs
-   init {0=0}
->> keySetRemove 2
-   ref : false ;; {0=0}
-   ours: EXC:UnsupportedOperationException ;; {0=0}
-```
-
-### Singleton retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 70; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @13-1805 Singleton
-   init [-1]
->> retainAll [-1]
-   ref : false ;; [-1]
-   ours: EXC:UnsupportedOperationException ;; [-1]
-```
-
-### EmptyMap putAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 69; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-329 EmptyMap
-   init {}
->> putAll {}
-   ref : "void" ;; {}
-   ours: EXC:UnsupportedOperationException ;; {}
-```
-
-### NCopies/reversed remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 60; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @2-4703 NCopies/reversed
-   init []
->> remove 3
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### ArrayList/reversed/subList init result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 50; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @33-1178 ArrayList/reversed/subList:3:2
->> init [3,5]
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:IllegalArgumentException ;; ?
-```
-
-### EmptySet addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 48; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @9-4710 EmptySet
-   init []
->> addAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### NCopies removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 47; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @2-101 NCopies
-   init []
->> removeIf empty
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### EmptySetConst addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 45; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-2200 EmptySetConst
-   init []
->> addAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonList retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 44; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-2333 SingletonList
-   init [17]
->> retainAll [17]
-   ref : false ;; [17]
-   ours: EXC:UnsupportedOperationException ;; [17]
-```
-
-### NCopies addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 44; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @6-4306 NCopies
-   init []
->> addAllAt 4 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### UnmodList/reversed remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 44; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @1-4691 UnmodList/reversed
-   init []
->> remove 2
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### SingletonList addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 40; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @21-3286 SingletonList
-   init []
->> addAll []
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### NCopies itw result ref=value ours=value
-
-- scripts: 39; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @16-1404 NCopies
-   init [8]
->> itw r,h
-   ref : "[EXC:IllegalStateException]" ;; [8]
-   ours: "[EXC:UnsupportedOperationException]" ;; [8]
-```
-
-### EmptyListConst addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 35; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @17-3822 EmptyListConst
-   init []
->> addAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### SingletonList litw result ref=value ours=value
-
-- scripts: 34; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @2-337 SingletonList
-   init []
->> litw 0 r,f,i
-   ref : "[EXC:IllegalStateException]" ;; [null]
-   ours: "[EXC:UnsupportedOperationException]" ;; [null]
-```
-
-### SingletonList nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 30; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @30-2133 SingletonList
-   init []
->> nCopiesAddAll 0 5
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### MapOf keySetRemove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 30; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @10-4696 MapOf
-   init {'=-2}
->> keySetRemove 'a
-   ref : false ;; {""=-2}
-   ours: EXC:UnsupportedOperationException ;; {""=-2}
-```
-
-### NCopies litw result ref=value ours=value
-
-- scripts: 29; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @17-2597 NCopies
-   init [18]
->> litw 0 s:3,f
-   ref : "[EXC:IllegalStateException]" ;; [18]
-   ours: "[EXC:UnsupportedOperationException]" ;; [18]
-```
-
-### EmptyList addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 25; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @1-1786 EmptyList
-   init []
->> addAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### NCopies/subList remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 24; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @19-856 NCopies/subList:1:2
-   init ['a,'abc]
->> remove 'abc
-   ref : false ;; ["a"] || ["a","a"]
-   ours: EXC:UnsupportedOperationException ;; ["a"] || ["a","a"]
-```
-
-### SingletonMap entryRemoveIf result ref=EXC:UnsupportedOperationException ours=EXC:NullPointerException
-
-- scripts: 22; assessment: **library**. Collections.singletonMap(..).entrySet().removeIf(..): the reference always throws UnsupportedOperationException (before calling the predicate); ours returns false or calls the predicate first.
-
-```
-   @4-964 SingletonMap
-   init {}
->> entryRemoveIf gt3
-   ref : EXC:UnsupportedOperationException ;; {null=null}
-   ours: EXC:NullPointerException ;; ?
-```
-
-### NCopies retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 22; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @23-380 NCopies
-   init []
->> retainAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### Stack/reversed/subList isRA result ref=value ours=value
-
-- scripts: 21; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @18-2039 Stack/reversed/subList:3:4
-   init [0,2,8,6]
->> isRA
-   ref : false ;; [0] || [0,2,8,6]
-   ours: true ;; [0] || [0,2,8,6]
-```
-
-### UnmodList/reversed removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 20; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @13-4203 UnmodList/reversed
-   init []
->> removeAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOfPairs init result ref=EXC:IllegalArgumentException ours=EXC:NullPointerException
-
-- scripts: 20; assessment: **library**. Map.of(k1, v1, ...) with a duplicate key and a null value: the reference reports the duplicate key (IllegalArgumentException) before the null (NullPointerException); ours the null first.
-
-```
-   @14-3449 MapOfPairs
->> init {4=7,4=0,null=1}
-   ref : EXC:IllegalArgumentException ;; ?
-   ours: EXC:NullPointerException ;; ?
-```
-
-### NCopies addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 20; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-1250 NCopies
-   init []
->> addAll []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### ListCopyOf/reversed/subList isRA result ref=value ours=value
-
-- scripts: 20; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @2-1288 ListCopyOf/reversed/subList:2:3
-   init [1,4,8]
->> isRA
-   ref : false ;; [1] || [1,4,8]
-   ours: true ;; [1] || [1,4,8]
-```
-
-### NCopies/reversed removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 20; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-1639 NCopies/reversed
-   init []
->> removeAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOf/keySet remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 19; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @24-1043 MapOf/keySet
-   init {0=-2}
->> remove 12
-   ref : false ;; [0] || {0=-2}
-   ours: EXC:UnsupportedOperationException ;; [0] || {0=-2}
-```
-
-### NCopies/reversed removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 19; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @32-1209 NCopies/reversed
-   init []
->> removeIf isZero
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOfPairs keySetRetainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 19; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @30-2351 MapOfPairs
-   init {'ba=1}
->> keySetRetainAll ['ba]
-   ref : false ;; {"ba"=1}
-   ours: EXC:UnsupportedOperationException ;; {"ba"=1}
-```
-
-### UnmodList/reversed set result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 19; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @6-1946 UnmodList/reversed
-   init []
->> set 5 -2
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### EmptyList nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 19; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @10-2351 EmptyList
-   init []
->> nCopiesAddAll 0 '
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### UnmodList/subList/reversed remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 18; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @19-536 UnmodList/subList:0:1/reversed
-   init [9]
->> remove 2
-   ref : false ;; [9] || [9]
-   ours: EXC:UnsupportedOperationException ;; [9] || [9]
-```
-
-### NCopies/subList/reversed remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 18; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @18-1567 NCopies/subList:0:0/reversed
-   init []
->> remove 1
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOf/values addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 17; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @35-3336 MapOf/values
-   init {}
->> addAll []
-   ref : false ;; [] || {}
-   ours: EXC:UnsupportedOperationException ;; [] || {}
-```
-
-### MapOf/values clear result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 17; assessment: **library**. Map.of(..).keySet()/values()/entrySet().clear() on an empty map: the reference throws UnsupportedOperationException (the view delegates to the map's clear()), ours does nothing.
-
-```
-   @7-2992 MapOf/values
-   init {}
->> clear
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: "void" ;; [] || {}
-```
-
-### NCopies/reversed itw result ref=value ours=value
-
-- scripts: 17; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @18-124 NCopies/reversed
-   init []
->> itw r,h,h,n,n
-   ref : "[EXC:IllegalStateException]" ;; [] || []
-   ours: "[EXC:UnsupportedOperationException]" ;; [] || []
-```
-
-### UnmodList/subList/reversed removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 17; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @39-1829 UnmodList/subList:0:4/reversed
-   init [2,-2,16,1]
->> removeAll []
-   ref : false ;; [1,16,-2,2] || [2,-2,16,1]
-   ours: EXC:UnsupportedOperationException ;; [1,16,-2,2] || [2,-2,16,1]
-```
-
-### NCopies/reversed/subList remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 16; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @15-353 NCopies/reversed/subList:0:1
-   init [7]
->> remove 5
-   ref : false ;; [7] || [7]
-   ours: EXC:UnsupportedOperationException ;; [7] || [7]
-```
-
-### SingletonList sortBsearch result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 15; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @35-4391 SingletonList
-   init []
->> sortBsearch null
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### MapCopyOf keySetRetainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 15; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @25-3698 MapCopyOf
-   init {6=-2}
->> keySetRetainAll [6]
-   ref : false ;; {6=-2}
-   ours: EXC:UnsupportedOperationException ;; {6=-2}
-```
-
-### UnmodList/reversed/subList remove result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 15; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @24-164 UnmodList/reversed/subList:1:2
-   init [5,8]
->> remove 7
-   ref : false ;; [5] || [5,8]
-   ours: EXC:UnsupportedOperationException ;; [5] || [5,8]
-```
-
-### MapOf/keySet addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 15; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @16-3961 MapOf/keySet
-   init {}
->> addAll []
-   ref : false ;; [] || {}
-   ours: EXC:UnsupportedOperationException ;; [] || {}
-```
-
-### SingletonList bsearchCmp result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 15; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @11-3926 SingletonList
-   init []
->> bsearchCmp null mod3
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### EmptyListConst nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 15; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @2-4235 EmptyListConst
-   init []
->> nCopiesAddAll 0 9
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### NCopies/reversed retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 14; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-3896 NCopies/reversed
-   init []
->> retainAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 14; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @22-3862 NCopies
-   init []
->> addAllAt 0 []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### MapOf/values removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 13; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @25-1094 MapOf/values
-   init {'bb=6}
->> removeAll []
-   ref : false ;; [6] || {"bb"=6}
-   ours: EXC:UnsupportedOperationException ;; [6] || {"bb"=6}
-```
-
-### Vector/reversed/subList isRA result ref=value ours=value
-
-- scripts: 13; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @2-4799 Vector/reversed/subList:3:4
-   init [0,15,7,5]
->> isRA
-   ref : false ;; [0] || [0,15,7,5]
-   ours: true ;; [0] || [0,15,7,5]
-```
-
-### UnmodList/subList/reversed addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 13; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @9-1171 UnmodList/subList:0:0/reversed
-   init []
->> addAllAt 2 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOf/keySet removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 13; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @29-3547 MapOf/keySet
-   init {'ab=4}
->> removeAll []
-   ref : false ;; ["ab"] || {"ab"=4}
-   ours: EXC:UnsupportedOperationException ;; ["ab"] || {"ab"=4}
-```
-
-### UnmodList/reversed/subList removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 13; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @6-2705 UnmodList/reversed/subList:1:1
-   init [']
->> removeAll []
-   ref : false ;; [] || [""]
-   ours: EXC:UnsupportedOperationException ;; [] || [""]
-```
-
-### LinkedHashMapAccess/sequencedEntrySet addFirst result ref=EXC:ClassCastException ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @1-1115 LinkedHashMapAccess/sequencedEntrySet
-   init {}
->> addFirst 'abc=0
-   ref : EXC:ClassCastException ;; [] || {}
-   ours: EXC:UnsupportedOperationException ;; [] || {}
-```
-
-### NCopies nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @24-4634 NCopies
-   init []
->> nCopiesAddAll 0 -5
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### NCopies/subList removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-1411 NCopies/subList:0:0
-   init []
->> removeIf odd
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### EmptyList addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @12-740 EmptyList
-   init []
->> addAllAt 0 []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### LinkedHashMapAccess/sequencedEntrySet addLast result ref=EXC:ClassCastException ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @20-1220 LinkedHashMapAccess/sequencedEntrySet
-   init {}
->> addLast 'bb=0
-   ref : EXC:ClassCastException ;; [] || {}
-   ours: EXC:UnsupportedOperationException ;; [] || {}
-```
-
-### NCopies/reversed set result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @11-2862 NCopies/reversed
-   init []
->> set 4 4
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### UnmodList/subList/reversed removeAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @14-524 UnmodList/subList:3:3/reversed
-   init ['ba,'bb,'b]
->> removeAt 1
-   ref : EXC:IndexOutOfBoundsException ;; [] || ["ba","bb","b"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["ba","bb","b"]
-```
-
-### ListOf/reversed/subList isRA result ref=value ours=value
-
-- scripts: 12; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @6-2315 ListOf/reversed/subList:0:4
-   init ['ca,'b,'a,'a]
->> isRA
-   ref : false ;; ["a","a","b","ca"] || ["ca","b","a","a"]
-   ours: true ;; ["a","a","b","ca"] || ["ca","b","a","a"]
-```
-
-### LinkedHashMap/sequencedEntrySet addFirst result ref=EXC:ClassCastException ours=EXC:UnsupportedOperationException
-
-- scripts: 12; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @8-3052 LinkedHashMap/sequencedEntrySet
-   init {}
->> addFirst 'bb=4
-   ref : EXC:ClassCastException ;; [] || {}
-   ours: EXC:UnsupportedOperationException ;; [] || {}
-```
-
-### ListOf/subList/reversed removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 11; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @9-4946 ListOf/subList:0:0/reversed
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies subListClear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 11; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @19-2593 NCopies
-   init [-2,0,6,-1]
->> subListClear 4 4
-   ref : "void" ;; [-2,-2,-2,-2]
-   ours: EXC:UnsupportedOperationException ;; [-2,-2,-2,-2]
-```
-
-### NCopies/reversed removeAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 11; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @4-3725 NCopies/reversed
-   init []
->> removeAt 2
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### UnmodList/reversed removeAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 11; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @2-4584 UnmodList/reversed
-   init []
->> removeAt 5
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOf/entrySet addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 11; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @7-3596 MapOf/entrySet
-   init {'=6,'bb=4}
->> addAll []
-   ref : false ;; [""=6,"bb"=4] || {""=6,"bb"=4}
-   ours: EXC:UnsupportedOperationException ;; [""=6,"bb"=4] || {""=6,"bb"=4}
-```
-
-### UnmodList/reversed/subList removeAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 10; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @1-2940 UnmodList/reversed/subList:0:0
-   init []
->> removeAt 6
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### MapOf keySetRetainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 10; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @25-3180 MapOf
-   init {-1=8}
->> keySetRetainAll [-1]
-   ref : false ;; {-1=8}
-   ours: EXC:UnsupportedOperationException ;; {-1=8}
-```
-
-### NCopies/reversed/subList removeAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 10; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @22-3361 NCopies/reversed/subList:0:4
-   init [-4,5,-1,2]
->> removeAt 4
-   ref : EXC:IndexOutOfBoundsException ;; [-4,-4,-4,-4] || [-4,-4,-4,-4]
-   ours: EXC:UnsupportedOperationException ;; [-4,-4,-4,-4] || [-4,-4,-4,-4]
-```
-
 ### Stream pipe:primIter result ref=value ours=value
 
 - scripts: 10; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
@@ -1671,281 +109,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> pipe of [3] | flatMap dup | peek | flatMapToInt dup | primIter h
    ref : [true] LOG[3,3]
    ours: [true] LOG[3]
-```
-
-### Misc x:csort result ref=value ours=EXC:NullPointerException
-
-- scripts: 10; assessment: **library**. Comparator.thenComparing*(nullsFirst(..)/nullsLast(..), ..): the reference's null-friendly comparator keeps handling nulls in the composed comparator (nulls never reach the key extractor); ours passes nulls on to the next comparator.
-
-```
-   @13-4416 Misc
->> x csort [null,null] thenDouble nullsLast then comparing neg rev half
-   ref : [null,null]
-   ours: EXC:NullPointerException
-```
-
-### MapOf/keySet clear result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 9; assessment: **library**. Map.of(..).keySet()/values()/entrySet().clear() on an empty map: the reference throws UnsupportedOperationException (the view delegates to the map's clear()), ours does nothing.
-
-```
-   @2-4772 MapOf/keySet
-   init {}
->> clear
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: "void" ;; [] || {}
-```
-
-### ListOf/reversed removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @37-1853 ListOf/reversed
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### LinkedHashMap/sequencedEntrySet addLast result ref=EXC:ClassCastException ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @3-2106 LinkedHashMap/sequencedEntrySet
-   init {}
->> addLast 'ca=6
-   ref : EXC:ClassCastException ;; [] || {}
-   ours: EXC:UnsupportedOperationException ;; [] || {}
-```
-
-### UnmodList/subList/reversed addAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @16-1572 UnmodList/subList:4:4/reversed
-   init ['c,'a,'ba,'b]
->> addAt 5 null
-   ref : EXC:IndexOutOfBoundsException ;; [] || ["c","a","ba","b"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["c","a","ba","b"]
-```
-
-### UnmodList/subList/reversed set result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @25-2601 UnmodList/subList:0:1/reversed
-   init ['b]
->> set 9 'bb
-   ref : EXC:IndexOutOfBoundsException ;; ["b"] || ["b"]
-   ours: EXC:UnsupportedOperationException ;; ["b"] || ["b"]
-```
-
-### NCopies replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-3585 NCopies
-   init []
->> replaceAll first
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### NCopies/reversed/subList removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @21-2375 NCopies/reversed/subList:0:4
-   init ['b,'abc,'bb,']
->> removeIf hasA
-   ref : false ;; ["b","b","b","b"] || ["b","b","b","b"]
-   ours: EXC:UnsupportedOperationException ;; ["b","b","b","b"] || ["b","b","b","b"]
-```
-
-### SingletonList subListClear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 9; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @29-3827 SingletonList
-   init []
->> subListClear 1 1
-   ref : "void" ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### UnmodList/reversed addAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @1-4039 UnmodList/reversed
-   init []
->> addAt 9 'ab
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### SingletonList addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-1042 SingletonList
-   init []
->> addAllAt 0 []
-   ref : false ;; [null]
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### NCopies/reversed/subList addAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @6-644 NCopies/reversed/subList:3:4
-   init [8,4,17,4]
->> addAt 5 -1
-   ref : EXC:IndexOutOfBoundsException ;; [8] || [8,8,8,8]
-   ours: EXC:UnsupportedOperationException ;; [8] || [8,8,8,8]
-```
-
-### NCopies/reversed addAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @37-1694 NCopies/reversed
-   init []
->> addAt 5 -4
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### UnmodList/reversed/subList addAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @37-4414 UnmodList/reversed/subList:2:2
-   init [2,4]
->> addAt 3 7
-   ref : EXC:IndexOutOfBoundsException ;; [] || [2,4]
-   ours: EXC:UnsupportedOperationException ;; [] || [2,4]
-```
-
-### NCopies/reversed/subList isRA result ref=value ours=value
-
-- scripts: 8; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @13-4151 NCopies/reversed/subList:1:1
-   init ['c]
->> isRA
-   ref : false ;; [] || ["c"]
-   ours: true ;; [] || ["c"]
-```
-
-### NCopies removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @23-4201 NCopies
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### MapOf/keySet removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @23-3731 MapOf/keySet
-   init {6=9}
->> removeIf odd
-   ref : false ;; [6] || {6=9}
-   ours: EXC:UnsupportedOperationException ;; [6] || {6=9}
-```
-
-### NCopies/reversed litw result ref=value ours=value
-
-- scripts: 8; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @4-3232 NCopies/reversed
-   init [0]
->> litw 1 H,s:3,n,j,r,h,i,j
-   ref : "[true,EXC:IllegalStateException]" ;; [0] || [0]
-   ours: "[true,EXC:UnsupportedOperationException]" ;; [0] || [0]
-```
-
-### NCopies/subList/reversed removeAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 8; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @26-3266 NCopies/subList:0:0/reversed
-   init []
->> removeAt 5
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### UnmodList/reversed/subList isRA result ref=value ours=value
-
-- scripts: 7; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @12-3376 UnmodList/reversed/subList:4:4
-   init [1,9,-4,3]
->> isRA
-   ref : false ;; [] || [1,9,-4,3]
-   ours: true ;; [] || [1,9,-4,3]
-```
-
-### ArrayList/reversed/subList isRA result ref=value ours=value
-
-- scripts: 7; assessment: **library**. reversed().subList(..) is RandomAccess in ours, not in the reference.
-
-```
-   @8-1154 ArrayList/reversed/subList:0:1
-   init ['c]
->> isRA
-   ref : false ;; ["c"] || ["c"]
-   ours: true ;; ["c"] || ["c"]
-```
-
-### NCopies/subList/reversed removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @13-4779 NCopies/subList:1:4/reversed
-   init ['b,'abc,'ba,'ba]
->> removeAll []
-   ref : false ;; ["b","b","b"] || ["b","b","b","b"]
-   ours: EXC:UnsupportedOperationException ;; ["b","b","b"] || ["b","b","b","b"]
-```
-
-### NCopies/reversed/subList set result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @1-3657 NCopies/reversed/subList:3:4
-   init [null,3,6,20]
->> set 3 8
-   ref : EXC:IndexOutOfBoundsException ;; [null] || [null,null,null,null]
-   ours: EXC:UnsupportedOperationException ;; [null] || [null,null,null,null]
 ```
 
 ### HashSet splw result ref=value ours=value
@@ -1960,138 +123,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[DISTINCT|SIZED,#1,DISTINCT|SIZED,~,#0,false]" ;; [""]
 ```
 
-### EmptyListConst subListClear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @36-568 EmptyListConst
-   init []
->> subListClear 0 0
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### ListOf/reversed/subList removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @25-3455 ListOf/reversed/subList:3:3
-   init ['bb,'a,'ab]
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || ["bb","a","ab"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["bb","a","ab"]
-```
-
-### UnmodList/reversed addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @3-2319 UnmodList/reversed
-   init []
->> addAllAt 5 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/reversed addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @16-3752 NCopies/reversed
-   init ['c,']
->> addAllAt 2 []
-   ref : false ;; ["c","c"] || ["c","c"]
-   ours: EXC:UnsupportedOperationException ;; ["c","c"] || ["c","c"]
-```
-
-### NCopies/reversed/subList addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @22-3905 NCopies/reversed/subList:1:1
-   init ['ca]
->> addAllAt 4 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [] || ["ca"]
-```
-
-### NCopies/subList/reversed set result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 7; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @8-3677 NCopies/subList:3:3/reversed
-   init [1,6,0]
->> set -1 -1
-   ref : EXC:IndexOutOfBoundsException ;; [] || [1,1,1]
-   ours: EXC:UnsupportedOperationException ;; [] || [1,1,1]
-```
-
-### UnmodList/reversed swap result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @31-1319 UnmodList/reversed
-   init [-2]
->> swap 0 4
-   ref : EXC:IndexOutOfBoundsException ;; [-2] || [-2]
-   ours: EXC:UnsupportedOperationException ;; [-2] || [-2]
-```
-
-### NCopies/subList/reversed addAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @13-4214 NCopies/subList:0:3/reversed
-   init [3,5,1]
->> addAt 6 9
-   ref : EXC:IndexOutOfBoundsException ;; [3,3,3] || [3,3,3]
-   ours: EXC:UnsupportedOperationException ;; [3,3,3] || [3,3,3]
-```
-
-### UnmodList/reversed nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @11-3767 UnmodList/reversed
-   init []
->> nCopiesAddAll 0 'c
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### UnmodList/reversed retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @18-1616 UnmodList/reversed
-   init []
->> retainAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @25-922 NCopies
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
 ### Stack/reversed litw result ref=value ours=value
 
 - scripts: 6; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
@@ -2104,160 +135,15 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[false,a,EXC:IllegalStateException]" ;; ["a","bb"] || ["bb","a"]
 ```
 
-### AbsSeqList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
+### Stream pipe:splwT result ref=value ours=value
 
-- scripts: 6; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @7-300 AbsSeqList/reversed
-   init ['ab]
->> subListAdd 2 1 'ba
-   ref : EXC:IndexOutOfBoundsException ;; ["ab"] || ["ab"]
-   ours: EXC:IllegalArgumentException ;; ["ab"] || ["ab"]
-```
-
-### ListCopyOf/subList/reversed removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
+- scripts: 6; assessment: **intentional**. iterator()/spliterator() over flatMap: ours pulls the mapped stream one element at a time (so an infinite mapped stream still yields); the reference pushes the whole mapped stream into its buffer, so an upstream peek sees more elements. Results are equal; how many elements peek observes is unspecified.
 
 ```
-   @37-950 ListCopyOf/subList:3:3/reversed
-   init [3,-1,-2]
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || [3,-1,-2]
-   ours: EXC:UnsupportedOperationException ;; [] || [3,-1,-2]
-```
-
-### EmptyList subListClear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @39-3421 EmptyList
-   init []
->> subListClear 0 0
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### ListCopyOf/subList/reversed removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @11-346 ListCopyOf/subList:0:0/reversed
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/subList removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @26-379 NCopies/subList:0:0
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/subList/reversed addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @26-2670 NCopies/subList:0:1/reversed
-   init ['bb]
->> addAllAt 7 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; ["bb"] || ["bb"]
-```
-
-### UnmodList/reversed/subList set result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @34-2119 UnmodList/reversed/subList:1:4
-   init [-1,3,5,1]
->> set 4 5
-   ref : EXC:IndexOutOfBoundsException ;; [5,3,-1] || [-1,3,5,1]
-   ours: EXC:UnsupportedOperationException ;; [5,3,-1] || [-1,3,5,1]
-```
-
-### NCopies/subList addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @11-468 NCopies/subList:2:2
-   init [1,-1]
->> addAllAt 1 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [] || [1,1]
-```
-
-### UnmodList/reversed/subList retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @29-292 UnmodList/reversed/subList:4:4
-   init ['c,'b,'b,'a]
->> retainAll []
-   ref : false ;; [] || ["c","b","b","a"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["c","b","b","a"]
-```
-
-### NCopies/reversed addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 6; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @21-3387 NCopies/reversed
-   init []
->> addAllAt 5 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/subList/reversed removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @18-2407 NCopies/subList:1:1/reversed
-   init ['bb]
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || ["bb"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["bb"]
-```
-
-### NCopies/reversed subListClear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @9-1451 NCopies/reversed
-   init ['ab]
->> subListClear 1 1
-   ref : "void" ;; ["ab"] || ["ab"]
-   ours: EXC:UnsupportedOperationException ;; ["ab"] || ["ab"]
-```
-
-### NCopies/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 5; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @28-4958 NCopies/reversed
-   init [3]
->> subListCme 3 1 17
-   ref : EXC:IndexOutOfBoundsException ;; [3] || [3]
-   ours: EXC:IllegalArgumentException ;; [3] || [3]
+   @24-1577 Stream
+>> pipe diterate2 4.5 third | limit 1 | flatMap dup | peek | splwT e,t,c
+   ref : [UNKNOWN,45e-1,ORDERED] LOG[45e-1,45e-1]
+   ours: [UNKNOWN,45e-1,ORDERED] LOG[45e-1]
 ```
 
 ### HashSet/synchronizedSet splw result ref=value ours=value
@@ -2272,222 +158,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[#1,~,false,DISTINCT|SIZED,S#0]" ;; [-2] || [-2]
 ```
 
-### UnmodList/subList/reversed retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @6-2279 UnmodList/subList:3:3/reversed
-   init [6,6,8]
->> retainAll []
-   ref : false ;; [] || [6,6,8]
-   ours: EXC:UnsupportedOperationException ;; [] || [6,6,8]
-```
-
-### NCopies/reversed/subList removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-4170 NCopies/reversed/subList:2:2
-   init [6,6]
->> removeAll []
-   ref : false ;; [] || [6,6]
-   ours: EXC:UnsupportedOperationException ;; [] || [6,6]
-```
-
-### NCopies/subList itw result ref=value ours=value
-
-- scripts: 5; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @15-1114 NCopies/subList:0:2
-   init ['ca,'b]
->> itw r,f,n,f,n,n
-   ref : "[EXC:IllegalStateException]" ;; ["ca","ca"] || ["ca","ca"]
-   ours: "[EXC:UnsupportedOperationException]" ;; ["ca","ca"] || ["ca","ca"]
-```
-
-### NCopies/subList removeAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @11-61 NCopies/subList:1:2
-   init [5,5]
->> removeAll []
-   ref : false ;; [5] || [5,5]
-   ours: EXC:UnsupportedOperationException ;; [5] || [5,5]
-```
-
-### ListCopyOf/reversed removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @29-3747 ListCopyOf/reversed
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies removeIf result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @23-3981 NCopies
-   init [null]
->> removeIf long
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### LinkedList/unmodifiableList shuffle result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. Collections.shuffle on an unmodifiable list with fewer than 2 elements: the reference makes no swaps and returns; ours writes the (unchanged) elements back through a list iterator for non-RandomAccess lists and throws UnsupportedOperationException (shuffle in src/Collections.ts).
-
-```
-   @11-1778 LinkedList/unmodifiableList
-   init [6]
->> shuffle 683
-   ref : "void" ;; [6] || [6]
-   ours: EXC:UnsupportedOperationException ;; [6] || [6]
-```
-
-### EmptyListConst addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @22-1542 EmptyListConst
-   init []
->> addAllAt 0 []
-   ref : false ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### UnmodList/reversed/subList addAllAt result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @38-4498 UnmodList/reversed/subList:0:2
-   init ['c,'ca]
->> addAllAt 4 []
-   ref : EXC:IndexOutOfBoundsException ;; ?
-   ours: EXC:UnsupportedOperationException ;; ["ca","c"] || ["c","ca"]
-```
-
-### ListCopyOf/reversed/subList removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 5; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @39-4094 ListCopyOf/reversed/subList:2:2
-   init [5,3]
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || [5,3]
-   ours: EXC:UnsupportedOperationException ;; [] || [5,3]
-```
-
-### Vector/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 5; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @5-4857 Vector/reversed
-   init [0,6]
->> subListAdd 8 2 null
-   ref : EXC:IndexOutOfBoundsException ;; [6,0] || [0,6]
-   ours: EXC:IllegalArgumentException ;; [6,0] || [0,6]
-```
-
-### NCopies/subList/reversed removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @15-2370 NCopies/subList:0:2/reversed
-   init ['b,'c]
->> removeIf long
-   ref : false ;; ["b","b"] || ["b","b"]
-   ours: EXC:UnsupportedOperationException ;; ["b","b"] || ["b","b"]
-```
-
-### ListCopyOf/reversed/subList removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @15-1184 ListCopyOf/reversed/subList:2:2
-   init ['abc,'ca]
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || ["abc","ca"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["abc","ca"]
-```
-
-### NCopies/subList/reversed replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @18-2886 NCopies/subList:2:2/reversed
-   init [4,13]
->> replaceAll abs
-   ref : "void" ;; [] || [4,4]
-   ours: EXC:UnsupportedOperationException ;; [] || [4,4]
-```
-
-### NCopies/subList/reversed sortBsearch result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @28-4891 NCopies/subList:4:4/reversed
-   init [-1,1,1,5]
->> sortBsearch 8
-   ref : -1 ;; [] || [-1,-1,-1,-1]
-   ours: EXC:UnsupportedOperationException ;; [] || [-1,-1,-1,-1]
-```
-
-### Stack/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 4; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @32-1045 Stack/reversed
-   init [3]
->> subListClear 4 1
-   ref : EXC:IndexOutOfBoundsException ;; [3] || [3]
-   ours: EXC:IllegalArgumentException ;; [3] || [3]
-```
-
-### NCopies/reversed clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @17-3229 NCopies/reversed
-   init []
->> clear
-   ref : "void" ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 4; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @35-4094 NCopies/reversed
-   init [8]
->> subListClear 4 1
-   ref : EXC:IndexOutOfBoundsException ;; [8] || [8]
-   ours: EXC:IllegalArgumentException ;; [8] || [8]
-```
-
 ### HashSet/unmodifiableSet splw result ref=value ours=value
 
 - scripts: 4; assessment: **reference-quirk**. HashMap/HashSet spliterators of the reference drop SIZED from characteristics() after traversal; the Spliterator contract says characteristics are stable between splits, ours keeps SIZED.
@@ -2498,404 +168,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> splw f,x,x,c,g
    ref : "[#1,~,~,DISTINCT,EXC:IllegalStateException]" ;; ["ab"] || ["ab"]
    ours: "[#1,~,~,DISTINCT|SIZED,EXC:IllegalStateException]" ;; ["ab"] || ["ab"]
-```
-
-### ListOf/subList/reversed removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @10-3788 ListOf/subList:0:0/reversed
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### ListOf/reversed removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @38-3303 ListOf/reversed
-   init []
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### ListOf/reversed/subList removeLast result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @10-1501 ListOf/reversed/subList:2:2
-   init [-2,-4]
->> removeLast
-   ref : EXC:NoSuchElementException ;; [] || [-2,-4]
-   ours: EXC:UnsupportedOperationException ;; [] || [-2,-4]
-```
-
-### NCopies/subList sortBsearch result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @18-3267 NCopies/subList:0:0
-   init []
->> sortBsearch '
-   ref : -1 ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### UnmodList/reversed addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @26-4943 UnmodList/reversed
-   init []
->> addAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/subList/reversed retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @34-974 NCopies/subList:2:2/reversed
-   init [2,19]
->> retainAll []
-   ref : false ;; [] || [2,2]
-   ours: EXC:UnsupportedOperationException ;; [] || [2,2]
-```
-
-### ListOf/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 4; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @16-1262 ListOf/reversed
-   init []
->> subList 1 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### ListCopyOf/reversed removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @5-4414 ListCopyOf/reversed
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### ListCopyOf/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 4; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @24-1516 ListCopyOf/reversed
-   init [7]
->> subList 5 1
-   ref : EXC:IndexOutOfBoundsException ;; [7] || [7]
-   ours: EXC:IllegalArgumentException ;; [7] || [7]
-```
-
-### NCopies/subList/reversed bsearchCmp result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 4; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @7-4083 NCopies/subList:4:4/reversed
-   init [2,-1,-1,1]
->> bsearchCmp 5 null
-   ref : -1 ;; [] || [2,2,2,2]
-   ours: EXC:UnsupportedOperationException ;; [] || [2,2,2,2]
-```
-
-### ListOf/subList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @38-2610 ListOf/subList:2:4/reversed
-   init ['a,'b,'ab,']
->> subListClear 5 1
-   ref : EXC:IndexOutOfBoundsException ;; ["","ab"] || ["a","b","ab",""]
-   ours: EXC:IllegalArgumentException ;; ["","ab"] || ["a","b","ab",""]
-```
-
-### NCopies/reversed/subList replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-452 NCopies/reversed/subList:2:2
-   init [','ca]
->> replaceAll dup
-   ref : "void" ;; [] || ["",""]
-   ours: EXC:UnsupportedOperationException ;; [] || ["",""]
-```
-
-### UnmodList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @9-521 UnmodList/reversed
-   init []
->> subListClear 4 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### NCopies/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @9-2991 NCopies/reversed
-   init []
->> subList 3 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### ArrayList/subList/reversed iterCme result ref=EXC:ConcurrentModificationException ours=EXC:NoSuchElementException
-
-- scripts: 3; assessment: **library**. an iterator over subList(..).reversed() / reversed().subList(..) is not fail-fast after a structural change through the view: the reference throws ConcurrentModificationException, ours NoSuchElementException.
-
-```
-   @7-1873 ArrayList/subList:0:1/reversed
-   init [0]
->> iterCme -1
-   ref : EXC:ConcurrentModificationException ;; [0,-1] || [-1,0]
-   ours: EXC:NoSuchElementException ;; [0,-1] || [-1,0]
-```
-
-### NCopies/reversed/subList itw result ref=value ours=value
-
-- scripts: 3; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @38-4419 NCopies/reversed/subList:3:4
-   init ['abc,'ab,'ca,'c]
->> itw h,r,n,n
-   ref : "[true,EXC:IllegalStateException]" ;; ["abc"] || ["abc","abc","abc","abc"]
-   ours: "[true,EXC:UnsupportedOperationException]" ;; ["abc"] || ["abc","abc","abc","abc"]
-```
-
-### AbsList/subList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @36-3470 AbsList/subList:1:1/reversed
-   init ['c]
->> subListCme 5 0 'b
-   ref : EXC:IndexOutOfBoundsException ;; [] || ["c"]
-   ours: EXC:IllegalArgumentException ;; [] || ["c"]
-```
-
-### NCopies/subList clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @17-4971 NCopies/subList:2:2
-   init [6,1]
->> clear
-   ref : "void" ;; [] || [6,6]
-   ours: EXC:UnsupportedOperationException ;; [] || [6,6]
-```
-
-### MapOf/values removeIf result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @8-720 MapOf/values
-   init {'a=-3}
->> removeIf pos
-   ref : false ;; [-3] || {"a"=-3}
-   ours: EXC:UnsupportedOperationException ;; [-3] || {"a"=-3}
-```
-
-### ListCopyOf/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @24-1345 ListCopyOf/reversed
-   init [-1,7,7]
->> subListCme 5 3 9
-   ref : EXC:IndexOutOfBoundsException ;; [7,7,-1] || [-1,7,7]
-   ours: EXC:IllegalArgumentException ;; [7,7,-1] || [-1,7,7]
-```
-
-### NCopies/reversed bsearchCmp result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @33-4944 NCopies/reversed
-   init [null,5]
->> bsearchCmp 3 mod3rev
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null] || [null,null]
-```
-
-### Stack/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @11-768 Stack/reversed
-   init []
-   collAddAll [5,18]
->> subListCme 4 2 4
-   ref : EXC:IndexOutOfBoundsException ;; [5,18] || [18,5]
-   ours: EXC:IllegalArgumentException ;; [5,18] || [18,5]
-```
-
-### NCopies bsearchCmp result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @14-1285 NCopies
-   init [null,-1]
->> bsearchCmp 9 mod3
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null]
-```
-
-### NCopies/subList/reversed clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @26-476 NCopies/subList:3:3/reversed
-   init [2,2,5]
->> clear
-   ref : "void" ;; [] || [2,2,2]
-   ours: EXC:UnsupportedOperationException ;; [] || [2,2,2]
-```
-
-### NCopies/reversed/subList swap result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @40-2061 NCopies/reversed/subList:2:3
-   init [4,2,7]
->> swap 0 1
-   ref : EXC:IndexOutOfBoundsException ;; [4] || [4,4,4]
-   ours: EXC:UnsupportedOperationException ;; [4] || [4,4,4]
-```
-
-### NCopies/subList bsearchCmp result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @8-2143 NCopies/subList:4:4
-   init [1,2,1,2]
->> bsearchCmp 6 nullsFirst
-   ref : -1 ;; [] || [1,1,1,1]
-   ours: EXC:UnsupportedOperationException ;; [] || [1,1,1,1]
-```
-
-### NCopies/subList removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @36-2203 NCopies/subList:3:3
-   init [3,-1,7]
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || [3,3,3]
-   ours: EXC:UnsupportedOperationException ;; [] || [3,3,3]
-```
-
-### NCopies replaceAll result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @16-4811 NCopies
-   init [null]
->> replaceAll times2
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null]
-```
-
-### ListCopyOf/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @30-4003 ListCopyOf/reversed
-   init []
->> subListClear 2 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### UnmodList/reversed addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @27-767 UnmodList/reversed
-   init [13,-2,8]
->> addAllAt 3 []
-   ref : false ;; [8,-2,13] || [13,-2,8]
-   ours: EXC:UnsupportedOperationException ;; [8,-2,13] || [13,-2,8]
-```
-
-### AbsList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @27-1156 AbsList/reversed
-   init []
-   addLast 'ca
->> subList 4 1
-   ref : EXC:IndexOutOfBoundsException ;; ["ca"] || ["ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca"] || ["ca"]
-```
-
-### NCopies/reversed addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @24-2973 NCopies/reversed
-   init []
->> addAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/subList replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 3; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @14-2529 NCopies/subList:0:0
-   init []
->> replaceAll plus1
-   ref : "void" ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
 ```
 
 ### HashSet/checkedSet splw result ref=value ours=value
@@ -2910,368 +182,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[#1,~,DISTINCT|SIZED,false,false]" ;; [5] || [5]
 ```
 
-### AbsSeqList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 3; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @16-29 AbsSeqList/reversed
-   init []
->> subListClear 1 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### NCopies/subList/reversed itw result ref=value ours=value
-
-- scripts: 3; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @30-2873 NCopies/subList:0:1/reversed
-   init ['a]
->> itw r,n
-   ref : "[EXC:IllegalStateException]" ;; ["a"] || ["a"]
-   ours: "[EXC:UnsupportedOperationException]" ;; ["a"] || ["a"]
-```
-
-### UnmodList/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @32-4473 UnmodList/subList:1:3/reversed
-   init [6,null,3]
->> subListAdd 3 1 9
-   ref : EXC:IndexOutOfBoundsException ;; [3,null] || [6,null,3]
-   ours: EXC:IllegalArgumentException ;; [3,null] || [6,null,3]
-```
-
-### NCopies/subList/reversed removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @6-643 NCopies/subList:4:4/reversed
-   init [1,3,-1,1]
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || [1,1,1,1]
-   ours: EXC:UnsupportedOperationException ;; [] || [1,1,1,1]
-```
-
-### Vector/subList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @7-739 Vector/subList:0:4/reversed
-   init ['b,'abc,'c,'ba]
->> subListClear 8 1
-   ref : EXC:IndexOutOfBoundsException ;; ["ba","c","abc","b"] || ["b","abc","c","ba"]
-   ours: EXC:IllegalArgumentException ;; ["ba","c","abc","b"] || ["b","abc","c","ba"]
-```
-
-### NCopies/reversed/subList subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @20-4038 NCopies/reversed/subList:0:3
-   init [-1,null,3]
->> subListClear 5 2
-   ref : EXC:IndexOutOfBoundsException ;; [-1,-1,-1] || [-1,-1,-1]
-   ours: EXC:IllegalArgumentException ;; [-1,-1,-1] || [-1,-1,-1]
-```
-
-### NCopies/reversed/subList addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @24-3149 NCopies/reversed/subList:1:2
-   init [','b]
->> addAll []
-   ref : false ;; [""] || ["",""]
-   ours: EXC:UnsupportedOperationException ;; [""] || ["",""]
-```
-
-### NCopies/reversed sortBsearch result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @29-2149 NCopies/reversed
-   init []
->> sortBsearch 4
-   ref : -1 ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### ArrayList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @9-4050 ArrayList/reversed
-   init [','c]
->> subListAdd 8 2 'ca
-   ref : EXC:IndexOutOfBoundsException ;; ["c",""] || ["","c"]
-   ours: EXC:IllegalArgumentException ;; ["c",""] || ["","c"]
-```
-
-### MapOf/keySet retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @9-4498 MapOf/keySet
-   init {'b=4}
->> retainAll ['b]
-   ref : false ;; ["b"] || {"b"=4}
-   ours: EXC:UnsupportedOperationException ;; ["b"] || {"b"=4}
-```
-
-### AbsList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @17-212 AbsList/reversed
-   init ['a,'ab]
-   addFirst 'c
->> subListAdd 4 3 'b
-   ref : EXC:IndexOutOfBoundsException ;; ["c","ab","a"] || ["a","ab","c"]
-   ours: EXC:IllegalArgumentException ;; ["c","ab","a"] || ["a","ab","c"]
-```
-
-### NCopies sortBsearch result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @33-3345 NCopies
-   init [null,-1]
->> sortBsearch 9
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null]
-```
-
-### Vector capacity result ref=value ours=value
-
-- scripts: 2; assessment: **intentional**. Vector with a capacityIncrement: the reference grows to max(needed, capacity + capacityIncrement) (capacity 5 with 9 elements needed becomes 9); ours replays the growth one element at a time for bulk adds, adding the increment repeatedly (5 becomes 11), and a bulk add followed by removals never records the growth at all (10 instead of 20). This is the documented shortcut in capacity() in src/list/Vector.ts: growth is replayed lazily, one element at a time.
-
-```
-   @39-2294 Vector
-   init [','c,'ca,'ab,','bb,'ca]
-   addAll ['a,'abc,'ba,'abc]
-   iterRemove hasA
->> capacity
-   ref : 20 ;; ["","c","","bb"]
-   ours: 10 ;; ["","c","","bb"]
-```
-
-### UnmodList/subList/reversed addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @19-1954 UnmodList/subList:0:1/reversed
-   init [3]
->> addAll []
-   ref : false ;; [3] || [3]
-   ours: EXC:UnsupportedOperationException ;; [3] || [3]
-```
-
-### TreeMap/sequencedEntrySet addAll result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 2; assessment: **library**. sequencedKeySet()/sequencedValues()/sequencedEntrySet().addAll(empty): the reference's views always throw UnsupportedOperationException; ours returns false.
-
-```
-   @7-1369 TreeMap/sequencedEntrySet
-   init {}
->> addAll []
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: false ;; [] || {}
-```
-
-### NCopies/subList retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @33-1246 NCopies/subList:2:3
-   init [-1,4,1]
->> retainAll [-1]
-   ref : false ;; [-1] || [-1,-1,-1]
-   ours: EXC:UnsupportedOperationException ;; [-1] || [-1,-1,-1]
-```
-
-### ArrayList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @33-1938 ArrayList/reversed
-   init [null]
->> subListCme 4 1 'ab
-   ref : EXC:IndexOutOfBoundsException ;; [null] || [null]
-   ours: EXC:IllegalArgumentException ;; [null] || [null]
-```
-
-### UnmodList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @33-2718 UnmodList/reversed
-   init [','ca]
->> subList 5 2
-   ref : EXC:IndexOutOfBoundsException ;; ["ca",""] || ["","ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca",""] || ["","ca"]
-```
-
-### ListCopyOf/reversed/subList subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @33-4601 ListCopyOf/reversed/subList:0:4
-   init [','b,'a,'ca]
->> subListCme 4 1 'abc
-   ref : EXC:IndexOutOfBoundsException ;; ["ca","a","b",""] || ["","b","a","ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca","a","b",""] || ["","b","a","ca"]
-```
-
-### NCopies/subList litw result ref=value ours=value
-
-- scripts: 2; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @2-1232 NCopies/subList:3:4
-   init ['b,'ca,'c,'b]
->> litw 0 r,h,p,a:'b
-   ref : "[EXC:IllegalStateException]" ;; ["b"] || ["b","b","b","b"]
-   ours: "[EXC:UnsupportedOperationException]" ;; ["b"] || ["b","b","b","b"]
-```
-
-### UnmodList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @24-716 UnmodList/reversed
-   init []
->> subListCme 10 0 'abc
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### LinkedList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @16-1699 LinkedList/reversed
-   init [9,2]
->> subListCme 8 2 0
-   ref : EXC:IndexOutOfBoundsException ;; [2,9] || [9,2]
-   ours: EXC:IllegalArgumentException ;; [2,9] || [9,2]
-```
-
-### UnmodList/reversed/subList subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @18-2057 UnmodList/reversed/subList:0:1
-   init ['b]
->> subList 6 0
-   ref : EXC:IndexOutOfBoundsException ;; ["b"] || ["b"]
-   ours: EXC:IllegalArgumentException ;; ["b"] || ["b"]
-```
-
-### TreeMapRev/sequencedValues addAll result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 2; assessment: **library**. sequencedKeySet()/sequencedValues()/sequencedEntrySet().addAll(empty): the reference's views always throw UnsupportedOperationException; ours returns false.
-
-```
-   @26-276 TreeMapRev/sequencedValues
-   init {}
->> addAll []
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: false ;; [] || {}
-```
-
-### NCopies/reversed nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @5-2413 NCopies/reversed
-   init []
->> nCopiesAddAll 0 3
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### AbsList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @22-4713 AbsList/reversed
-   init ['b]
->> subListCme 9 1 'abc
-   ref : EXC:IndexOutOfBoundsException ;; ["b"] || ["b"]
-   ours: EXC:IllegalArgumentException ;; ["b"] || ["b"]
-```
-
-### NCopies/reversed bsearchCmp result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @3-2002 NCopies/reversed
-   init []
->> bsearchCmp 8 nullsLast
-   ref : -1 ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### Misc x:capply result ref=value ours=EXC:NullPointerException
-
-- scripts: 2; assessment: **library**. Comparator.thenComparing*(nullsFirst(..)/nullsLast(..), ..): the reference's null-friendly comparator keeps handling nulls in the composed comparator (nulls never reach the key extractor); ours passes nulls on to the next comparator.
-
-```
-   @11-2770 Misc
->> x capply null null thenByC nullsLast nat sign thenLong rev neg
-   ref : 0
-   ours: EXC:NullPointerException
-```
-
-### NCopies/subList/reversed addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @30-2203 NCopies/subList:1:4/reversed
-   init [4,-4,-2,0]
->> addAll []
-   ref : false ;; [4,4,4] || [4,4,4,4]
-   ours: EXC:UnsupportedOperationException ;; [4,4,4] || [4,4,4,4]
-```
-
-### Vector/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @29-751 Vector/reversed
-   init []
->> subList 4 -1
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
 ### Stream pipe:allMatch result ref=value ours=value
 
 - scripts: 2; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
@@ -3281,126 +191,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> pipe iterate3 8 lt10 plus1 | peek | gather custom mapConc | allMatch even
    ref : false LOG[8,9]
    ours: false LOG[8]
-```
-
-### UnmodList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @22-229 UnmodList/reversed
-   init ['b,'abc]
->> subListAdd 5 2 'ba
-   ref : EXC:IndexOutOfBoundsException ;; ["abc","b"] || ["b","abc"]
-   ours: EXC:IllegalArgumentException ;; ["abc","b"] || ["b","abc"]
-```
-
-### NCopies/reversed/subList retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-2223 NCopies/reversed/subList:0:0
-   init []
->> retainAll []
-   ref : false ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/subList/reversed nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @4-2657 NCopies/subList:0:3/reversed
-   init ['bb,'bb,'a]
->> nCopiesAddAll 0 'c
-   ref : false ;; ["bb","bb","bb"] || ["bb","bb","bb"]
-   ours: EXC:UnsupportedOperationException ;; ["bb","bb","bb"] || ["bb","bb","bb"]
-```
-
-### NCopies/reversed/subList clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @24-798 NCopies/reversed/subList:1:1
-   init ['bb]
->> clear
-   ref : "void" ;; [] || ["bb"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["bb"]
-```
-
-### NCopies/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @12-1928 NCopies/reversed
-   init ['ca]
->> subListAdd 3 1 'ab
-   ref : EXC:IndexOutOfBoundsException ;; ["ca"] || ["ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca"] || ["ca"]
-```
-
-### MapOf/values retainAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Map.of/Map.copyOf views (keySet/values/entrySet and the keySet/values/entrySet ops) throw UnsupportedOperationException even when nothing would be removed; the reference's views inherit AbstractCollection's remove/removeAll/retainAll/removeIf and only throw once an element would actually be removed (returning false otherwise).
-
-```
-   @36-4418 MapOf/values
-   init {7=2}
->> retainAll [2]
-   ref : false ;; [2] || {7=2}
-   ours: EXC:UnsupportedOperationException ;; [2] || {7=2}
-```
-
-### AbsSeqList/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @24-2655 AbsSeqList/subList:1:2/reversed
-   init ['a,'ab]
->> subListAdd 2 0 'abc
-   ref : EXC:IndexOutOfBoundsException ;; ["ab"] || ["a","ab"]
-   ours: EXC:IllegalArgumentException ;; ["ab"] || ["a","ab"]
-```
-
-### Stack/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 2; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @7-2133 Stack/reversed
-   init []
->> subList 2 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### UnmodList/subList/reversed swap result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @14-1744 UnmodList/subList:2:4/reversed
-   init ['a,'bb,'ba,'ab]
->> swap 0 2
-   ref : EXC:IndexOutOfBoundsException ;; ["ab","ba"] || ["a","bb","ba","ab"]
-   ours: EXC:UnsupportedOperationException ;; ["ab","ba"] || ["a","bb","ba","ab"]
-```
-
-### NCopies/reversed replaceAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 2; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @15-2889 NCopies/reversed
-   init []
->> replaceAll sign
-   ref : "void" ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
 ```
 
 ### AbsSeqList/reversed litw result ref=value ours=value
@@ -3415,128 +205,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[a,true,EXC:IllegalStateException]" ;; [""] || [""]
 ```
 
-### ListOf/subList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @1-824 ListOf/subList:2:4/reversed
-   init ['c,'c,'ba,'bb]
->> subListCme 5 0 'bb
-   ref : EXC:IndexOutOfBoundsException ;; ["bb","ba"] || ["c","c","ba","bb"]
-   ours: EXC:IllegalArgumentException ;; ["bb","ba"] || ["c","c","ba","bb"]
-```
-
-### TreeMapRev/headMap merge result ref=EXC:IllegalArgumentException ours=EXC:NullPointerException
-
-- scripts: 1; assessment: **library**. null argument outside a range view: the reference reports the range (IllegalArgumentException) before the null (NullPointerException); ours the null first.
-
-```
-   @1-2202 TreeMapRev/headMap:6:true
-   init {}
->> merge 5 null max
-   ref : EXC:IllegalArgumentException ;; {} || {}
-   ours: EXC:NullPointerException ;; {} || {}
-```
-
-### ListOf/reversed/subList subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @1-3633 ListOf/reversed/subList:0:3
-   init ['a,'a,'ca]
->> subListAdd 4 0 'abc
-   ref : EXC:IndexOutOfBoundsException ;; ["ca","a","a"] || ["a","a","ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca","a","a"] || ["a","a","ca"]
-```
-
-### NCopies/reversed/subList subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @9-567 NCopies/reversed/subList:1:3
-   init [8,-1,-2]
->> subListAdd 2 0 -4
-   ref : EXC:IndexOutOfBoundsException ;; [8,8] || [8,8,8]
-   ours: EXC:IllegalArgumentException ;; [8,8] || [8,8,8]
-```
-
-### AbsSeqList/reversed/subList subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @9-781 AbsSeqList/reversed/subList:2:3
-   init [3,15,-3]
->> subList 1 0
-   ref : EXC:IndexOutOfBoundsException ;; [3] || [3,15,-3]
-   ours: EXC:IllegalArgumentException ;; [3] || [3,15,-3]
-```
-
-### ArrayList/reversed/subList iterCme result ref=EXC:ConcurrentModificationException ours=EXC:NoSuchElementException
-
-- scripts: 1; assessment: **library**. an iterator over subList(..).reversed() / reversed().subList(..) is not fail-fast after a structural change through the view: the reference throws ConcurrentModificationException, ours NoSuchElementException.
-
-```
-   @17-595 ArrayList/reversed/subList:3:3
-   init ['ba,'ba,']
-   add 'a
->> iterCme '
-   ref : EXC:ConcurrentModificationException ;; ["a",""] || ["","a","ba","ba",""]
-   ours: EXC:NoSuchElementException ;; ["a",""] || ["","a","ba","ba",""]
-```
-
-### ListCopyOf/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @25-839 ListCopyOf/reversed
-   init []
->> subListAdd 3 0 'a
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### Vector/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @2-1743 Vector/reversed
-   init ['ba]
->> subListCme 5 1 'ab
-   ref : EXC:IndexOutOfBoundsException ;; ["ba"] || ["ba"]
-   ours: EXC:IllegalArgumentException ;; ["ba"] || ["ba"]
-```
-
-### NCopies/subList/reversed litw result ref=value ours=value
-
-- scripts: 1; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @2-2573 NCopies/subList:0:2/reversed
-   init [6,-2]
->> litw 1 r
-   ref : "[EXC:IllegalStateException]" ;; [6,6] || [6,6]
-   ours: "[EXC:UnsupportedOperationException]" ;; [6,6] || [6,6]
-```
-
-### AbsList/reversed/subList subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @2-2934 AbsList/reversed/subList:2:3
-   init [-1,7,5]
-   addAll [0,2]
->> subListCme 4 3 1
-   ref : EXC:IndexOutOfBoundsException ;; [-1,0,2] || [2,0,-1,7,5]
-   ours: EXC:IllegalArgumentException ;; [-1,0,2] || [2,0,-1,7,5]
-```
-
 ### Vector/reversed litw result ref=value ours=value
 
 - scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
@@ -3549,18 +217,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[4,false,a,a,false,EXC:IllegalStateException]" ;; ["a",null,"ca","c","b","b"] || ["b","b","c","ca",null,"a"]
 ```
 
-### AbsSeqList/reversed/subList subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @10-3182 AbsSeqList/reversed/subList:0:4
-   init [2,3,6,1]
->> subListCme 3 1 null
-   ref : EXC:IndexOutOfBoundsException ;; [1,6,3,2] || [2,3,6,1]
-   ours: EXC:IllegalArgumentException ;; [1,6,3,2] || [2,3,6,1]
-```
-
 ### LinkedList/reversed litw result ref=value ours=value
 
 - scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
@@ -3571,66 +227,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> litw 2 h,j,a:5,r,h,a:5
    ref : "[false,1,a,r,false,a]" ;; [-2,null,5] || [5,null,-2]
    ours: "[false,1,a,EXC:IllegalStateException]" ;; [-2,null,5] || [5,null,-2]
-```
-
-### AbsList/reversed/subList subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @18-570 AbsList/reversed/subList:0:4
-   init ['bb,'abc,'bb,'b]
->> subListAdd 5 4 'bb
-   ref : EXC:IndexOutOfBoundsException ;; ["b","bb","abc","bb"] || ["bb","abc","bb","b"]
-   ours: EXC:IllegalArgumentException ;; ["b","bb","abc","bb"] || ["bb","abc","bb","b"]
-```
-
-### UnmodList/subList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @18-3000 UnmodList/subList:3:4/reversed
-   init ['a,'ba,','abc]
->> subListClear 4 1
-   ref : EXC:IndexOutOfBoundsException ;; ["abc"] || ["a","ba","","abc"]
-   ours: EXC:IllegalArgumentException ;; ["abc"] || ["a","ba","","abc"]
-```
-
-### AbsSeqList/reversed/subList subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @34-1718 AbsSeqList/reversed/subList:3:4
-   init [','ca,'ba,'bb]
->> subListClear 8 1
-   ref : EXC:IndexOutOfBoundsException ;; [""] || ["","ca","ba","bb"]
-   ours: EXC:IllegalArgumentException ;; [""] || ["","ca","ba","bb"]
-```
-
-### NCopies/reversed swap result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @34-3561 NCopies/reversed
-   init [','ab,'ab]
->> swap 2 9
-   ref : EXC:IndexOutOfBoundsException ;; ["","",""] || ["","",""]
-   ours: EXC:UnsupportedOperationException ;; ["","",""] || ["","",""]
-```
-
-### Stack/reversed/subList subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @3-2500 Stack/reversed/subList:0:3
-   init [',',']
->> subListAdd 1 -1 '
-   ref : EXC:IndexOutOfBoundsException ;; ["","",""] || ["","",""]
-   ours: EXC:IllegalArgumentException ;; ["","",""] || ["","",""]
 ```
 
 ### ArrayList/reversed litw result ref=value ours=value
@@ -3656,30 +252,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: OPT[7]
 ```
 
-### NCopies/subList/reversed replaceAll result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @11-3843 NCopies/subList:1:2/reversed
-   init [null,'bb]
->> replaceAll rev
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null] || [null,null]
-```
-
-### AbsSeqList/subList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @19-1027 AbsSeqList/subList:0:0/reversed
-   init []
->> subList 1 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
 ### Stream pipe:forEach result ref=value ours=value
 
 - scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
@@ -3689,77 +261,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> pipe builder [-5,8] | peek | gather custom mapConc | forEach
    ref : "void" LOG[-5,8,-4,9]
    ours: "void" LOG[-5,-4,8,9]
-```
-
-### Stream pipe:anyMatch result ref=EXC:NullPointerException ours=value
-
-- scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
-
-```
-   @19-3340 Stream
->> pipe concat ['a,null] [] | map len | gather custom mapConc | anyMatch lt10
-   ref : EXC:NullPointerException
-   ours: true
-```
-
-### Stack/subList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @19-4754 Stack/subList:1:4/reversed
-   init ['b,'bb,','ca]
->> subListCme 5 3 'ca
-   ref : EXC:IndexOutOfBoundsException ;; ["ca","","bb"] || ["b","bb","","ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca","","bb"] || ["b","bb","","ca"]
-```
-
-### TreeSetRev/descendingSet/headSet subSetAdd result ref=EXC:IllegalArgumentException ours=EXC:NullPointerException
-
-- scripts: 1; assessment: **library**. null argument outside a range view: the reference reports the range (IllegalArgumentException) before the null (NullPointerException); ours the null first.
-
-```
-   @35-3015 TreeSetRev/descendingSet/headSet:0:true
-   init []
->> subSetAdd 14 null 4
-   ref : EXC:IllegalArgumentException ;; [] || []
-   ours: EXC:NullPointerException ;; [] || []
-```
-
-### Vector/reversed/subList subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @35-4577 Vector/reversed/subList:0:1
-   init [-2]
->> subListAdd 3 0 2
-   ref : EXC:IndexOutOfBoundsException ;; [-2] || [-2]
-   ours: EXC:IllegalArgumentException ;; [-2] || [-2]
-```
-
-### UnmodList/subList/reversed nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. reversed()/subList() views of unmodifiable lists: ours throws UnsupportedOperationException for every mutator; the reference's reversed view only throws when the call would change the list (no-op removeAll/retainAll/remove/addAll(empty) return false).
-
-```
-   @4-1521 UnmodList/subList:3:4/reversed
-   init ['ba,'bb,','a]
->> nCopiesAddAll 0 'ab
-   ref : false ;; ["a"] || ["ba","bb","","a"]
-   ours: EXC:UnsupportedOperationException ;; ["a"] || ["ba","bb","","a"]
-```
-
-### UnmodList/reversed/subList subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @12-1582 UnmodList/reversed/subList:0:4
-   init ['abc,'abc,'ca,'bb]
->> subListAdd 4 -1 'b
-   ref : EXC:IndexOutOfBoundsException ;; ["bb","ca","abc","abc"] || ["abc","abc","ca","bb"]
-   ours: EXC:IllegalArgumentException ;; ["bb","ca","abc","abc"] || ["abc","abc","ca","bb"]
 ```
 
 ### Stream pipe:iterT result ref=value ours=value
@@ -3784,66 +285,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: 0
 ```
 
-### UnmodList/subList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @28-290 UnmodList/subList:0:2/reversed
-   init [8,null]
->> subListCme 3 1 null
-   ref : EXC:IndexOutOfBoundsException ;; [null,8] || [8,null]
-   ours: EXC:IllegalArgumentException ;; [null,8] || [8,null]
-```
-
-### NCopies/subList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @28-2703 NCopies/subList:2:3/reversed
-   init [5,-1,-2]
->> subListClear 4 1
-   ref : EXC:IndexOutOfBoundsException ;; [5] || [5,5,5]
-   ours: EXC:IllegalArgumentException ;; [5] || [5,5,5]
-```
-
-### TreeMapRev/sequencedKeySet addAll result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 1; assessment: **library**. sequencedKeySet()/sequencedValues()/sequencedEntrySet().addAll(empty): the reference's views always throw UnsupportedOperationException; ours returns false.
-
-```
-   @28-3007 TreeMapRev/sequencedKeySet
-   init {}
->> addAll []
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: false ;; [] || {}
-```
-
-### NCopies/subList addAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @28-3525 NCopies/subList:2:3
-   init ['c,'b,'ca]
->> addAll []
-   ref : false ;; ["c"] || ["c","c","c"]
-   ours: EXC:UnsupportedOperationException ;; ["c"] || ["c","c","c"]
-```
-
-### NCopies/reversed removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @28-4643 NCopies/reversed
-   init []
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
 ### AbsList/reversed/subList litw result ref=value ours=value
 
 - scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
@@ -3855,138 +296,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> litw 1 f,s:0,p,j,a:8,s:0,p,a:8
    ref : "[[6],s,0,0,a,s,0,a]" ;; [9,8,0,0] || [0,0,8,9,2,3]
    ours: "[[6],s,0,0,a,EXC:IllegalStateException]" ;; [9,8,0] || [0,8,9,2,3]
-```
-
-### TreeMap/sequencedValues addAll result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 1; assessment: **library**. sequencedKeySet()/sequencedValues()/sequencedEntrySet().addAll(empty): the reference's views always throw UnsupportedOperationException; ours returns false.
-
-```
-   @13-736 TreeMap/sequencedValues
-   init {}
->> addAll []
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: false ;; [] || {}
-```
-
-### NCopies clear result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @13-4917 NCopies
-   init []
->> clear
-   ref : "void" ;; []
-   ours: EXC:UnsupportedOperationException ;; []
-```
-
-### ListOf/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @21-2535 ListOf/reversed
-   init ['c,'a,'abc,'ab]
->> subListCme 5 4 'b
-   ref : EXC:IndexOutOfBoundsException ;; ["ab","abc","a","c"] || ["c","a","abc","ab"]
-   ours: EXC:IllegalArgumentException ;; ["ab","abc","a","c"] || ["c","a","abc","ab"]
-```
-
-### AbsList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @21-2557 AbsList/reversed
-   init []
->> subListClear 3 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### NCopies/subList/reversed swap result ref=EXC:IndexOutOfBoundsException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @21-4034 NCopies/subList:1:3/reversed
-   init [1,1,-2]
->> swap 0 2
-   ref : EXC:IndexOutOfBoundsException ;; [1,1] || [1,1,1]
-   ours: EXC:UnsupportedOperationException ;; [1,1] || [1,1,1]
-```
-
-### NCopies sort result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @29-1008 NCopies
-   init [null,-1]
->> sort mod3
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null]
-```
-
-### AbsSeqList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @29-4696 AbsSeqList/reversed
-   init ['a,'ba,null]
->> subList 5 3
-   ref : EXC:IndexOutOfBoundsException ;; [null,"ba","a"] || ["a","ba",null]
-   ours: EXC:IllegalArgumentException ;; [null,"ba","a"] || ["a","ba",null]
-```
-
-### LinkedList/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @6-1971 LinkedList/reversed
-   init [','abc,'ab]
->> subListClear 4 3
-   ref : EXC:IndexOutOfBoundsException ;; ["ab","abc",""] || ["","abc","ab"]
-   ours: EXC:IllegalArgumentException ;; ["ab","abc",""] || ["","abc","ab"]
-```
-
-### NCopies/reversed replaceAll result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @6-2102 NCopies/reversed
-   init [null]
->> replaceAll abs
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null] || [null]
-```
-
-### Stack/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @14-65 Stack/reversed
-   init [0]
->> subListAdd 4 1 9
-   ref : EXC:IndexOutOfBoundsException ;; [0] || [0]
-   ours: EXC:IllegalArgumentException ;; [0] || [0]
-```
-
-### NCopies/subList sort result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @14-527 NCopies/subList:0:0
-   init []
->> sort mod3ThenRev
-   ref : "void" ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
 ```
 
 ### AbsSeqList/reversed/subList litw result ref=value ours=value
@@ -4001,90 +310,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[a,true,"abc",a,EXC:IllegalStateException]" ;; [null,"abc","abc","ca"] || ["ca","abc","abc",null,"ab",null]
 ```
 
-### TreeMap/synchronizedSortedMap compute result ref=value ours=EXC:NullPointerException
-
-- scripts: 1; assessment: **library**. compute(null, f) on an empty TreeMap (natural ordering) whose function returns null: the reference never compares the key and returns null; ours rejects the null key first (NullPointerException).
-
-```
-   @14-2714 TreeMap/synchronizedSortedMap
-   init {}
->> compute null nullKV
-   ref : null ;; {} || {}
-   ours: EXC:NullPointerException ;; {} || {}
-```
-
-### ListCopyOf/subList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @14-4014 ListCopyOf/subList:0:3/reversed
-   init [20,3,0]
->> subList 5 1
-   ref : EXC:IndexOutOfBoundsException ;; [0,3,20] || [20,3,0]
-   ours: EXC:IllegalArgumentException ;; [0,3,20] || [20,3,0]
-```
-
-### ListOf/reversed/subList subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @14-4040 ListOf/reversed/subList:0:2
-   init ['b,'ab]
->> subListCme 1 0 'ba
-   ref : EXC:IndexOutOfBoundsException ;; ["ab","b"] || ["b","ab"]
-   ours: EXC:IllegalArgumentException ;; ["ab","b"] || ["b","ab"]
-```
-
-### ArrayList/reversed/subList subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @22-1588 ArrayList/reversed/subList:0:3
-   init [-2,9,-1]
->> subList 4 2
-   ref : EXC:IndexOutOfBoundsException ;; [-1,9,-2] || [-2,9,-1]
-   ours: EXC:IllegalArgumentException ;; [-1,9,-2] || [-2,9,-1]
-```
-
-### NCopies/reversed/subList removeFirst result ref=EXC:NoSuchElementException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @22-2149 NCopies/reversed/subList:4:4
-   init ['ab,'c,','ab]
->> removeFirst
-   ref : EXC:NoSuchElementException ;; [] || ["ab","ab","ab","ab"]
-   ours: EXC:UnsupportedOperationException ;; [] || ["ab","ab","ab","ab"]
-```
-
-### ListOf/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @22-3689 ListOf/reversed
-   init [4,-2]
->> subListAdd 4 2 7
-   ref : EXC:IndexOutOfBoundsException ;; [-2,4] || [4,-2]
-   ours: EXC:IllegalArgumentException ;; [-2,4] || [4,-2]
-```
-
-### NCopies/reversed/subList addAllAt result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @30-478 NCopies/reversed/subList:1:3
-   init ['c,'ca,']
->> addAllAt 2 []
-   ref : false ;; ["c","c"] || ["c","c","c"]
-   ours: EXC:UnsupportedOperationException ;; ["c","c"] || ["c","c","c"]
-```
-
 ### AbsList/reversed litw result ref=value ours=value
 
 - scripts: 1; assessment: **reference-quirk**. list iterator of a reversed() view: the reference accepts set()/remove() right after add(), which ListIterator specifies as IllegalStateException; ours throws IllegalStateException.
@@ -4095,66 +320,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> litw 1 H,n,f,a:7,r,h,h,p
    ref : "[true,0,[],a,r,false,false,0]" ;; [-2,0] || [0,-2]
    ours: "[true,0,[],a,EXC:IllegalStateException]" ;; [-2,0,7] || [7,0,-2]
-```
-
-### TreeSet/descendingSet/headSet subSetPlain result ref=EXC:IllegalArgumentException ours=EXC:NullPointerException
-
-- scripts: 1; assessment: **library**. null argument outside a range view: the reference reports the range (IllegalArgumentException) before the null (NullPointerException); ours the null first.
-
-```
-   @30-3174 TreeSet/descendingSet/headSet:'a:false
-   init []
->> subSetPlain 'a null
-   ref : EXC:IllegalArgumentException ;; [] || []
-   ours: EXC:NullPointerException ;; [] || []
-```
-
-### NCopies/reversed/subList sort result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @30-3724 NCopies/reversed/subList:0:0
-   init []
->> sort nullsFirst
-   ref : "void" ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### NCopies/reversed/subList nCopiesAddAll result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @30-3941 NCopies/reversed/subList:1:3
-   init [3,11,9]
->> nCopiesAddAll 0 17
-   ref : false ;; [3,3] || [3,3,3]
-   ours: EXC:UnsupportedOperationException ;; [3,3] || [3,3,3]
-```
-
-### LinkedList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @30-4798 LinkedList/reversed
-   init []
->> subListAdd 1 -1 'abc
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
-### LinkedList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @38-1702 LinkedList/reversed
-   init []
->> subList 5 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
 ```
 
 ### Vector/reversed/subList litw result ref=value ours=value
@@ -4170,42 +335,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: "[a,2,EXC:IllegalStateException]" ;; ["abc","ba","abc"] || ["abc","ba","abc","ca","a","abc",null]
 ```
 
-### UnmodList/subList/reversed subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @38-4308 UnmodList/subList:2:4/reversed
-   init ['a,'ca,','abc]
->> subList 4 0
-   ref : EXC:IndexOutOfBoundsException ;; ["abc",""] || ["a","ca","","abc"]
-   ours: EXC:IllegalArgumentException ;; ["abc",""] || ["a","ca","","abc"]
-```
-
-### NCopies/reversed sortBsearch result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @7-1409 NCopies/reversed
-   init [null,6]
->> sortBsearch 4
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null] || [null,null]
-```
-
-### TreeMapRev/sequencedEntrySet addAll result ref=EXC:UnsupportedOperationException ours=value
-
-- scripts: 1; assessment: **library**. sequencedKeySet()/sequencedValues()/sequencedEntrySet().addAll(empty): the reference's views always throw UnsupportedOperationException; ours returns false.
-
-```
-   @7-2571 TreeMapRev/sequencedEntrySet
-   init {}
->> addAll []
-   ref : EXC:UnsupportedOperationException ;; [] || {}
-   ours: false ;; [] || {}
-```
-
 ### Stream pipe:collect3 result ref=EXC:NullPointerException ours=EXC:NullPointerException
 
 - scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
@@ -4217,54 +346,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
    ours: EXC:NullPointerException LOG[null]
 ```
 
-### ListCopyOf/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @15-1601 ListCopyOf/subList:0:2/reversed
-   init [0,1]
->> subListAdd 2 1 -2
-   ref : EXC:IndexOutOfBoundsException ;; [1,0] || [0,1]
-   ours: EXC:IllegalArgumentException ;; [1,0] || [0,1]
-```
-
-### NCopies/reversed/subList sort result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @15-1762 NCopies/reversed/subList:1:4
-   init [null,2,2,4]
->> sort null
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null,null] || [null,null,null,null]
-```
-
-### AbsList/reversed/subList subList result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @15-4792 AbsList/reversed/subList:2:3
-   init [4,-2,2]
->> subList 1 0
-   ref : EXC:IndexOutOfBoundsException ;; [4] || [4,-2,2]
-   ours: EXC:IllegalArgumentException ;; [4] || [4,-2,2]
-```
-
-### ListOf/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @23-1149 ListOf/reversed
-   init []
->> subListClear 4 0
-   ref : EXC:IndexOutOfBoundsException ;; [] || []
-   ours: EXC:IllegalArgumentException ;; [] || []
-```
-
 ### Stream pipe:findFirstStr result ref=value ours=value
 
 - scripts: 1; assessment: **intentional**. Gatherers.mapConcurrent: the reference runs the mapper ahead on up to maxConcurrency virtual threads, so an upstream peek observes (and a failing mapper throws for) elements before earlier results reach downstream; ours maps sequentially in order. Results and the exception type are the same; side-effect timing is unspecified.
@@ -4274,126 +355,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 >> pipe dof [2.5,5] | peek | mapToObj id | gather custom mapConc | findFirstStr
    ref : "Optional[3.5]" LOG[25e-1,5]
    ours: "Optional[3.5]" LOG[25e-1]
-```
-
-### ListOf/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @31-575 ListOf/subList:0:2/reversed
-   init ['c,'ab]
->> subListAdd 4 1 'ca
-   ref : EXC:IndexOutOfBoundsException ;; ["ab","c"] || ["c","ab"]
-   ours: EXC:IllegalArgumentException ;; ["ab","c"] || ["c","ab"]
-```
-
-### AbsSeqList/reversed subListCme result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @8-2294 AbsSeqList/reversed
-   init [']
->> subListCme 4 1 '
-   ref : EXC:IndexOutOfBoundsException ;; [""] || [""]
-   ours: EXC:IllegalArgumentException ;; [""] || [""]
-```
-
-### ArrayList/reversed/subList subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @16-1554 ArrayList/reversed/subList:0:3
-   init ['ba,'ab,']
->> subListClear 2 1
-   ref : EXC:IndexOutOfBoundsException ;; ["","ab","ba"] || ["ba","ab",""]
-   ours: EXC:IllegalArgumentException ;; ["","ab","ba"] || ["ba","ab",""]
-```
-
-### NCopies/reversed/subList litw result ref=value ours=value
-
-- scripts: 1; assessment: **library**. check order on immutable list iterators: set()/remove() without a preceding next()/previous() throws IllegalStateException in the reference, UnsupportedOperationException in ours.
-
-```
-   @16-4747 NCopies/reversed/subList:0:4
-   init [','ba,'ab,'ab]
->> litw 4 s:'ab
-   ref : "[EXC:IllegalStateException]" ;; ["","","",""] || ["","","",""]
-   ours: "[EXC:UnsupportedOperationException]" ;; ["","","",""] || ["","","",""]
-```
-
-### NCopies/reversed sort result ref=value ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. Collections.empty*/EMPTY_*/singleton*/nCopies (and their subList/reversed views): ours throws UnsupportedOperationException for every mutator; the reference throws only when the call would change the collection (remove/removeAll/retainAll/removeIf/clear/addAll(empty)/sort of a 0-1 element list/... return false or do nothing).
-
-```
-   @24-230 NCopies/reversed
-   init []
->> sort null
-   ref : "void" ;; [] || []
-   ours: EXC:UnsupportedOperationException ;; [] || []
-```
-
-### AbsList/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @24-3023 AbsList/subList:0:4/reversed
-   init [5,4,6,3]
->> subListAdd 4 0 3
-   ref : EXC:IndexOutOfBoundsException ;; [3,6,4,5] || [5,4,6,3]
-   ours: EXC:IllegalArgumentException ;; [3,6,4,5] || [5,4,6,3]
-```
-
-### Vector/reversed subListClear result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @32-1259 Vector/reversed
-   init [6,7]
->> subListClear 4 2
-   ref : EXC:IndexOutOfBoundsException ;; [7,6] || [6,7]
-   ours: EXC:IllegalArgumentException ;; [7,6] || [6,7]
-```
-
-### NCopies/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @32-2404 NCopies/subList:2:3/reversed
-   init ['ca,'abc,'ba]
->> subListAdd 4 0 'ca
-   ref : EXC:IndexOutOfBoundsException ;; ["ca"] || ["ca","ca","ca"]
-   ours: EXC:IllegalArgumentException ;; ["ca"] || ["ca","ca","ca"]
-```
-
-### NCopies/reversed/subList removeIf result ref=EXC:NullPointerException ours=EXC:UnsupportedOperationException
-
-- scripts: 1; assessment: **library**. check order on unmodifiable/immutable collections and views: the reference validates the call first (empty collection, index, iterator state, null argument) and throws that exception; ours throws UnsupportedOperationException first.
-
-```
-   @40-1172 NCopies/reversed/subList:0:4
-   init [null,'bb,'bb,'ab]
->> removeIf hasA
-   ref : EXC:NullPointerException ;; ?
-   ours: EXC:UnsupportedOperationException ;; [null,null,null,null] || [null,null,null,null]
-```
-
-### Stack/subList/reversed subListAdd result ref=EXC:IndexOutOfBoundsException ours=EXC:IllegalArgumentException
-
-- scripts: 1; assessment: **library**. subList(from, to) with from > to on a reversed() list view: the reference throws IndexOutOfBoundsException (Objects.checkFromToIndex), ours IllegalArgumentException (as ArrayList.subList does).
-
-```
-   @40-1427 Stack/subList:1:1/reversed
-   init [null]
->> subListAdd 5 0 '
-   ref : EXC:IndexOutOfBoundsException ;; [] || [null]
-   ours: EXC:IllegalArgumentException ;; [] || [null]
 ```
 
 ## API coverage matrix
@@ -4518,9 +479,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| hasMoreElements | 5,233 |
-| nextElement | 10,673 |
-| asIterator | 5,320 |
+| hasMoreElements | 3,819 |
+| nextElement | 7,941 |
+| asIterator | 3,884 |
 
 </details>
 
@@ -4528,10 +489,10 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| hasNext | 4,384,574 |
-| next | 3,307,415 |
-| remove | 21,929 |
-| forEachRemaining | 33,943 |
+| hasNext | 4,205,391 |
+| next | 3,287,990 |
+| remove | 21,475 |
+| forEachRemaining | 31,447 |
 
 </details>
 
@@ -4539,16 +500,16 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| hasPrevious | 5,134 |
-| previous | 4,280 |
-| nextIndex | 714 |
-| previousIndex | 711 |
-| set | 3,410 |
-| add | 2,202 |
-| hasNext | 2,647,806 |
-| next | 1,963,597 |
-| remove | 8,823 |
-| forEachRemaining | 14,929 |
+| hasPrevious | 4,644 |
+| previous | 3,906 |
+| nextIndex | 653 |
+| previousIndex | 643 |
+| set | 3,189 |
+| add | 1,993 |
+| hasNext | 2,280,003 |
+| next | 1,749,208 |
+| remove | 7,905 |
+| forEachRemaining | 10,066 |
 
 </details>
 
@@ -4564,26 +525,26 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 758,435 |
-| forEach | 9,229 |
-| size | 9,895 |
-| isEmpty | 9,094 |
-| contains | 16,974 |
-| toArray | 23,013 |
-| add | 33,094 |
-| remove | 29,219 |
-| containsAll | 9,298 |
-| addAll | 13,553 |
-| removeAll | 9,322 |
-| removeIf | 16,985 |
-| retainAll | 16,951 |
-| clear | 11,380 |
-| equals | 20,589 |
+| iterator | 836,440 |
+| forEach | 9,152 |
+| size | 9,820 |
+| isEmpty | 9,020 |
+| contains | 16,891 |
+| toArray | 22,790 |
+| add | 32,571 |
+| remove | 29,088 |
+| containsAll | 9,226 |
+| addAll | 13,276 |
+| removeAll | 9,236 |
+| removeIf | 16,915 |
+| retainAll | 16,880 |
+| clear | 11,296 |
+| equals | 20,441 |
 | hashCode | excluded: identity hash code in the reference for these wrappers/views (not overridden there) |
-| toString | 11,336 |
-| spliterator | 7,069 |
-| stream | 33,268 |
-| parallelStream | 9,426 |
+| toString | 11,265 |
+| spliterator | 8,988 |
+| stream | 33,024 |
+| parallelStream | 9,348 |
 
 </details>
 
@@ -4591,33 +552,33 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| reversed | 7,990 |
-| addFirst | 4,405 |
-| addLast | 4,333 |
-| getFirst | 4,466 |
-| getLast | 4,493 |
-| removeFirst | 4,435 |
-| removeLast | 4,485 |
-| iterator | 511,275 |
-| forEach | 4,763 |
-| size | 5,462 |
-| isEmpty | 4,694 |
-| contains | 8,099 |
-| toArray | 13,603 |
-| add | 20,103 |
-| remove | 13,058 |
-| containsAll | 4,836 |
-| addAll | 9,261 |
-| removeAll | 4,907 |
-| removeIf | 8,136 |
-| retainAll | 6,385 |
-| clear | 6,979 |
-| equals | 11,749 |
+| reversed | 7,847 |
+| addFirst | 4,332 |
+| addLast | 4,264 |
+| getFirst | 4,382 |
+| getLast | 4,406 |
+| removeFirst | 4,352 |
+| removeLast | 4,420 |
+| iterator | 503,200 |
+| forEach | 4,690 |
+| size | 5,389 |
+| isEmpty | 4,622 |
+| contains | 8,011 |
+| toArray | 13,385 |
+| add | 19,579 |
+| remove | 12,913 |
+| containsAll | 4,764 |
+| addAll | 8,984 |
+| removeAll | 4,819 |
+| removeIf | 8,060 |
+| retainAll | 6,301 |
+| clear | 6,897 |
+| equals | 11,601 |
 | hashCode | excluded: identity hash code in the reference for these wrappers/views (not overridden there) |
-| toString | 7,042 |
-| spliterator | 4,726 |
-| stream | 20,028 |
-| parallelStream | 4,912 |
+| toString | 6,971 |
+| spliterator | 4,640 |
+| stream | 19,784 |
+| parallelStream | 4,834 |
 
 </details>
 
@@ -4705,17 +666,17 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| reversed | 1,719 |
+| reversed | 1,680 |
 | iterator | 170,002 |
 | forEach | 2,095 |
 | size | 2,100 |
 | isEmpty | 2,005 |
 | contains | 5,438 |
 | toArray | 4,322 |
-| add | 6,349 |
+| add | 6,240 |
 | remove | 5,751 |
 | containsAll | 2,081 |
-| addAll | 1,994 |
+| addAll | 1,955 |
 | removeAll | 2,140 |
 | removeIf | 5,374 |
 | retainAll | 3,630 |
@@ -4745,17 +706,17 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | headSet | 3,832 |
 | tailSet | 2,076 |
 | subSet | 2,918 |
-| reversed | 1,405 |
+| reversed | 1,389 |
 | iterator | 128,585 |
 | forEach | 1,520 |
 | size | 1,516 |
 | isEmpty | 1,415 |
 | contains | 1,546 |
 | toArray | 2,968 |
-| add | 4,899 |
+| add | 4,842 |
 | remove | 3,431 |
 | containsAll | 1,478 |
-| addAll | 1,477 |
+| addAll | 1,458 |
 | removeAll | 1,477 |
 | removeIf | 1,476 |
 | retainAll | 1,936 |
@@ -4790,7 +751,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | headSet | 3,832 |
 | tailSet | 2,076 |
 | subSet | 2,918 |
-| reversed | 1,405 |
+| reversed | 1,389 |
 | comparator | 1,437 |
 | first | 1,459 |
 | last | 1,428 |
@@ -4800,10 +761,10 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | isEmpty | 1,415 |
 | contains | 1,546 |
 | toArray | 2,968 |
-| add | 4,899 |
+| add | 4,842 |
 | remove | 3,431 |
 | containsAll | 1,478 |
-| addAll | 1,477 |
+| addAll | 1,458 |
 | removeAll | 1,477 |
 | removeIf | 1,476 |
 | retainAll | 1,936 |
@@ -4827,9 +788,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getKey | 794,618 |
-| getValue | 799,917 |
-| setValue | 9,597 |
+| getKey | 794,604 |
+| getValue | 799,905 |
+| setValue | 9,600 |
 | equals | 4,537 |
 | hashCode | 4,570 |
 | toString | 4,527 |
@@ -4847,9 +808,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | pollLastEntry | 978 |
 | putFirst | 994 |
 | putLast | 978 |
-| sequencedKeySet | 1,029 |
-| sequencedValues | 994 |
-| sequencedEntrySet | 1,002 |
+| sequencedKeySet | 1,045 |
+| sequencedValues | 1,011 |
+| sequencedEntrySet | 1,025 |
 | size | 1,031 |
 | isEmpty | 935 |
 | containsKey | 1,008 |
@@ -4894,9 +855,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | pollLastEntry | 881 |
 | putFirst | 895 |
 | putLast | 869 |
-| sequencedKeySet | 886 |
-| sequencedValues | 905 |
-| sequencedEntrySet | 899 |
+| sequencedKeySet | 902 |
+| sequencedValues | 922 |
+| sequencedEntrySet | 922 |
 | size | 932 |
 | isEmpty | 848 |
 | containsKey | 892 |
@@ -4952,9 +913,9 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | pollLastEntry | 881 |
 | putFirst | 895 |
 | putLast | 869 |
-| sequencedKeySet | 886 |
-| sequencedValues | 905 |
-| sequencedEntrySet | 899 |
+| sequencedKeySet | 902 |
+| sequencedValues | 922 |
+| sequencedEntrySet | 922 |
 | size | 932 |
 | isEmpty | 848 |
 | containsKey | 892 |
@@ -4996,42 +957,42 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| add | 12,885 |
-| addAll | 6,985 |
-| get | 2,480 |
-| set | 2,414 |
-| removeAt | 2,466 |
-| indexOf | 2,320 |
-| lastIndexOf | 2,459 |
-| listIterator | 12,212 |
-| subList | 14,946 |
-| replaceAll | 2,462 |
-| sort | 4,832 |
-| reversed | 6,088 |
-| addFirst | 2,450 |
-| addLast | 2,408 |
-| getFirst | 2,475 |
-| getLast | 2,485 |
-| removeFirst | 2,427 |
-| removeLast | 2,448 |
-| iterator | 321,053 |
-| forEach | 2,354 |
-| size | 3,077 |
-| isEmpty | 2,402 |
-| contains | 2,385 |
-| toArray | 8,387 |
-| remove | 4,974 |
-| containsAll | 2,479 |
-| removeAll | 2,463 |
-| removeIf | 2,494 |
-| retainAll | 2,453 |
-| clear | 3,553 |
-| equals | 7,012 |
-| hashCode | 2,404 |
-| toString | 4,743 |
-| spliterator | 2,412 |
-| stream | 12,986 |
-| parallelStream | 2,515 |
+| add | 12,527 |
+| addAll | 6,763 |
+| get | 2,408 |
+| set | 2,342 |
+| removeAt | 2,377 |
+| indexOf | 2,234 |
+| lastIndexOf | 2,393 |
+| listIterator | 11,849 |
+| subList | 14,608 |
+| replaceAll | 2,376 |
+| sort | 4,681 |
+| reversed | 6,001 |
+| addFirst | 2,377 |
+| addLast | 2,339 |
+| getFirst | 2,392 |
+| getLast | 2,399 |
+| removeFirst | 2,344 |
+| removeLast | 2,383 |
+| iterator | 312,999 |
+| forEach | 2,281 |
+| size | 3,004 |
+| isEmpty | 2,330 |
+| contains | 2,297 |
+| toArray | 8,169 |
+| remove | 4,829 |
+| containsAll | 2,407 |
+| removeAll | 2,375 |
+| removeIf | 2,418 |
+| retainAll | 2,369 |
+| clear | 3,472 |
+| equals | 6,864 |
+| hashCode | 2,333 |
+| toString | 4,672 |
+| spliterator | 2,326 |
+| stream | 12,742 |
+| parallelStream | 2,437 |
 
 </details>
 
@@ -5049,24 +1010,24 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| iterator | 389,240 |
-| forEach | 6,122 |
-| size | 6,077 |
-| isEmpty | 5,970 |
-| contains | 13,890 |
-| toArray | 12,315 |
-| add | 17,957 |
-| remove | 19,897 |
+| iterator | 479,064 |
+| forEach | 6,118 |
+| size | 6,075 |
+| isEmpty | 5,968 |
+| contains | 13,895 |
+| toArray | 12,310 |
+| add | 17,849 |
+| remove | 19,911 |
 | containsAll | 6,102 |
-| addAll | 5,827 |
-| removeAll | 6,145 |
-| removeIf | 13,791 |
-| retainAll | 13,748 |
-| clear | 7,126 |
+| addAll | 5,788 |
+| removeAll | 6,147 |
+| removeIf | 13,797 |
+| retainAll | 13,761 |
+| clear | 7,124 |
 | equals | 12,082 |
-| hashCode | 5,941 |
+| hashCode | 5,940 |
 | toString | 5,871 |
-| spliterator | 3,920 |
+| spliterator | 5,925 |
 | stream | 18,068 |
 | parallelStream | 6,149 |
 
@@ -5089,30 +1050,30 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| size | 4,879 |
-| isEmpty | 4,692 |
-| containsKey | 4,858 |
-| containsValue | 4,796 |
-| get | 4,837 |
-| put | 15,162 |
-| remove | 9,531 |
-| putAll | 4,762 |
-| clear | 5,490 |
-| keySet | 19,048 |
-| values | 9,294 |
-| entrySet | 261,052 |
-| equals | 4,759 |
-| hashCode | 4,829 |
-| toString | 4,805 |
-| getOrDefault | 4,761 |
-| forEach | 4,779 |
-| replaceAll | 4,816 |
-| putIfAbsent | 4,784 |
-| replace | 9,688 |
-| computeIfAbsent | 4,943 |
-| computeIfPresent | 4,934 |
-| compute | 4,839 |
-| merge | 4,884 |
+| size | 4,882 |
+| isEmpty | 4,698 |
+| containsKey | 4,865 |
+| containsValue | 4,803 |
+| get | 4,841 |
+| put | 15,183 |
+| remove | 9,542 |
+| putAll | 4,768 |
+| clear | 5,496 |
+| keySet | 19,075 |
+| values | 9,299 |
+| entrySet | 261,268 |
+| equals | 4,763 |
+| hashCode | 4,831 |
+| toString | 4,810 |
+| getOrDefault | 4,765 |
+| forEach | 4,782 |
+| replaceAll | 4,819 |
+| putIfAbsent | 4,787 |
+| replace | 9,698 |
+| computeIfAbsent | 4,945 |
+| computeIfPresent | 4,935 |
+| compute | 4,843 |
+| merge | 4,888 |
 
 </details>
 
@@ -5120,20 +1081,20 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| naturalOrder | 43,992 |
-| reverseOrder | 29,020 |
-| reversed | 8,596 |
+| naturalOrder | 43,804 |
+| reverseOrder | 28,951 |
+| reversed | 8,565 |
 | comparing | 9,732 |
-| comparingInt | 155,203 |
+| comparingInt | 154,453 |
 | comparingLong | 5,036 |
 | comparingDouble | 4,905 |
-| thenComparing | 12,086 |
+| thenComparing | 12,038 |
 | thenComparingBy | 9,694 |
 | thenComparingInt | 4,888 |
 | thenComparingLong | 4,898 |
 | thenComparingDouble | 4,724 |
-| nullsFirst | 16,228 |
-| nullsLast | 16,239 |
+| nullsFirst | 16,181 |
+| nullsLast | 16,180 |
 | max | excluded: API newer than the reference runtime (JDK 23) |
 | min | excluded: API newer than the reference runtime (JDK 23) |
 
@@ -5190,7 +1151,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| () | 3,422 |
+| () | 3,352 |
 
 </details>
 
@@ -5430,8 +1391,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| getKey | 38,570 |
-| getValue | 38,578 |
+| getKey | 38,781 |
+| getValue | 38,791 |
 | setValue | 2,476 |
 | equals | 2,545 |
 | hashCode | 2,516 |
@@ -5465,7 +1426,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | sort | 25,246 |
 | getFirst | 157 |
 | getLast | 146 |
-| iterator | 124,286 |
+| iterator | 124,197 |
 | listIterator | 845 |
 | spliterator | 1,247 |
 | equals | 563 |
@@ -5573,6 +1534,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | get | 347 |
 | set | 327 |
 | removeAt | 370 |
+| add | 16,812 |
 | clone | 240 |
 | ensureCapacity | 523 |
 | trimToSize | 556 |
@@ -5593,7 +1555,6 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | removeAllElements | 494 |
 | size | 956 |
 | isEmpty | 341 |
-| add | 16,812 |
 | remove | 761 |
 | contains | 318 |
 | toArray | 689 |
@@ -5649,6 +1610,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | get | 105 |
 | set | 98 |
 | removeAt | 113 |
+| add | 543 |
 | clone | 216 |
 | ensureCapacity | 110 |
 | trimToSize | 122 |
@@ -5669,7 +1631,6 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | removeAllElements | 103 |
 | size | 183 |
 | isEmpty | 113 |
-| add | 543 |
 | remove | 212 |
 | contains | 109 |
 | toArray | 222 |
@@ -5821,13 +1782,13 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | getNode | excluded: implementation hook (package-private in the reference) |
 | removeNode | excluded: implementation hook (package-private in the reference) |
 | size | 491 |
-| isEmpty | 425 |
+| isEmpty | 426 |
 | get | 425 |
 | containsKey | 385 |
 | containsValue | 435 |
 | put | 9,783 |
 | remove | 808 |
-| putAll | 8,130 |
+| putAll | 8,135 |
 | clear | 462 |
 | keySet | 1,693 |
 | values | 905 |
@@ -5869,7 +1830,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | forEach | 1,140 |
 | keySet | 5,311 |
 | values | 3,226 |
-| entrySet | 121,825 |
+| entrySet | 121,827 |
 | sequencedKeySet | 1,220 |
 | sequencedValues | 1,195 |
 | sequencedEntrySet | 1,235 |
@@ -5887,7 +1848,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | size | 1,087 |
 | isEmpty | 1,081 |
 | containsKey | 1,053 |
-| put | 62,003 |
+| put | 62,025 |
 | remove | 2,177 |
 | putAll | 1,079 |
 | hashCode | 1,042 |
@@ -5900,7 +1861,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | compute | 1,074 |
 | merge | 1,113 |
 | equals | 2,011 |
-| toString | 1,031 |
+| toString | 1,032 |
 
 </details>
 
@@ -5929,7 +1890,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | put | 15,764 |
 | putIfAbsent | 480 |
 | remove | 855 |
-| clear | 421 |
+| clear | 422 |
 | forEach | 1,678 |
 | replaceAll | 723 |
 | computeIfAbsent | 2,040 |
@@ -5942,7 +1903,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | navigableKeySet | 455 |
 | descendingKeySet | 388 |
 | descendingMap | 605 |
-| reversed | 460 |
+| reversed | 516 |
 | sequencedKeySet | 470 |
 | sequencedValues | 499 |
 | sequencedEntrySet | 517 |
@@ -5952,8 +1913,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | comparator | 409 |
 | firstKey | 358 |
 | lastKey | 401 |
-| firstEntry | 400 |
-| lastEntry | 387 |
+| firstEntry | 401 |
+| lastEntry | 388 |
 | pollFirstEntry | 379 |
 | pollLastEntry | 419 |
 | putFirst | 369 |
@@ -6160,23 +2121,23 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| sort | 3,437 |
-| reverse | 3,611 |
-| shuffle | 3,633 |
-| swap | 3,378 |
-| fill | 3,416 |
-| copy | 3,430 |
-| min | 30,536 |
-| max | 30,470 |
-| frequency | 15,278 |
-| disjoint | 15,389 |
-| binarySearch | 3,925 |
-| rotate | 3,472 |
-| nCopies | 5,981 |
-| addAll | 15,500 |
-| indexOfSubList | 3,477 |
-| lastIndexOfSubList | 3,462 |
-| replaceAll | 3,502 |
+| sort | 3,366 |
+| reverse | 3,533 |
+| shuffle | 3,566 |
+| swap | 3,321 |
+| fill | 3,361 |
+| copy | 3,369 |
+| min | 30,409 |
+| max | 30,319 |
+| frequency | 15,202 |
+| disjoint | 15,311 |
+| binarySearch | 4,498 |
+| rotate | 3,397 |
+| nCopies | 5,900 |
+| addAll | 15,410 |
+| indexOfSubList | 3,406 |
+| lastIndexOfSubList | 3,398 |
+| replaceAll | 3,422 |
 | reverseOrder | 9,826 |
 | emptyList | 4,471 |
 | emptySet | 2,320 |
@@ -6205,8 +2166,8 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | newSetFromMap | 479 |
 | newSequencedSetFromMap | 209 |
 | asLifoQueue | 484 |
-| enumeration | 32,282 |
-| list | 15,486 |
+| enumeration | 32,119 |
+| list | 15,395 |
 | checkedCollection | 120 |
 | checkedList | 118 |
 | checkedSet | 735 |
@@ -6250,7 +2211,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| filter | 24,821 |
+| filter | 24,735 |
 | map | 23,957 |
 | mapToInt | 6,847 |
 | mapToLong | 3,604 |
@@ -6264,7 +2225,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | mapMultiToLong | 5,749 |
 | mapMultiToDouble | 6,935 |
 | distinct | 6,756 |
-| sorted | 29,420 |
+| sorted | 29,337 |
 | peek | 8,661 |
 | limit | 22,223 |
 | skip | 9,437 |
@@ -6276,10 +2237,10 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | toArray | 9,014 |
 | reduce | 8,925 |
 | collect | 14,343 |
-| toList | 59,226 |
+| toList | 58,998 |
 | min | 3,193 |
 | max | 3,175 |
-| count | 19,672 |
+| count | 19,586 |
 | anyMatch | 4,340 |
 | allMatch | 3,719 |
 | noneMatch | 3,691 |
@@ -6287,7 +2248,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | findAny | 3,510 |
 | iterator | 7,097 |
 | spliterator | 3,563 |
-| isParallel | 19,448 |
+| isParallel | 19,370 |
 | sequential | 4,806 |
 | parallel | 3,966 |
 | unordered | 2,135 |
@@ -6493,7 +2454,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 |---|---:|
 | iterator | 14,148 |
 | spliterator | 29,593 |
-| isParallel | 27,262 |
+| isParallel | 27,184 |
 | sequential | 14,589 |
 | parallel | 12,538 |
 | unordered | 11,311 |
@@ -6838,14 +2799,14 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| tryAdvance | 18,953 |
-| forEachRemaining | 26,709 |
-| trySplit | 11,533 |
-| estimateSize | 7,097 |
-| getExactSizeIfKnown | 7,300 |
-| characteristics | 11,318 |
-| hasCharacteristics | 11,368 |
-| getComparator | 7,583 |
+| tryAdvance | 18,915 |
+| forEachRemaining | 26,663 |
+| trySplit | 11,511 |
+| estimateSize | 7,082 |
+| getExactSizeIfKnown | 7,274 |
+| characteristics | 11,300 |
+| hasCharacteristics | 11,341 |
+| getComparator | 7,563 |
 
 </details>
 
@@ -6857,7 +2818,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 | AbstractIntSpliterator | 1,849 |
 | AbstractLongSpliterator | 1,920 |
 | AbstractDoubleSpliterator | 1,909 |
-| emptySpliterator | 1,926 |
+| emptySpliterator | 1,927 |
 | emptyIntSpliterator | 1,946 |
 | emptyLongSpliterator | 1,898 |
 | emptyDoubleSpliterator | 1,942 |
@@ -6924,7 +2885,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 28,790 |
+| name | 30,420 |
 
 </details>
 
@@ -6940,7 +2901,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 82,592 |
+| name | 83,592 |
 
 </details>
 
@@ -6956,7 +2917,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 24,835 |
+| name | 24,816 |
 
 </details>
 
@@ -6964,7 +2925,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 21,794 |
+| name | 20,698 |
 
 </details>
 
@@ -6972,7 +2933,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 15,677 |
+| name | 15,829 |
 
 </details>
 
@@ -6980,7 +2941,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 220,555 |
+| name | 191,632 |
 
 </details>
 
@@ -6988,7 +2949,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 2,350 |
+| name | 2,356 |
 
 </details>
 
@@ -6996,7 +2957,7 @@ Every public member read from the declarations of `src/index.ts`, with the numbe
 
 | Member | Times compared |
 |---|---:|
-| name | 1,909 |
+| name | 1,969 |
 
 </details>
 
@@ -7015,16 +2976,19 @@ Views, iterators, wrappers and stream internals the harness received, with the p
 | CollectorImpl | Collector, Integrator | 5 |
 | Composite | Gatherer, Integrator, DefinedGatherer | 4 |
 | ConcatSpliterator | Integrator, Spliterator | 7 |
+| CopiesList | Collection, SequencedCollection, List, Integrator | 36 |
 | DelegatingSpliterator | Integrator, Spliterator | 7 |
 | DeqSpliterator | Integrator, Spliterator | 8 |
 | DescendingIterator | Iterator, Integrator | 4 |
 | DescendingItr | Iterator, Integrator | 4 |
 | DoublePipeline | DoubleStream, BaseStream, Integrator | 39 |
 | EmptyList | Collection, SequencedCollection, List, Integrator | 36 |
+| EmptyMap | Map, Integrator | 24 |
+| EmptySet | Collection, Set, Integrator | 21 |
 | EmptySpliterator | Integrator, Spliterator | 8 |
 | EntryIterator | Iterator, Integrator | 3 |
 | EntrySet | Collection, Set, Integrator | 21 |
-| EntrySetView | Collection, SequencedCollection, SequencedSet, Set, Integrator | 28 |
+| EntrySetView | Collection, SequencedCollection, SequencedSet, Set, Integrator | 27 |
 | GatherSink | Integrator, Downstream | 2 |
 | GathererImpl | Gatherer, Integrator, DefinedGatherer | 5 |
 | HashNode | MapEntry, Integrator | 2 |
@@ -7062,6 +3026,7 @@ Views, iterators, wrappers and stream internals the harness received, with the p
 | RefPipeline | Stream, BaseStream, Integrator | 43 |
 | ReverseListItr | Iterator, ListIterator, Integrator | 10 |
 | ReverseOrderLinkedListView | Collection, SequencedCollection, Queue, Deque, List, Integrator | 51 |
+| ReverseOrderListView | Collection, SequencedCollection, List, Integrator | 36 |
 | ReversedDeque | Collection, SequencedCollection, Queue, Deque, Integrator | 41 |
 | ReversedLinkedHashMap | SequencedMap, Map, Integrator | 34 |
 | ReversedLinkedHashSet | Collection, SequencedCollection, SequencedSet, Set, Integrator | 27 |
@@ -7070,10 +3035,12 @@ Views, iterators, wrappers and stream internals the harness received, with the p
 | SequencedKeyView | Collection, SequencedCollection, SequencedSet, Set, Integrator | 1 |
 | SequencedValuesView | Collection, SequencedCollection, Integrator | 1 |
 | SingletonList | Collection, SequencedCollection, List, Integrator | 36 |
+| SingletonMap | Map, Integrator | 24 |
+| SingletonSet | Collection, Set, Integrator | 21 |
 | SingletonSpliterator | Integrator, Spliterator | 8 |
 | SpliteratorIterator | Iterator, Integrator | 4 |
 | SubList | Collection, SequencedCollection, List, Integrator | 36 |
-| SubMap | SequencedMap, SortedMap, NavigableMap, Map, Integrator | 51 |
+| SubMap | SequencedMap, SortedMap, NavigableMap, Map, Integrator | 52 |
 | TreeIter | Iterator, Integrator | 4 |
 | TreeNode | MapEntry, Integrator | 3 |
 | UnmodifiableCollection | Collection, Integrator | 19 |
@@ -7090,6 +3057,6 @@ Views, iterators, wrappers and stream internals the harness received, with the p
 | UnmodifiableSortedMap | SequencedMap, SortedMap, NavigableMap, Map, Integrator | 40 |
 | ValueIterator | Iterator, Integrator | 3 |
 | Values | Collection, Integrator | 18 |
-| ValuesView | Collection, SequencedCollection, Integrator | 26 |
+| ValuesView | Collection, SequencedCollection, Integrator | 25 |
 | WrappingSpliterator | Integrator, Spliterator | 7 |
 

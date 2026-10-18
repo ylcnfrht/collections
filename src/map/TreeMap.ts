@@ -21,6 +21,19 @@ import { isEntry, isMap } from '../util/guards';
 import { equals, requireNonNull } from '../util/Objects';
 
 /**
+ * sequencedKeySet/Values/EntrySet as the reference's SequencedMap defaults: the plain view, except that
+ * add/addAll always throw UnsupportedOperationException and reversed() goes through the reversed map.
+ */
+function seqView<C extends SequencedCollection<unknown>>(view: C, reversed: () => C): C {
+  const w = Object.create(view) as C & { add: unknown; addAll: unknown };
+  w.add = w.addAll = () => {
+    throw new UnsupportedOperationException();
+  };
+  w.reversed = reversed;
+  return w;
+}
+
+/**
  * naturalCompare with fast paths for number/number and string/string; results are identical.
  * @internal
  */
@@ -749,7 +762,8 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
 
   override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
     requireNonNull(fn);
-    const n = this.getNode(key);
+    // as the reference, an empty map never compares the key before calling fn
+    const n = this.root === null ? null : this.getNode(key);
     if (n !== null && n.value !== null) return n.value;
     const mc = this.modCount;
     const v = fn(key);
@@ -772,7 +786,7 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
 
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
     requireNonNull(fn);
-    const n = this.getNode(key);
+    const n = this.root === null ? null : this.getNode(key);
     const mc = this.modCount;
     const v = fn(key, n === null ? null : n.value);
     if (this.modCount !== mc) throw new ConcurrentModificationException();
@@ -856,15 +870,15 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
   }
 
   sequencedKeySet(): NavigableSet<K> {
-    return this.navigableKeySet();
+    return seqView(this.navigableKeySet(), () => this.reversed().sequencedKeySet() as NavigableSet<K>);
   }
 
   sequencedValues(): SequencedCollection<V> {
-    return this.values();
+    return seqView(this.values(), () => this.reversed().sequencedValues());
   }
 
   sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
-    return this.entrySet();
+    return seqView(this.entrySet(), () => this.reversed().sequencedEntrySet());
   }
 
   headMap(toKey: K): SortedMap<K, V>;
@@ -1017,16 +1031,18 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
 
   // nested view: a new bound outside this view throws IllegalArgumentException; an absent one is inherited
   private sub(fromStart: boolean, lo: K | undefined, loInc: boolean, toEnd: boolean, hi: K | undefined, hiInc: boolean, desc: boolean): SubMap<K, V> {
+    // the reference checks the view's fromKey first, which is the absolute hi in a descending view
+    if (desc && !toEnd && !this.inRangeFor(hi, hiInc)) throw new IllegalArgumentException('fromKey out of range');
     if (fromStart) {
       fromStart = this.fromStart;
       lo = this.lo;
       loInc = this.loInc;
-    } else if (!this.inRangeFor(lo, loInc)) throw new IllegalArgumentException('fromKey out of range');
+    } else if (!this.inRangeFor(lo, loInc)) throw new IllegalArgumentException(desc ? 'toKey out of range' : 'fromKey out of range');
     if (toEnd) {
       toEnd = this.toEnd;
       hi = this.hi;
       hiInc = this.hiInc;
-    } else if (!this.inRangeFor(hi, hiInc)) throw new IllegalArgumentException('toKey out of range');
+    } else if (!desc && !this.inRangeFor(hi, hiInc)) throw new IllegalArgumentException('toKey out of range');
     return new SubMap(this.m, fromStart, lo, loInc, toEnd, hi, hiInc, desc);
   }
 
@@ -1159,11 +1175,11 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
     return this.m.putIfAbsent(key, value);
   }
 
+  // range views check the range first and leave the null checks to the backing map, as the reference
   override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
-    requireNonNull(fn);
     if (!this.inRange(key)) {
       // a null result stays a no-op, as with the Map default
-      const v = fn(key);
+      const v = requireNonNull(fn)(key);
       if (v === null || v === undefined) return null;
       throw new IllegalArgumentException('key out of range');
     }
@@ -1171,14 +1187,12 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
   }
 
   override computeIfPresent(key: K, fn: (key: K, value: V) => V | null | undefined): V | null {
-    requireNonNull(fn);
     return this.inRange(key) ? this.m.computeIfPresent(key, fn) : null;
   }
 
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
-    requireNonNull(fn);
     if (!this.inRange(key)) {
-      const v = fn(key, null);
+      const v = requireNonNull(fn)(key, null);
       if (v === null || v === undefined) return null;
       throw new IllegalArgumentException('key out of range');
     }
@@ -1186,8 +1200,6 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
   }
 
   override merge(key: K, value: V, fn: (oldValue: V, value: V) => V | null | undefined): V | null {
-    requireNonNull(fn);
-    requireNonNull(value);
     if (!this.inRange(key)) throw new IllegalArgumentException('key out of range');
     return this.m.merge(key, value, fn);
   }
@@ -1244,15 +1256,15 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
   }
 
   sequencedKeySet(): NavigableSet<K> {
-    return this.navigableKeySet();
+    return seqView(this.navigableKeySet(), () => this.reversed().sequencedKeySet() as NavigableSet<K>);
   }
 
   sequencedValues(): SequencedCollection<V> {
-    return this.values();
+    return seqView(this.values(), () => this.reversed().sequencedValues());
   }
 
   sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
-    return this.entrySet();
+    return seqView(this.entrySet(), () => this.reversed().sequencedEntrySet());
   }
 
   headMap(toKey: K): SortedMap<K, V>;

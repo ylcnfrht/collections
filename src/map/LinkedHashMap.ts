@@ -2,6 +2,7 @@ import { AbstractCollection } from '../abstract/AbstractCollection';
 import { AbstractMap, SimpleImmutableEntry } from '../abstract/AbstractMap';
 import { AbstractSet } from '../abstract/AbstractSet';
 import {
+  ClassCastException,
   ConcurrentModificationException,
   IllegalArgumentException,
   IllegalStateException,
@@ -41,6 +42,10 @@ function project<K, V>(kind: Kind, n: LinkedNode<K, V>): unknown {
   return kind === KEY ? n.key : kind === VALUE ? n.value : kind === ENTRY ? n : [n.key, n.value];
 }
 
+const PUT_NORM = 0;
+const PUT_FIRST = 1;
+const PUT_LAST = 2;
+
 /**
  * Hash map with a predictable iteration order: insertion order by default (re-putting a key keeps
  * its place), or access order when constructed with accessOrder = true (every get, put, compute or merge
@@ -55,6 +60,8 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
   readonly accessOrder: boolean;
   /** @internal evict the eldest entry while size exceeds this (set by lru()) */
   maxSize = Infinity;
+  /** where put() links a new node / moves an existing one: set only for the duration of putFirst/putLast */
+  private putMode = PUT_NORM;
   private lks: LinkedKeySet<K, V> | undefined;
   private lvs: LinkedValues<K, V> | undefined;
   private les: LinkedEntrySet<K, V> | undefined;
@@ -127,14 +134,19 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
 
   protected override afterNodeInsertion(node: HashNode<K, V>): void {
     // linked only now: hashing a self-containing key must not see the node yet
-    this.linkLast(node as LinkedNode<K, V>);
+    if (this.putMode === PUT_FIRST) this.linkFirst(node as LinkedNode<K, V>);
+    else this.linkLast(node as LinkedNode<K, V>);
     const h = this.head!;
     if (this.size() > this.maxSize || this.removeEldestEntry(h)) this.removeNode(h);
   }
 
   protected override afterNodeAccess(node: HashNode<K, V>): void {
-    if (this.accessOrder && this.tail !== node) {
+    const mode = this.putMode;
+    if ((mode === PUT_LAST || (mode === PUT_NORM && this.accessOrder)) && this.tail !== node) {
       this.moveToLast(node as LinkedNode<K, V>);
+      this.modCount++;
+    } else if (mode === PUT_FIRST && this.head !== node) {
+      this.moveToFirst(node as LinkedNode<K, V>);
       this.modCount++;
     }
   }
@@ -184,6 +196,10 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
 
   private moveToFirst(n: LinkedNode<K, V>): void {
     this.unlink(n);
+    this.linkFirst(n);
+  }
+
+  private linkFirst(n: LinkedNode<K, V>): void {
     const h = this.head;
     n.after = h;
     n.before = null;
@@ -296,22 +312,15 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return this.putAt(key, value, false);
   }
 
+  // As the reference: put() with the mode set, so a new node is linked at that end before
+  // removeEldestEntry sees the head (putFirst may thus evict the entry it just inserted).
   private putAt(key: K, value: V, first: boolean): V | null {
-    let n = this.getNode(key) as LinkedNode<K, V> | undefined;
-    let old: V | null = null;
-    if (n === undefined) {
-      this.put(key, value);
-      // removeEldestEntry may have evicted the new node itself
-      n = this.getNode(key) as LinkedNode<K, V> | undefined;
-      if (n === undefined) return null;
-    } else {
-      old = n.value;
-      n.value = value;
-      this.modCount++;
+    this.putMode = first ? PUT_FIRST : PUT_LAST;
+    try {
+      return this.put(key, value);
+    } finally {
+      this.putMode = PUT_NORM;
     }
-    if (first) this.moveToFirst(n);
-    else this.moveToLast(n);
-    return old;
   }
 }
 
@@ -517,6 +526,14 @@ class LinkedEntrySet<K, V> extends LinkedSetView<K, V, MapEntry<K, V>> {
     if (n === undefined) return false;
     this.map.removeNode(n);
     return true;
+  }
+  // the reference's typed addFirst/addLast cast the argument to an entry before refusing it
+  override addFirst(e: MapEntry<K, V>): void {
+    if (e != null && !isEntry(e)) throw new ClassCastException('not a map entry');
+    throw new UnsupportedOperationException();
+  }
+  override addLast(e: MapEntry<K, V>): void {
+    this.addFirst(e);
   }
 }
 

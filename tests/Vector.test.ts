@@ -90,13 +90,14 @@ describe('Vector · implementation', () => {
   });
 
   describe('clone', () => {
-    it('returns an independent Vector with the same capacity', () => {
+    // the reference copies only the elements: the clone starts with capacity == size, then doubles
+    it('returns an independent Vector whose capacity is its size', () => {
       const v = new Vector<number>(40);
       v.add(1);
       const c = v.clone();
       c.add(2);
       expect(c).toBeInstanceOf(Vector);
-      expect([v.toArray(), c.toArray(), c.capacity()]).toEqual([[1], [1, 2], 40]);
+      expect([v.toArray(), c.toArray(), v.capacity(), c.capacity()]).toEqual([[1], [1, 2], 40, 2]);
     });
     it('equals the original', () => {
       const v = Vector.of(new Point(1, 1));

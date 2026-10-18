@@ -1,4 +1,6 @@
-import { entryEquals, entryHash, entryToString, mapIterator, SimpleImmutableEntry } from './abstract/AbstractMap';
+import { AbstractList, subListRangeCheck } from './abstract/AbstractList';
+import { AbstractMap, entryEquals, entryHash, entryToString, mapIterator, SimpleImmutableEntry } from './abstract/AbstractMap';
+import { AbstractSet } from './abstract/AbstractSet';
 import {
   IllegalArgumentException,
   IllegalStateException,
@@ -7,14 +9,13 @@ import {
   UnsupportedOperationException,
 } from './exceptions';
 import {
-  buildMap,
-  buildSet,
   ImmutableCollectionBase,
   ImmutableList,
   ImmutableListBase,
   ImmutableMapBase,
-  ImmutableSetBase,
   lock,
+  removeWhere,
+  ReverseOrderListView,
   SEQUENCED_MUTATORS,
   uoe,
 } from './immutable/ImmutableCollections';
@@ -25,11 +26,11 @@ import { List } from './interfaces/List';
 import { Map, MapEntry, NavigableMap, SequencedMap, SortedMap } from './interfaces/Map';
 import { NavigableSet, SequencedSet, Set, SortedSet } from './interfaces/Set';
 import { SourceComparator, Spliterator } from './stream/Spliterator';
-import { SingletonSpliterator, Spliterators } from './stream/Spliterators';
+import { ArraySpliterator, SingletonSpliterator, Spliterators } from './stream/Spliterators';
 import { Comparator, naturalCompare, reverseOrder } from './util/Comparator';
 import { toArrayWith, WritableArrayLike } from './util/arrays';
-import { isRandomAccess, isSet, RANDOM_ACCESS, SET_BRAND } from './util/guards';
-import { checkPositionIndex, equals, requireNonNull } from './util/Objects';
+import { isList, isMap, isRandomAccess, isSet, RANDOM_ACCESS, SET_BRAND } from './util/guards';
+import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from './util/Objects';
 import {
   checkedCollection,
   checkedList,
@@ -95,7 +96,8 @@ export function shuffle(list: List<unknown>, rnd: RandomSource = Math.random): v
   requireNonNull(rnd);
   const f = typeof rnd === 'function' ? rnd : null;
   const pick = (bound: number) => (f !== null ? Math.floor(f() * bound) : (rnd as { nextInt(bound: number): number }).nextInt(bound));
-  if (isRandomAccess(list)) {
+  // the reference swaps in place below 5 elements (so a 0-1 element list is never written to)
+  if (list.size() < 5 || isRandomAccess(list)) {
     for (let i = list.size() - 1; i > 0; i--) {
       const j = pick(i + 1);
       list.set(i, list.set(j, list.get(i)));
@@ -286,9 +288,8 @@ export function rotate(list: List<unknown>, distance: number): void {
 /** Immutable list of n copies of o (o may be null). @throws IllegalArgumentException when n is negative or not an integer */
 export function nCopies<E>(n: number, o: E): List<E> {
   if (!(Number.isInteger(n) && n >= 0)) throw new IllegalArgumentException(`List length = ${n}`);
-  if (n === 0) return EMPTY_LIST; // SIZED|SUBSIZED spliterator, like the reference
-  // shortcut: materializes n slots (O(n) memory); switch to a computed list if huge counts show up
-  return new ImmutableList(new Array<E>(n).fill(o), o != null);
+  // the reference's CopiesList(0) behaves exactly like emptyList(), so the shared instance stands in for it
+  return n === 0 ? EMPTY_LIST : new CopiesList(n, o);
 }
 
 /** Adds every element; true if the collection changed. */
@@ -403,9 +404,45 @@ export function emptyEnumeration<E>(): Enumeration<E> {
 }
 
 // ---- empty and singleton collections (null elements allowed)
+// Each mirrors the reference class it stands for (an AbstractList/AbstractSet/AbstractMap subclass): the inherited
+// mutators fail only once they would change something (remove of an absent element returns false, clear() of an
+// empty one does nothing), and the reference's own overrides are copied method by method.
 
-/** emptyList(): iterators are the empty iterators, sort is a no-op. */
-class EmptyList<E> extends ImmutableList<E> {
+/** Iterator over one element; remove() is unsupported. */
+function singletonIterator<E>(e: E): Iterator<E> {
+  let hasNext = true;
+  return {
+    hasNext: () => hasNext,
+    next(): E {
+      if (!hasNext) throw new NoSuchElementException();
+      hasNext = false;
+      return e;
+    },
+    remove: uoe,
+    forEachRemaining(action: (e: E) => void): void {
+      requireNonNull(action);
+      if (hasNext) {
+        hasNext = false;
+        action(e);
+      }
+    },
+  };
+}
+
+/** emptyList(): iterators are the empty iterators; clear, sort, removeIf and replaceAll do nothing. */
+class EmptyList<E> extends AbstractList<E> {
+  get [RANDOM_ACCESS](): true {
+    return true;
+  }
+  size(): number {
+    return 0;
+  }
+  override isEmpty(): boolean {
+    return true;
+  }
+  get(index: number): E {
+    throw new IndexOutOfBoundsException(`Index: ${index}`);
+  }
   override iterator(): Iterator<E> {
     return EMPTY_ITERATOR;
   }
@@ -413,36 +450,331 @@ class EmptyList<E> extends ImmutableList<E> {
     checkPositionIndex(index, 0);
     return EMPTY_ITERATOR;
   }
+  override clear(): void {}
+  override contains(_o: unknown): boolean {
+    return false;
+  }
+  override containsAll(c: Collection<unknown>): boolean {
+    return requireNonNull(c).isEmpty();
+  }
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith([] as E[], generator as (length: number) => A) : [];
+  }
+  override equals(o: unknown): boolean {
+    return isList(o) && o.isEmpty();
+  }
+  override hashCode(): number {
+    return 1;
+  }
+  override removeIf(filter: (e: E) => boolean): boolean {
+    requireNonNull(filter);
+    return false;
+  }
+  override replaceAll(operator: (e: E) => E): void {
+    requireNonNull(operator);
+  }
   override sort(_c?: Comparator<E> | null): void {}
+  override forEach(action: (e: E) => void): void {
+    requireNonNull(action);
+  }
   /** SIZED|SUBSIZED, like the reference's emptyList(). */
   override spliterator(): Spliterator<E> {
     return Spliterators.emptySpliterator();
   }
-}
-
-/** singletonList(): reports the reference's singleton spliterator characteristics. */
-class SingletonList<E> extends ImmutableList<E> {
-  override spliterator(): Spliterator<E> {
-    return new SingletonSpliterator(this.es[0]);
+  override reversed(): List<E> {
+    return ReverseOrderListView.of(this, true);
   }
 }
 
-/** Shared immutable empty list, same instance as emptyList(). */
-export const EMPTY_LIST: List<never> = new EmptyList<never>([], true);
-/** Shared immutable empty set, same instance as emptySet(). */
-export const EMPTY_SET: Set<never> = Object.assign(buildSet<never>([], false, true), {
-  spliterator: (): Spliterator<never> => Spliterators.emptySpliterator(),
-});
-/** Shared immutable empty map, same instance as emptyMap(). */
-export const EMPTY_MAP: Map<never, never> = withViewSpliterators(buildMap<never, never>([], true), () => Spliterators.emptySpliterator(), () => Spliterators.emptySpliterator(), () => Spliterators.emptySpliterator());
-
-/** Replaces the spliterator of m's (cached) views: the reference's empty and singleton maps report their own. */
-function withViewSpliterators<K, V>(m: Map<K, V>, keys: () => Spliterator<K>, values: () => Spliterator<V>, entries: () => Spliterator<MapEntry<K, V>>): Map<K, V> {
-  Object.assign(m.keySet(), { spliterator: keys });
-  Object.assign(m.values(), { spliterator: values });
-  Object.assign(m.entrySet(), { spliterator: entries });
-  return m;
+/** singletonList(): removeIf/replaceAll always throw, sort does nothing. */
+class SingletonList<E> extends AbstractList<E> {
+  constructor(private readonly element: E) {
+    super();
+  }
+  get [RANDOM_ACCESS](): true {
+    return true;
+  }
+  size(): number {
+    return 1;
+  }
+  get(index: number): E {
+    if (index !== 0) throw new IndexOutOfBoundsException(`Index: ${index}, Size: 1`);
+    return this.element;
+  }
+  override iterator(): Iterator<E> {
+    return singletonIterator(this.element);
+  }
+  override contains(o: unknown): boolean {
+    return equals(o, this.element);
+  }
+  override forEach(action: (e: E) => void): void {
+    requireNonNull(action)(this.element);
+  }
+  override removeIf(_filter: (e: E) => boolean): boolean {
+    return uoe();
+  }
+  // AbstractCollection's iterator loops: they must not route through the removeIf above
+  override removeAll(c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    return removeWhere(this, (e) => c.contains(e));
+  }
+  override retainAll(c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    return removeWhere(this, (e) => !c.contains(e));
+  }
+  override replaceAll(_operator: (e: E) => E): void {
+    uoe();
+  }
+  override sort(_c?: Comparator<E> | null): void {}
+  override spliterator(): Spliterator<E> {
+    return new SingletonSpliterator(this.element);
+  }
+  override hashCode(): number {
+    return (31 + hashCode(this.element)) | 0;
+  }
+  override reversed(): List<E> {
+    return ReverseOrderListView.of(this, true);
+  }
 }
+
+/** nCopies(n, o): AbstractList's inherited mutators; subList is another copies list. */
+class CopiesList<E> extends AbstractList<E> {
+  constructor(private readonly n: number, private readonly element: E) {
+    super();
+  }
+  get [RANDOM_ACCESS](): true {
+    return true;
+  }
+  size(): number {
+    return this.n;
+  }
+  override contains(o: unknown): boolean {
+    return this.n !== 0 && equals(o, this.element);
+  }
+  override indexOf(o: unknown): number {
+    return this.contains(o) ? 0 : -1;
+  }
+  override lastIndexOf(o: unknown): number {
+    return this.contains(o) ? this.n - 1 : -1;
+  }
+  get(index: number): E {
+    checkIndex(index, this.n);
+    return this.element;
+  }
+  override forEach(action: (e: E) => void): void {
+    requireNonNull(action);
+    for (let i = 0; i < this.n; i++) action(this.element);
+  }
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    const a = new Array<E>(this.n).fill(this.element);
+    return arguments.length > 0 ? toArrayWith(a, generator as (length: number) => A) : a;
+  }
+  override subList(fromIndex: number, toIndex: number): List<E> {
+    subListRangeCheck(fromIndex, toIndex, this.n);
+    return new CopiesList(toIndex - fromIndex, this.element);
+  }
+  /** ORDERED|SIZED|SUBSIZED (SIZED|SUBSIZED when empty), what the reference's range-backed spliterator reports. */
+  override spliterator(): Spliterator<E> {
+    if (this.n === 0) return Spliterators.emptySpliterator();
+    return new ArraySpliterator(this.toArray(), 0, this.n, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+  }
+  override reversed(): List<E> {
+    return ReverseOrderListView.of(this, true);
+  }
+}
+
+/** emptySet(): clear and removeIf do nothing. */
+class EmptySet<E> extends AbstractSet<E> {
+  iterator(): Iterator<E> {
+    return EMPTY_ITERATOR;
+  }
+  size(): number {
+    return 0;
+  }
+  override isEmpty(): boolean {
+    return true;
+  }
+  override clear(): void {}
+  override contains(_o: unknown): boolean {
+    return false;
+  }
+  override containsAll(c: Collection<unknown>): boolean {
+    return requireNonNull(c).isEmpty();
+  }
+  override toArray(): E[];
+  override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
+  override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
+    return arguments.length > 0 ? toArrayWith([] as E[], generator as (length: number) => A) : [];
+  }
+  override forEach(action: (e: E) => void): void {
+    requireNonNull(action);
+  }
+  override removeIf(filter: (e: E) => boolean): boolean {
+    requireNonNull(filter);
+    return false;
+  }
+  override spliterator(): Spliterator<E> {
+    return Spliterators.emptySpliterator();
+  }
+  override hashCode(): number {
+    return 0;
+  }
+}
+
+/** singleton(o): removeIf always throws. */
+class SingletonSet<E> extends AbstractSet<E> {
+  constructor(private readonly element: E) {
+    super();
+  }
+  iterator(): Iterator<E> {
+    return singletonIterator(this.element);
+  }
+  size(): number {
+    return 1;
+  }
+  override contains(o: unknown): boolean {
+    return equals(o, this.element);
+  }
+  override forEach(action: (e: E) => void): void {
+    requireNonNull(action)(this.element);
+  }
+  override spliterator(): Spliterator<E> {
+    return new SingletonSpliterator(this.element);
+  }
+  override removeIf(_filter: (e: E) => boolean): boolean {
+    return uoe();
+  }
+  // AbstractSet.removeAll / AbstractCollection.retainAll, without the removeIf above
+  override removeAll(c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    if (this.size() > c.size()) {
+      let modified = false;
+      const it = c.iterator();
+      while (it.hasNext()) if (this.remove(it.next())) modified = true;
+      return modified;
+    }
+    return removeWhere(this, (e) => c.contains(e));
+  }
+  override retainAll(c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    return removeWhere(this, (e) => !c.contains(e));
+  }
+  override hashCode(): number {
+    return hashCode(this.element);
+  }
+}
+
+/** emptyMap(): the views are emptySet(); clear and replaceAll do nothing, the other mutating defaults throw. */
+class EmptyMap<K, V> extends AbstractMap<K, V> {
+  override size(): number {
+    return 0;
+  }
+  override isEmpty(): boolean {
+    return true;
+  }
+  override clear(): void {}
+  override containsKey(_key: unknown): boolean {
+    return false;
+  }
+  override containsValue(_value: unknown): boolean {
+    return false;
+  }
+  override get(_key: unknown): V | null {
+    return null;
+  }
+  override keySet(): Set<K> {
+    return EMPTY_SET;
+  }
+  override values(): Collection<V> {
+    return EMPTY_SET;
+  }
+  entrySet(): Set<MapEntry<K, V>> {
+    return EMPTY_SET;
+  }
+  override equals(o: unknown): boolean {
+    return isMap(o) && o.isEmpty();
+  }
+  override hashCode(): number {
+    return 0;
+  }
+  override getOrDefault(_key: unknown, defaultValue: V): V {
+    return defaultValue;
+  }
+  override remove(key: unknown): V | null;
+  override remove(key: unknown, value: unknown): boolean;
+  override remove(_key: unknown, _value?: unknown): V | null | boolean {
+    // remove(key, value) always throws; remove(key) finds nothing
+    return arguments.length >= 2 ? uoe() : null;
+  }
+  override forEach(action: (key: K, value: V) => void): void {
+    requireNonNull(action);
+  }
+  override replaceAll(fn: (key: K, value: V) => V): void {
+    requireNonNull(fn);
+  }
+}
+lock(EmptyMap, ['putIfAbsent', 'replace', 'computeIfAbsent', 'computeIfPresent', 'compute', 'merge']);
+
+/** singletonMap(k, v): views are singleton sets; remove(key, value), replace, replaceAll, compute* and merge always throw. */
+class SingletonMap<K, V> extends AbstractMap<K, V> {
+  private ks: Set<K> | undefined;
+  private vs: Collection<V> | undefined;
+  private ens: Set<MapEntry<K, V>> | undefined;
+  constructor(private readonly k: K, private readonly v: V) {
+    super();
+  }
+  override size(): number {
+    return 1;
+  }
+  override isEmpty(): boolean {
+    return false;
+  }
+  override containsKey(key: unknown): boolean {
+    return equals(key, this.k);
+  }
+  override containsValue(value: unknown): boolean {
+    return equals(value, this.v);
+  }
+  override get(key: unknown): V | null {
+    return equals(key, this.k) ? this.v : null;
+  }
+  override keySet(): Set<K> {
+    return (this.ks ??= new SingletonSet(this.k));
+  }
+  override values(): Collection<V> {
+    return (this.vs ??= new SingletonSet(this.v));
+  }
+  entrySet(): Set<MapEntry<K, V>> {
+    return (this.ens ??= new SingletonSet<MapEntry<K, V>>(new SimpleImmutableEntry(this.k, this.v)));
+  }
+  override getOrDefault(key: unknown, defaultValue: V): V {
+    return equals(key, this.k) ? this.v : defaultValue;
+  }
+  override forEach(action: (key: K, value: V) => void): void {
+    requireNonNull(action)(this.k, this.v);
+  }
+  override remove(key: unknown): V | null;
+  override remove(key: unknown, value: unknown): boolean;
+  override remove(key: unknown, value?: unknown): V | null | boolean {
+    // remove(key, value) always throws; remove(key) is AbstractMap's (throws only when the key is present)
+    return arguments.length >= 2 ? uoe() : super.remove(key);
+  }
+  override hashCode(): number {
+    return hashCode(this.k) ^ hashCode(this.v);
+  }
+}
+lock(SingletonMap, ['replaceAll', 'putIfAbsent', 'replace', 'computeIfAbsent', 'computeIfPresent', 'compute', 'merge']);
+
+/** Shared immutable empty list, same instance as emptyList(). */
+export const EMPTY_LIST: List<never> = new EmptyList<never>();
+/** Shared immutable empty set, same instance as emptySet(). */
+export const EMPTY_SET: Set<never> = new EmptySet<never>();
+/** Shared immutable empty map, same instance as emptyMap(). */
+export const EMPTY_MAP: Map<never, never> = new EmptyMap<never, never>();
 
 export function emptyList<E>(): List<E> {
   return EMPTY_LIST;
@@ -457,17 +789,15 @@ export function emptyMap<K, V>(): Map<K, V> {
 }
 
 export function singletonList<E>(o: E): List<E> {
-  return new SingletonList([o], o != null);
+  return new SingletonList(o);
 }
 
 export function singleton<E>(o: E): Set<E> {
-  return Object.assign(buildSet([o], false, false), { spliterator: (): Spliterator<E> => new SingletonSpliterator(o) });
+  return new SingletonSet(o);
 }
 
 export function singletonMap<K, V>(key: K, value: V): Map<K, V> {
-  const m = buildMap([new SimpleImmutableEntry(key, value)], false);
-  const entry = m.entrySet().iterator().next();
-  return withViewSpliterators(m, () => new SingletonSpliterator(key), () => new SingletonSpliterator(value), () => new SingletonSpliterator(entry));
+  return new SingletonMap(key, value);
 }
 
 // ---- unmodifiable views: read-through, every mutator throws UnsupportedOperationException
@@ -728,8 +1058,9 @@ class UnmodifiableList<E> extends ImmutableListBase<E> {
   override subList(fromIndex: number, toIndex: number): List<E> {
     return new UnmodifiableList(this.l.subList(fromIndex, toIndex));
   }
+  // List's default reversed(): a modifiable reverse view over this wrapper, so it fails only where the wrapper does
   override reversed(): List<E> {
-    return new UnmodifiableList(this.l.reversed());
+    return ReverseOrderListView.of(this, true);
   }
   override spliterator(): Spliterator<E> {
     return this.l.spliterator();
@@ -1042,23 +1373,23 @@ export function unmodifiableCollection<E>(c: Collection<E>): Collection<E> {
 
 export function unmodifiableSequencedCollection<E>(c: SequencedCollection<E>): SequencedCollection<E> {
   requireNonNull(c);
-  return c instanceof UnmodifiableSequencedCollection ? c : new UnmodifiableSequencedCollection(c);
+  return c.constructor === UnmodifiableSequencedCollection ? c : new UnmodifiableSequencedCollection(c);
 }
 
 export function unmodifiableList<E>(list: List<E>): List<E> {
   requireNonNull(list);
-  return list instanceof ImmutableListBase ? list : new UnmodifiableList(list);
+  return list.constructor === UnmodifiableList ? list : new UnmodifiableList(list);
 }
 
 export function unmodifiableSet<E>(s: Set<E>): Set<E> {
   requireNonNull(s);
-  return s instanceof ImmutableSetBase || s instanceof UnmodifiableSet ? s : new UnmodifiableSet(s);
+  return s.constructor === UnmodifiableSet ? s : new UnmodifiableSet(s);
 }
 
 /** Unmodifiable view with set equality; wrapping an unmodifiable sequenced (or sorted) set returns it. */
 export function unmodifiableSequencedSet<E>(s: SequencedSet<E>): SequencedSet<E> {
   requireNonNull(s);
-  return s instanceof UnmodifiableSequencedSet ? s : new UnmodifiableSequencedSet(s);
+  return s.constructor === UnmodifiableSequencedSet ? s : new UnmodifiableSequencedSet(s);
 }
 
 export function unmodifiableSortedSet<E>(s: SortedSet<E>): SortedSet<E> {
@@ -1073,13 +1404,13 @@ export function unmodifiableNavigableSet<E>(s: NavigableSet<E>): NavigableSet<E>
 
 export function unmodifiableMap<K, V>(m: Map<K, V>): Map<K, V> {
   requireNonNull(m);
-  return m instanceof ImmutableMapBase ? m : new UnmodifiableMap(m);
+  return m.constructor === UnmodifiableMap ? m : new UnmodifiableMap(m);
 }
 
 /** Unmodifiable view with map equality; wrapping an unmodifiable sequenced (or sorted) map returns it. */
 export function unmodifiableSequencedMap<K, V>(m: SequencedMap<K, V>): SequencedMap<K, V> {
   requireNonNull(m);
-  return m instanceof UnmodifiableSequencedMap ? m : new UnmodifiableSequencedMap(m);
+  return m.constructor === UnmodifiableSequencedMap ? m : new UnmodifiableSequencedMap(m);
 }
 
 export function unmodifiableSortedMap<K, V>(m: SortedMap<K, V>): SortedMap<K, V> {

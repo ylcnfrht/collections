@@ -122,3 +122,31 @@ describe('exceptions', () => {
     expect(String(new NoSuchElementException('m'))).toBe('NoSuchElementException: m');
   });
 });
+
+// every result below was verified on the reference (its null-friendly comparator composes)
+describe('Comparator · composing nullsFirst/nullsLast keeps handling nulls', () => {
+  const nl = Comparator.nullsLast<number>(naturalCompare as Comparator<number>);
+  it('thenComparing* never pass nulls on', () => {
+    const c1 = Comparator.thenComparingBy(nl, (x: number | null | undefined) => -(x as number));
+    expect([c1(null, null), c1(null, 1), c1(1, 2)]).toEqual([0, 1, -1]);
+    const c2 = Comparator.thenComparingDouble(
+      Comparator.thenComparingInt(nl, (x) => -(x as number)),
+      (x) => x as number
+    );
+    expect([c2(null, null), c2(2, null)]).toEqual([0, -1]);
+    const c3 = Comparator.thenComparing(Comparator.nullsFirst<number>(null), Comparator.reverseOrder<number | null | undefined>());
+    expect([c3(1, 2), c3(null, 2)]).toEqual([1, -1]);
+    const nn = Comparator.thenComparingBy(Comparator.nullsFirst(Comparator.nullsLast<number>()), (x: number | null | undefined) => -(x as number));
+    expect([nn(null, 1), nn(1, 1)]).toEqual([-1, 0]);
+  });
+  it('reversed() flips the null placement and reverses the inner comparator', () => {
+    const r = Comparator.reversed(nl);
+    expect([r(null, 1), r(1, 2), r(null, null)]).toEqual([-1, 1, 0]);
+    const r2 = Comparator.reversed(Comparator.thenComparingBy(nl, (x: number | null | undefined) => (x as number) % 2));
+    expect([r2(null, 1), r2(3, 2)]).toEqual([-1, -1]);
+    expect(stableSort([null, 3, null, 1], Comparator.reversed(Comparator.thenComparingBy(Comparator.nullsFirst<number>(), (x: number | null) => (x as number) * 2)))).toEqual([3, 1, null, null]);
+  });
+  it('Collections.reverseOrder-style reversal stays a plain reverse', () => {
+    expect(Comparator.reversed(Comparator.reversed(nl))(null, 1)).toBe(1);
+  });
+});

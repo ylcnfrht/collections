@@ -884,6 +884,10 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
     return new ReversedList(this.base).listIterator(index);
   }
 
+  override subList(fromIndex: number, toIndex: number): List<E> {
+    return new ReversedList(this.base).subList(fromIndex, toIndex);
+  }
+
   override [Symbol.iterator](): Generator<E> {
     const it = this.base.descendingIterator();
     const js: IterableIterator<E> = {

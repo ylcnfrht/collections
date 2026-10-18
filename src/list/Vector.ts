@@ -49,13 +49,25 @@ export class Vector<E> extends ArrayList<E> {
     return super.removeAt(index);
   }
 
+  override add(e: E): boolean;
+  override add(index: number, e: E): void;
+  override add(a: E | number, b?: E): boolean | void {
+    if (arguments.length >= 2) return super.add(a as number, b as E);
+    this.ensure(this.es.length + 1);
+    return super.add(a as E);
+  }
+
   protected override addAtIndex(index: number, e: E): void {
     if ((index >>> 0) !== index || index > this.es.length) aioobe(index, this.es.length);
+    this.ensure(this.es.length + 1);
     super.addAtIndex(index, e);
   }
 
   protected override addAllAt(index: number, c: Collection<E>): boolean {
     if ((index >>> 0) !== index || index > this.es.length) aioobe(index, this.es.length);
+    const n = requireNonNull(c).size();
+    // a bulk add grows once, to fit everything, like the reference
+    if (n > 0) this.ensure(this.es.length + n);
     return super.addAllAt(index, c);
   }
 
@@ -65,7 +77,7 @@ export class Vector<E> extends ArrayList<E> {
 
   override clone(): this {
     const c = super.clone() as Vector<E>;
-    c.cap = this.cap;
+    c.cap = this.es.length; // the reference copies only the elements, so a clone's capacity is its size
     (c as { capacityIncrement: number }).capacityIncrement = this.capacityIncrement;
     return c as this;
   }
@@ -76,7 +88,11 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   override ensureCapacity(minCapacity: number): void {
-    if (minCapacity > this.capacity()) this.grow(minCapacity);
+    this.ensure(minCapacity);
+  }
+
+  private ensure(minCapacity: number): void {
+    if (minCapacity > this.cap) this.grow(minCapacity);
   }
 
   override trimToSize(): void {
@@ -84,9 +100,6 @@ export class Vector<E> extends ArrayList<E> {
   }
 
   capacity(): number {
-    // shortcut: growth is replayed lazily one element at a time, which matches single adds
-    // exactly; a bulk addAll may report a different (still sufficient) capacity than the reference
-    while (this.cap < this.es.length) this.grow(this.cap + 1);
     return this.cap;
   }
 
@@ -115,6 +128,7 @@ export class Vector<E> extends ArrayList<E> {
     const a = this.es;
     if (!(newSize >= 0)) aioobe(newSize, a.length);
     this.modCount++;
+    this.ensure(newSize);
     if (newSize < a.length) a.length = newSize;
     else while (a.length < newSize) a.push(null as E);
   }

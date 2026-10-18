@@ -1,3 +1,4 @@
+import { SimpleImmutableEntry } from '../src/abstract/AbstractMap';
 import { MapEntry, SequencedMap } from '../src/interfaces/Map';
 import { HashMap } from '../src/map/HashMap';
 import { LinkedHashMap } from '../src/map/LinkedHashMap';
@@ -418,12 +419,61 @@ describe('LinkedHashMap · SequencedMap', () => {
     m.putLast(1, 'x');
     expectThrows(() => it.next(), 'ConcurrentModificationException');
   });
-  it('putFirst into an lru map evicts the eldest, not the new key', () => {
+  // verified on the reference: putFirst links the new entry at the front before removeEldestEntry
+  // sees the head, so a size-bounded map evicts the entry it just inserted
+  it('putFirst into a bounded map evicts the new key, as the reference', () => {
     const m = LinkedHashMap.lru<number, number>(2);
     m.put(1, 1);
     m.put(2, 2);
+    expect(m.putFirst(3, 3)).toBeNull();
+    expect(keys(m)).toEqual([1, 2]);
+  });
+  it('putFirst/putLast with a removeEldestEntry override, in both orders, as the reference', () => {
+    class Bounded<K, V> extends LinkedHashMap<K, V> {
+      constructor(private readonly n: number, accessOrder: boolean) {
+        super(16, 0.75, accessOrder);
+      }
+      protected override removeEldestEntry(): boolean {
+        return this.size() > this.n;
+      }
+    }
+    const m = new Bounded<number, number>(2, false);
+    m.put(1, 1);
+    m.put(2, 2);
     m.putFirst(3, 3);
-    expect(keys(m)).toEqual([3, 2]);
+    expect(m.toString()).toBe('{1=1, 2=2}');
+    m.putLast(4, 4);
+    expect(m.toString()).toBe('{2=2, 4=4}');
+    m.putFirst(2, 20);
+    expect(m.toString()).toBe('{2=20, 4=4}');
+    const a = new Bounded<number, number>(2, true);
+    a.put(1, 1);
+    a.put(2, 2);
+    a.putFirst(1, 10);
+    expect(a.toString()).toBe('{1=10, 2=2}');
+    a.put(3, 3);
+    expect(a.toString()).toBe('{2=2, 3=3}');
+    a.putFirst(5, 5);
+    expect(a.toString()).toBe('{2=2, 3=3}');
+    a.putLast(3, 30);
+    expect(a.toString()).toBe('{2=2, 3=30}');
+  });
+  it('entry-set addFirst/addLast cast the argument first, as the reference', () => {
+    // verified on the reference: a non-entry argument is a ClassCastException, an entry (or null) UnsupportedOperationException
+    const es = lhm(1).sequencedEntrySet() as unknown as { addFirst(x: unknown): void; addLast(x: unknown): void };
+    expectThrows(() => es.addFirst('bb=4'), 'ClassCastException');
+    expectThrows(() => es.addLast('bb=4'), 'ClassCastException');
+    expectThrows(() => es.addFirst(new SimpleImmutableEntry('bb', 4)), 'UnsupportedOperationException');
+    expectThrows(() => es.addLast(null), 'UnsupportedOperationException');
+  });
+  it('putFirst of the current head and putLast of the tail are not structural changes', () => {
+    const m = lhm(1, 2);
+    const it = m.keySet().iterator();
+    it.next();
+    m.putFirst(1, 5);
+    expect(it.next()).toBe(2);
+    m.putLast(2, 6);
+    expect(it.hasNext()).toBe(false);
   });
   it('sequenced views are the same live views as keySet/values/entrySet', () => {
     const m = lhm(1, 2);

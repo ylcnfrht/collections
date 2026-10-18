@@ -94,17 +94,6 @@ const RULES: { sig: RegExp; text?: RegExp; category: Assessment['category']; not
     note: 'LinkedHashMap.putFirst with a removeEldestEntry override: the reference moves the new entry to the front before asking removeEldestEntry, so it evicts the entry it just inserted; ours evicts the previous eldest.',
   },
   {
-    sig: /^(Vector|VectorCap|Stack) capacity result/,
-    category: 'intentional',
-    note: 'Vector with a capacityIncrement: the reference grows to max(needed, capacity + capacityIncrement) (capacity 5 with 9 elements needed becomes 9); ours replays the growth one element at a time for bulk adds, adding the increment repeatedly (5 becomes 11), and a bulk add followed by removals never records the growth at all (10 instead of 20). This is the documented shortcut in capacity() in src/list/Vector.ts: growth is replayed lazily, one element at a time.',
-  },
-  {
-    sig: /pipe:splwT result ref=value ours=value/,
-    text: /IMMUTABLE/,
-    category: 'library',
-    note: 'spliterator() of a Stream.of/concat/builder stream reports IMMUTABLE in ours; the reference does not.',
-  },
-  {
     sig: /^NCopies\/subList splw result ref=value ours=value/,
     category: 'library',
     note: 'spliterator() of Collections.nCopies(..).subList(..): the reference does not report ORDERED; ours does.',

@@ -87,7 +87,8 @@ class Builder<T, S> {
     const b = this.buf;
     if (b === null) throw new IllegalStateException();
     this.buf = null;
-    return ofArray(this.ctor, b);
+    // as the reference: 0-1 elements stream like of(..); more come from a buffer that is not IMMUTABLE
+    return b.length < 2 ? ofArray(this.ctor, b) : from(this.ctor, new ArraySpliterator(b, 0, b.length, ARRAY_FLAGS & ~Spliterator.IMMUTABLE));
   }
 }
 
