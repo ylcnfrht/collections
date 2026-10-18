@@ -7,6 +7,7 @@
 import { HashSet } from '../../set/HashSet';
 import { naturalCompare, stableSort } from '../../util/Comparator';
 import type { Comparator } from '../../util/Comparator';
+import { CompensatedSum } from '../../util/SummaryStatistics';
 import type { Downstream, Gatherer, Integrator } from '../Gatherer';
 
 /** Receives the elements of one traversal. size is the exact element count, or -1 if unknown. */
@@ -469,24 +470,13 @@ export class SumSink extends Sink<number> {
   }
 }
 
-/** Kahan-compensated sum plus a simple sum (the fallback when the compensated one turns NaN on infinities). */
+/** Compensated sum and count (average() of every number stream; sum() of DoubleStream). */
 export class DoubleSumSink extends Sink<number> {
-  sum = 0;
-  c = 0;
-  simple = 0;
+  readonly sum = new CompensatedSum();
   count = 0;
   accept(t: number): void {
     this.count++;
-    this.simple += t;
-    const y = t - this.c;
-    const s = this.sum;
-    const v = s + y;
-    this.c = v - s - y;
-    this.sum = v;
-  }
-  result(): number {
-    const r = this.sum - this.c;
-    return r !== r && (this.simple === Infinity || this.simple === -Infinity) ? this.simple : r;
+    this.sum.add(t);
   }
 }
 

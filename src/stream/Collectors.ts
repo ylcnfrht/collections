@@ -14,7 +14,7 @@ import { HashMap } from '../map/HashMap';
 import { HashSet } from '../set/HashSet';
 import type { Comparator } from '../util/Comparator';
 import { requireNonNull, toString } from '../util/Objects';
-import { DoubleSummaryStatistics, IntSummaryStatistics, LongSummaryStatistics } from '../util/SummaryStatistics';
+import { CompensatedSum, DoubleSummaryStatistics, IntSummaryStatistics, LongSummaryStatistics } from '../util/SummaryStatistics';
 import type { Collector as CollectorType, CollectorCharacteristics } from './Collector';
 import { Optional } from './Optional';
 import { closeAfterFailure } from './pipeline/Sink';
@@ -173,23 +173,6 @@ class Joiner {
 interface OptionalBox<T> {
   value: T;
   present: boolean;
-}
-
-// ---- compensated (Kahan) summation, laid out like the reference: [high, compensation, ..., simpleSum]
-
-function sumWithCompensation(a: number[], value: number): void {
-  const tmp = value - a[1];
-  const sum = a[0];
-  const velvel = sum + tmp;
-  a[1] = velvel - sum - tmp;
-  a[0] = velvel;
-}
-
-function computeFinalSum(a: number[]): number {
-  const tmp = a[0] - a[1];
-  const simpleSum = a[a.length - 1];
-  if (Number.isNaN(tmp) && (simpleSum === Infinity || simpleSum === -Infinity)) return simpleSum;
-  return tmp;
 }
 
 /**
@@ -371,17 +354,10 @@ function summingLong<T>(mapper: (t: T) => number): CollectorType<T, Hidden, numb
 /** Compensated (Kahan) summation, as the reference; an infinite plain sum wins over a NaN compensated one. */
 function summingDouble<T>(mapper: (t: T) => number): CollectorType<T, Hidden, number> {
   mapper = lazy(mapper);
-  // [high-order sum, compensation, simple sum]
-  return make<T, number[], number>(() => [0, 0, 0], (a, t) => {
-    const val = mapper(t);
-    sumWithCompensation(a, val);
-    a[2] += val;
-  }, (a, b) => {
-    sumWithCompensation(a, b[0]);
-    sumWithCompensation(a, -b[1]);
-    a[2] += b[2];
+  return make<T, CompensatedSum, number>(() => new CompensatedSum(), (a, t) => a.add(mapper(t)), (a, b) => {
+    a.addAll(b);
     return a;
-  }, computeFinalSum, CH_NOID) as CollectorType<T, Hidden, number>;
+  }, (a) => a.result(), CH_NOID) as CollectorType<T, Hidden, number>;
 }
 
 /** 0 when no elements. */
@@ -405,20 +381,7 @@ function averagingLong<T>(mapper: (t: T) => number): CollectorType<T, Hidden, nu
 
 /** Compensated summation, as the reference. 0 when no elements. */
 function averagingDouble<T>(mapper: (t: T) => number): CollectorType<T, Hidden, number> {
-  mapper = lazy(mapper);
-  // [high-order sum, compensation, count, simple sum]
-  return make<T, number[], number>(() => [0, 0, 0, 0], (a, t) => {
-    const val = mapper(t);
-    sumWithCompensation(a, val);
-    a[2]++;
-    a[3] += val;
-  }, (a, b) => {
-    sumWithCompensation(a, b[0]);
-    sumWithCompensation(a, -b[1]);
-    a[2] += b[2];
-    a[3] += b[3];
-    return a;
-  }, (a) => (a[2] === 0 ? 0 : computeFinalSum(a) / a[2]), CH_NOID) as CollectorType<T, Hidden, number>;
+  return collectingAndThen(summarizingDouble(mapper), (st) => st.getAverage()) as CollectorType<T, Hidden, number>;
 }
 
 function reducing<T>(op: (a: T, b: T) => T): CollectorType<T, Hidden, Optional<NonNullable<T>>>;
@@ -560,28 +523,24 @@ function toUnmodifiableMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: 
   return collectingAndThen(inner, (m) => ImmutableMap.copyOf(m));
 }
 
-function summarizingInt<T>(mapper: (t: T) => number): CollectorType<T, IntSummaryStatistics, IntSummaryStatistics> {
+function summarizing<T, S extends { accept(n: number): void; combine(o: S): void }>(stats: () => S, mapper: (t: T) => number): CollectorType<T, S, S> {
   mapper = lazy(mapper);
-  return makeId<T, IntSummaryStatistics>(() => new IntSummaryStatistics(), (r, t) => r.accept(mapper(t)), (l, r) => {
+  return makeId<T, S>(stats, (r, t) => r.accept(mapper(t)), (l, r) => {
     l.combine(r);
     return l;
   }, CH_ID);
+}
+
+function summarizingInt<T>(mapper: (t: T) => number): CollectorType<T, IntSummaryStatistics, IntSummaryStatistics> {
+  return summarizing(() => new IntSummaryStatistics(), mapper);
 }
 
 function summarizingLong<T>(mapper: (t: T) => number): CollectorType<T, LongSummaryStatistics, LongSummaryStatistics> {
-  mapper = lazy(mapper);
-  return makeId<T, LongSummaryStatistics>(() => new LongSummaryStatistics(), (r, t) => r.accept(mapper(t)), (l, r) => {
-    l.combine(r);
-    return l;
-  }, CH_ID);
+  return summarizing(() => new LongSummaryStatistics(), mapper);
 }
 
 function summarizingDouble<T>(mapper: (t: T) => number): CollectorType<T, DoubleSummaryStatistics, DoubleSummaryStatistics> {
-  mapper = lazy(mapper);
-  return makeId<T, DoubleSummaryStatistics>(() => new DoubleSummaryStatistics(), (r, t) => r.accept(mapper(t)), (l, r) => {
-    l.combine(r);
-    return l;
-  }, CH_ID);
+  return summarizing(() => new DoubleSummaryStatistics(), mapper);
 }
 
 /**

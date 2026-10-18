@@ -703,7 +703,7 @@ abstract class NumberPipeline extends AbstractPipeline<number> {
   }
 
   protected total(s: DoubleSumSink): number {
-    return s.simple;
+    return s.sum.simple;
   }
 
   protected collectStats<S extends { accept(n: number): void }>(stats: S): S {
@@ -773,10 +773,10 @@ export class DoublePipeline extends NumberPipeline implements DoubleStream {
   }
   /** Kahan-compensated. */
   override sum(): number {
-    return this.exec(this.open(), new DoubleSumSink(), false).result();
+    return this.exec(this.open(), new DoubleSumSink(), false).sum.result();
   }
   protected override total(s: DoubleSumSink): number {
-    return s.result();
+    return s.sum.result();
   }
   summaryStatistics(): DoubleSummaryStatistics {
     return this.collectStats(new DoubleSummaryStatistics());
