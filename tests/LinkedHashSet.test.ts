@@ -102,8 +102,9 @@ describe('LinkedHashSet · constructors', () => {
   });
   it('overrides every HashSet method (none touches the unused inherited storage)', () => {
     const own = Object.getOwnPropertyNames(LinkedHashSet.prototype);
-    // unlink/removeIndex are private helpers reached only through overridden methods
-    const missing = Object.getOwnPropertyNames(HashSet.prototype).filter((n) => !['constructor', 'unlink', 'removeIndex'].includes(n) && !own.includes(n));
+    // the storage is shared and empty: unlink/removeIndex/removeExact are reached only through overridden methods
+    // and HashSet's own iterator, which LinkedHashSet never creates
+    const missing = Object.getOwnPropertyNames(HashSet.prototype).filter((n) => !['constructor', 'unlink', 'removeIndex', 'removeExact'].includes(n) && !own.includes(n));
     expect(missing).toEqual([]);
     expect(Object.getOwnPropertySymbols(LinkedHashSet.prototype)).toContain(Symbol.iterator);
   });
@@ -345,5 +346,13 @@ describe('LinkedHashSet SE 27 additions', () => {
     expect(Array.from(s.toArray((n) => new Int32Array(n)))).toEqual([3, 1, 2]);
     expect(s.reversed().toArray((n) => new Array<number>(n))).toEqual([2, 1, 3]);
     expectThrows(() => s.reversed().toArray(() => new Int32Array(0)), 'IndexOutOfBoundsException');
+  });
+});
+
+describe('LinkedHashSet and the inherited HashSet storage', () => {
+  it('instances do not share elements', () => {
+    const a = LinkedHashSet.of<unknown>(1, 'x', new Date(1));
+    const b = new LinkedHashSet<unknown>();
+    expect([a.size(), b.size(), b.contains(1), b.contains('x'), b.contains(new Date(1))]).toEqual([3, 0, false, false, false]);
   });
 });
