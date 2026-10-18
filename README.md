@@ -6,18 +6,18 @@ equality through `equals()`/`hashCode()`, fail-fast iterators, live views, navig
 and lazy streams.
 
 ```ts
-import { ArrayList, HashMap, TreeMap, Collectors, Comparator } from 'ts-collections-framework';
+import { ArrayList, HashMap, TreeMap, Collectors, Comparator, List } from 'ts-collections-framework';
 
 const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
 
 const byLength = words.stream()
   .distinct()
-  .collect(Collectors.groupingBy((w) => w.length, () => new TreeMap(), Collectors.toList()));
-console.log(byLength.toString()); // {3=[fig], 4=[pear], 5=[apple]}
+  .collect(Collectors.groupingBy((w) => w.length, () => new TreeMap<number, List<string>>(), Collectors.toList()));
+console.log(byLength.toString()); // → {3=[fig], 4=[pear], 5=[apple]}
 
 const counts = new HashMap<string, number>();
 for (const w of words) counts.merge(w, 1, (a, b) => a + b);
-console.log(counts.get('apple')); // 2
+console.log(counts.get('apple')); // → 2
 
 words.sort(Comparator.comparing((w: string) => w.length));
 ```

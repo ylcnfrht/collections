@@ -1,0 +1,124 @@
+// Doctest: every ```ts block in docs/ and README.md runs against the library, and every
+// `console.log(...)` that carries a `// → expected` comment must print exactly that, in order.
+// Blocks fenced as ```ts nocheck are skipped (signatures, pseudo-code, intentionally failing code).
+import { readdirSync, readFileSync, statSync } from 'fs';
+import { join, relative } from 'path';
+import { inspect } from 'util';
+import * as ts from 'typescript';
+import * as lib from '../src';
+
+const ROOT = join(__dirname, '..');
+
+function markdownFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((f) => {
+    const p = join(dir, f);
+    if (statSync(p).isDirectory()) return markdownFiles(p);
+    return p.endsWith('.md') && !p.endsWith('COMPATIBILITY.md') ? [p] : [];
+  });
+}
+
+interface Block {
+  file: string;
+  line: number;
+  code: string;
+}
+
+function blocks(file: string): Block[] {
+  const out: Block[] = [];
+  const lines = readFileSync(file, 'utf8').split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^```(ts|typescript)\s*(.*)$/.exec(lines[i]);
+    if (!m) continue;
+    const start = i;
+    const body: string[] = [];
+    for (i++; i < lines.length && !lines[i].startsWith('```'); i++) body.push(lines[i]);
+    if (!/\bnocheck\b/.test(m[2])) out.push({ file, line: start + 1, code: body.join('\n') });
+  }
+  return out;
+}
+
+/** What console.log prints in a doc: strings as-is, collections via toString(), JS values via inspect. */
+function show(v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (v !== null && typeof v === 'object' && !Array.isArray(v) && v.toString !== Object.prototype.toString) return String(v);
+  return inspect(v, { depth: 4, breakLength: Infinity });
+}
+
+function expectations(code: string): string[] {
+  return code
+    .split('\n')
+    .map((l) => /console\.log\(.*\);?\s*\/\/\s*→\s?(.*)$/.exec(l))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => m[1].trimEnd());
+}
+
+function run(block: Block): string[] {
+  const js = ts.transpileModule(block.code, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
+  }).outputText;
+  const printed: string[] = [];
+  // same realm as the library, so arrays/Maps created in examples are the ones the library expects
+  const requireLib = (id: string) => {
+    if (id === 'ts-collections-framework') return lib;
+    throw new Error(`docs may only import 'ts-collections-framework' (got ${id})`);
+  };
+  const log = { log: (...a: unknown[]) => printed.push(a.map(show).join(' ')) };
+  const fn = new Function('require', 'exports', 'module', 'console', js + `\n//# sourceURL=${relative(ROOT, block.file)}:${block.line}`);
+  fn(requireLib, {}, { exports: {} }, log);
+  return printed;
+}
+
+const files = [join(ROOT, 'README.md'), ...markdownFiles(join(ROOT, 'docs'))];
+
+describe.each(files.map((f) => [relative(ROOT, f), f]))('%s', (_name, file) => {
+  const bs = blocks(file);
+  if (bs.length === 0) {
+    it('has no runnable examples', () => undefined);
+    return;
+  }
+  it.each(bs.map((b) => [b.line, b]))('example at line %i runs and prints what it claims', (_line, b) => {
+    const printed = run(b as Block);
+    const expected = expectations((b as Block).code);
+    // only lines carrying an expectation are compared; extra logs without one are allowed only if none expect
+    if (expected.length > 0) expect(printed).toEqual(expected);
+  });
+});
+
+describe('docs examples type-check', () => {
+  it('every runnable example compiles under strict mode', () => {
+    const all = files.flatMap(blocks);
+    const virtual = new Map<string, string>();
+    all.forEach((b, i) => virtual.set(join(ROOT, `__doc_${i}.ts`), `declare const console: { log(...a: unknown[]): void };\n${b.code}\nexport {};\n`));
+    const options: ts.CompilerOptions = {
+      strict: true,
+      noEmit: true,
+      target: ts.ScriptTarget.ES2022,
+      lib: ['lib.es2022.d.ts', 'lib.esnext.disposable.d.ts'],
+      module: ts.ModuleKind.CommonJS,
+      moduleResolution: ts.ModuleResolutionKind.Node10,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      types: [],
+      baseUrl: ROOT,
+      paths: { 'ts-collections-framework': ['src/index.ts'] },
+    };
+    const host = ts.createCompilerHost(options);
+    const read = host.readFile.bind(host);
+    const exists = host.fileExists.bind(host);
+    const getSource = host.getSourceFile.bind(host);
+    host.readFile = (f) => virtual.get(f) ?? read(f);
+    host.fileExists = (f) => virtual.has(f) || exists(f);
+    host.getSourceFile = (f, lang, ...rest) =>
+      virtual.has(f) ? ts.createSourceFile(f, virtual.get(f)!, lang) : getSource(f, lang, ...rest);
+    const program = ts.createProgram([...virtual.keys()], options, host);
+    const errors = ts
+      .getPreEmitDiagnostics(program)
+      .filter((d) => d.file && virtual.has(d.file.fileName))
+      .map((d) => {
+        const i = Number(/__doc_(\d+)/.exec(d.file!.fileName)![1]);
+        const { line } = d.file!.getLineAndCharacterOfPosition(d.start ?? 0);
+        return `${relative(ROOT, all[i].file)}:${all[i].line + line}: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`;
+      });
+    expect(errors).toEqual([]);
+  }, 120_000);
+});

@@ -1,0 +1,10 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "out": "docs-api",
+  "name": "ts-collections-framework",
+  "readme": "none",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "categorizeByGroup": true,
+  "sort": ["kind", "alphabetical"]
+}

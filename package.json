@@ -51,7 +51,8 @@
     "test:diff": "ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --count 20000 --batch 5000",
     "test:diff:proof": "ts-node --transpile-only -P tsconfig.test.json tools/differential/proof.ts --scripts 200000 --batch 5000",
     "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "docs:api": "typedoc"
   },
   "devDependencies": {
     "@datastructures-js/priority-queue": "6.4.0",
@@ -63,6 +64,7 @@
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "tsup": "8.5.1",
+    "typedoc": "0.28.20",
     "typescript": "^5.8.3"
   }
 }
