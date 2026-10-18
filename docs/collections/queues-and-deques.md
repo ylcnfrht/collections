@@ -165,7 +165,7 @@ flowchart LR
     s0 --> s1["slot 1: free (tail)"]
 ```
 
-On growth the array doubles and the shorter of the two wrapped segments is moved into the new half, so elements never need re-sorting and the copy is amortized O(1) per insert. The deque never shrinks; `clear()` empties it but keeps the capacity. `new ArrayDeque(n)` sizes the array for `n` elements up front (rounded up to a power of two) — useful when you know the peak size.
+On growth the array doubles and the shorter of the two wrapped segments is moved into the new half, so elements never need re-sorting and the copy is amortized O(1) per insert. The deque never shrinks; `clear()` empties it but keeps the capacity. `new ArrayDeque(n)` sizes the array for `n` elements up front (rounded up to a power of two, at most 2^25 slots; past that it grows on demand) — useful when you know the peak size.
 
 ### No nulls
 
