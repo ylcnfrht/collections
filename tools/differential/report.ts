@@ -55,7 +55,7 @@ export interface ReportInput {
 }
 
 const NORMALISATIONS: [string, string][] = [
-  ['`remove(int)` is `removeAt(index)`', 'TypeScript cannot tell remove(index) from remove(element) on a List<number>; the op `removeAt i` maps to the reference\'s remove(int).'],
+  ['`remove(int)` is `removeAt(index)`', 'TypeScript cannot tell remove(index) from remove(element) on a `List<number>`; the op `removeAt i` maps to the reference\'s remove(int).'],
   ['-0 and 0 print as 0; int catalogue functions add `+ 0`', 'int arithmetic has no -0 in the reference; JS numbers do. The double catalogue avoids producing -0, so DoubleStream.distinct (which keeps -0.0 and 0.0 apart) is not affected.'],
   ['Numbers print as integers or shortest round-trip digits (`25e-1`)', 'one JS number type versus the reference\'s int/long/double: values are compared, not their static type.'],
   ['Magnitudes >= 2^53-1 print as BIG', 'JS numbers are exact only up to 2^53; the empty LongSummaryStatistics min/max (64-bit limits) normalise to BIG.'],

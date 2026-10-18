@@ -63,19 +63,25 @@
     "test:diff:proof": "ts-node --transpile-only -P tsconfig.test.json tools/differential/proof.ts --scripts 200000 --batch 5000",
     "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
-    "docs:api": "typedoc"
+    "docs:api": "typedoc",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@datastructures-js/priority-queue": "6.4.0",
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
     "js-sdsl": "4.4.2",
+    "mermaid": "11.17.2",
     "mnemonist": "0.40.5",
     "tinybench": "6.2.0",
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "tsup": "8.5.1",
     "typedoc": "0.28.20",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitepress": "1.6.4",
+    "vitepress-plugin-mermaid": "2.0.17"
   }
 }
