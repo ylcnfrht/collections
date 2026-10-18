@@ -495,8 +495,9 @@ class AscendingIterator<E> implements Iterator<E> {
 
   next(): E {
     const d = this.d;
-    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
+    // exhausted first, as the reference: next() past the end is NoSuchElementException even after a change
     if (this.remaining <= 0) throw new NoSuchElementException();
+    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
     const a = d.elements;
     const i = this.cursor;
     this.lastRet = i;
@@ -538,8 +539,9 @@ class DescendingIterator<E> implements Iterator<E> {
 
   next(): E {
     const d = this.d;
-    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
+    // exhausted first, as the reference: next() past the end is NoSuchElementException even after a change
     if (this.remaining <= 0) throw new NoSuchElementException();
+    if (d.modCount !== this.expected) throw new ConcurrentModificationException();
     const a = d.elements;
     const i = this.cursor;
     this.lastRet = i;
