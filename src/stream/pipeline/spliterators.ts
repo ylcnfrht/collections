@@ -1,9 +1,8 @@
 // Source spliterators of the stream factories. Each also implements drainTo(), which pushes straight
 // into a sink without a per-element action closure: the engine's fast path.
-import { NoSuchElementException, UnsupportedOperationException } from '../../exceptions';
-import type { Iterator } from '../../interfaces/Iterator';
 import { requireNonNull } from '../../util/Objects';
 import { BaseSpliterator, Spliterator } from '../Spliterator';
+import { SpliteratorIterator } from '../Spliterators';
 import { Sink } from './Sink';
 
 const { ORDERED, SIZED, SUBSIZED, IMMUTABLE, NONNULL, DISTINCT, SORTED } = Spliterator;
@@ -330,35 +329,6 @@ export class DelegatingSpliterator<T> extends EngineSpliterator<T> {
 }
 
 /** Iterator (hasNext/next) over a spliterator; remove() is unsupported. */
-export class SpliteratorIterator<T> implements Iterator<T> {
-  private ready = false;
-  private value: T | undefined = undefined;
-  private readonly take = (t: T) => {
-    this.ready = true;
-    this.value = t;
-  };
-  constructor(private readonly sp: Spliterator<T>) {}
-  hasNext(): boolean {
-    if (!this.ready) this.sp.tryAdvance(this.take);
-    return this.ready;
-  }
-  next(): T {
-    if (!this.hasNext()) throw new NoSuchElementException();
-    this.ready = false;
-    const v = this.value as T;
-    this.value = undefined;
-    return v;
-  }
-  remove(): void {
-    throw new UnsupportedOperationException('remove');
-  }
-  forEachRemaining(action: (t: T) => void): void {
-    requireNonNull(action);
-    if (this.ready) action(this.next());
-    this.sp.forEachRemaining(action);
-  }
-}
-
 /** PrimitiveIterator of the number streams: nextInt / nextLong / nextDouble are next(). */
 export class NumberIterator extends SpliteratorIterator<number> {
   nextInt(): number {

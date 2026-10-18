@@ -45,7 +45,8 @@ import {
   SumSink,
   TakeWhileSink,
 } from './Sink';
-import { ArraySpliterator, DelegatingSpliterator, drain, JsIterator, NumberIterator, SpliteratorIterator } from './spliterators';
+import { SpliteratorIterator } from '../Spliterators';
+import { ArraySpliterator, DelegatingSpliterator, drain, JsIterator, NumberIterator } from './spliterators';
 
 const LINKED = 'stream has already been operated upon or closed';
 const { DISTINCT, SORTED, ORDERED, SIZED, SUBSIZED } = Spliterator;

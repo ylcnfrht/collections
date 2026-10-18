@@ -367,37 +367,33 @@ function isCollection(o: unknown): o is Collection<unknown> {
   return typeof (o as Collection<unknown>).iterator === 'function' && typeof (o as Collection<unknown>).size === 'function';
 }
 
-class SpliteratorIterator<T> implements Iterator<T> {
+/** Iterator over a spliterator (Spliterators.iterator, and every stream's iterator()). @internal */
+export class SpliteratorIterator<T> implements Iterator<T> {
   private ready = false;
-  private nextElement: T | undefined = undefined;
-  constructor(private readonly s: Spliterator<T>) {}
+  private value: T | undefined = undefined;
+  private readonly take = (t: T) => {
+    this.ready = true;
+    this.value = t;
+  };
+  constructor(private readonly sp: Spliterator<T>) {}
   hasNext(): boolean {
-    if (!this.ready)
-      this.s.tryAdvance((t) => {
-        this.ready = true;
-        this.nextElement = t;
-      });
+    if (!this.ready) this.sp.tryAdvance(this.take);
     return this.ready;
   }
   next(): T {
-    if (!this.ready && !this.hasNext()) throw new NoSuchElementException();
+    if (!this.hasNext()) throw new NoSuchElementException();
     this.ready = false;
-    const t = this.nextElement as T;
-    this.nextElement = undefined;
-    return t;
+    const v = this.value as T;
+    this.value = undefined;
+    return v;
   }
   remove(): void {
     throw new UnsupportedOperationException('remove');
   }
   forEachRemaining(action: (t: T) => void): void {
     requireNonNull(action);
-    if (this.ready) {
-      this.ready = false;
-      const t = this.nextElement as T;
-      this.nextElement = undefined;
-      action(t);
-    }
-    this.s.forEachRemaining(action);
+    if (this.ready) action(this.next());
+    this.sp.forEachRemaining(action);
   }
 }
 
