@@ -18,10 +18,33 @@ const byLength = words.stream().collect(
 console.log(byLength.toString()); // → {3=[fig], 4=[pear, kiwi], 5=[apple]}
 ```
 
+- [Why this library exists](#why-this-library-exists)
 - [Which page do I need?](#which-page-do-i-need)
 - [All pages](#all-pages)
 - [The interface hierarchy](#the-interface-hierarchy)
 - [API reference](#api-reference)
+
+## Why this library exists
+
+JS and TypeScript ship with exactly two collections: `Map` and `Set`. They are fast and well-built, but they stop
+there. They compare object keys by reference, so two equal `Point(1, 2)` keys are different keys. They have no
+sorted variants, no navigation (`floor`, `ceiling`, range views), no priority queue and no deque. And changing a
+collection while you iterate it fails silently instead of loudly.
+
+The npm ecosystem fills the gaps one data structure at a time: one package for a heap, another for a tree map, a
+third for an LRU cache. Each has its own API, its own idea of equality and its own level of testing. None of them
+adds up to a framework: a single, coherent set of interfaces that every implementation honours, so that a `List`
+is a `List` whichever class backs it.
+
+Other platforms solved this long ago. The best-known example is **Java's Collections Framework**, which for more
+than twenty-five years has given developers one vocabulary for lists, queues, sets, maps and streams, together with
+a precise specification of how each one behaves.
+
+**ts-collections-framework brings that framework to Node.js, JS and TypeScript.** Think of it as its direct
+equivalent: the same interfaces, the same classes and the same documented behaviour, adapted to TypeScript. It is
+built to production standards: every documented behaviour is tested, it is verified against the reference runtime
+on over 1.6 million compared operations ([how](./advanced/testing.md)), and it is tuned to match or beat native
+collections and the popular alternatives ([numbers](./advanced/performance.md)).
 
 ## Which page do I need?
 

@@ -5,6 +5,12 @@ The classic collections framework API — `ArrayList`, `LinkedList`, `HashMap`, 
 equality through `equals()`/`hashCode()`, fail-fast iterators, live views, navigable sorted collections
 and lazy streams.
 
+**Why:** the Node.js / JS / TypeScript world has no production-grade collections framework. `Map` and `Set` compare
+keys by reference and stop there, and npm offers one data structure per package, each with its own API and
+semantics. This library is the equivalent of **Java's Collections Framework** for TypeScript: the same interfaces,
+classes and documented behaviour, tested against every documented contract, verified against the reference runtime,
+and tuned for speed. [Read more](docs/README.md#why-this-library-exists).
+
 ```ts
 import { ArrayList, HashMap, TreeMap, Collectors, Comparator, List } from 'ts-collections-framework';
 
