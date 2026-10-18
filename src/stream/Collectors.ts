@@ -29,7 +29,8 @@ interface ClosableSource<U> {
 }
 
 type Chars = Set<CollectorCharacteristics>;
-// any: the container type the reference hides behind a wildcard; callers never touch it
+// any: the container type the reference hides behind a wildcard; callers never touch it. Not unknown: that would
+// stop concrete collectors (toList(): Collector<T, List<T>, List<T>>) from being passed as downstreams.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Hidden = any;
 
