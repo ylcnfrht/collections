@@ -48,7 +48,8 @@ describe('ArrayDeque · implementation', () => {
     it('hint NaN falls back to minimum', () => expect(cap(new ArrayDeque(NaN))).toBe(8));
     it.each([2 ** 30, 2 ** 31, Infinity])('huge hint %p is clamped, not rejected', (n) => {
       const d = new ArrayDeque<number>(n);
-      expect(cap(d)).toBe(2 ** 30);
+      // preallocation stops at 2^25 (beyond that V8 makes the array a slow dictionary); it grows on demand
+      expect(cap(d)).toBe(2 ** 25);
       d.addLast(1);
       d.addFirst(0);
       expect([d.toArray(), d.pollLast(), d.pollFirst(), d.isEmpty()]).toEqual([[0, 1], 1, 0, true]);

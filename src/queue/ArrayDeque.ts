@@ -24,9 +24,10 @@ const MAX_CAPACITY = 2 ** 30;
  */
 const FREE = 0;
 
-// holey preallocation: filling to keep it packed costs more than the hole checks it saves
+// holey preallocation: filling to keep it packed costs more than the hole checks it saves. From 2^26 slots on,
+// V8 makes a preallocated array a slow dictionary, so a bigger hint preallocates 2^25 and grows from there.
 function slots(n: number): unknown[] {
-  return new Array(n);
+  return new Array(Math.min(n, 2 ** 25));
 }
 
 /** Smallest power of two strictly greater than n (one slot always stays empty), at most MAX_CAPACITY. */
@@ -453,7 +454,9 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
   private grow(): void {
     const a = this.elements;
     const cap = a.length;
-    a.length = cap * 2;
+    // a length-extended array turns into a slow dictionary from 2^26 slots on: past that, push
+    if (cap * 2 < 2 ** 26) a.length = cap * 2;
+    else for (let i = 0; i < cap; i++) a.push(FREE);
     const h = this.head;
     if (h < cap - h) {
       for (let i = 0; i < h; i++) {
