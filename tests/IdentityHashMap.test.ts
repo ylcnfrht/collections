@@ -1,4 +1,5 @@
 import { SimpleEntry } from '../src/abstract/AbstractMap';
+import { ArrayList } from '../src/list/ArrayList';
 import { HashMap } from '../src/map/HashMap';
 import { IdentityHashMap } from '../src/map/IdentityHashMap';
 import { identityHashCode, hashCode } from '../src/util/Objects';
@@ -420,5 +421,18 @@ describe('IdentityHashMap · clone and compute', () => {
     const m = of(['a', 1]);
     expect(m.computeIfAbsent('b', () => (m.put('c', 3), 2))).toBe(2);
     expect(m.size()).toBe(3);
+  });
+});
+
+describe('IdentityHashMap keySet().removeAll', () => {
+  it('matches keys by c.contains whatever the sizes, as the reference', () => {
+    for (const n of [1, 3]) {
+      const m = new IdentityHashMap<Point, number>();
+      const p1 = new Point(1, 0);
+      m.put(p1, 1);
+      for (let i = 2; i <= n; i++) m.put(new Point(i, 0), i);
+      // an equal but distinct Point: ArrayList.contains matches it by equals
+      expect([m.keySet().removeAll(ArrayList.of(new Point(1, 0))), m.size()]).toEqual([true, n - 1]);
+    }
   });
 });

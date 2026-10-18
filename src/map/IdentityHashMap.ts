@@ -288,6 +288,14 @@ class KeySet<K, V> extends AbstractSet<K> {
   override clear(): void {
     this.map.clear();
   }
+  /**
+   * Always by c.contains over these keys, as the reference: the inherited version switches to this.remove (by
+   * identity) when this set is larger, so the result depended on the sizes.
+   */
+  override removeAll(c: Collection<unknown>): boolean {
+    requireNonNull(c);
+    return this.removeIf((k) => c.contains(k));
+  }
   /** Sum of the keys' identity hash codes (keys compare by reference). */
   override hashCode(): number {
     let h = 0;
