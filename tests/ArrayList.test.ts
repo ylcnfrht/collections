@@ -415,6 +415,23 @@ describe('ArrayList · implementation', () => {
       l.add(5);
       expectThrows(() => s.get(0), CME);
     });
+    it('subList removeIf is one pass over the root and keeps nested views in sync', () => {
+      const l = ArrayList.of(0, 1, 2, 3, 4, 5, 6, 7);
+      const outer = l.subList(1, 7);
+      const inner = outer.subList(1, 5);
+      const removeAt = jest.spyOn(l, 'removeAt');
+      expect(inner.removeIf((x) => x % 2 === 0)).toBe(true);
+      expect(removeAt).not.toHaveBeenCalled();
+      expect([l.toArray(), outer.toArray(), inner.toArray()]).toEqual([[0, 1, 3, 5, 6, 7], [1, 3, 5, 6], [3, 5]]);
+      expect(inner.removeIf(() => false)).toBe(false);
+      expect(() => inner.removeIf((x) => {
+        if (x === 5) throw new Error('boom');
+        return true;
+      })).toThrow('boom');
+      expect(l.toArray()).toEqual([0, 1, 3, 5, 6, 7]);
+      outer.retainAll(SimpleList.of(1, 6));
+      expect([l.toArray(), outer.size()]).toEqual([[0, 1, 6, 7], 2]);
+    });
     it('subList addAll at its middle', () => {
       const l = ArrayList.of(0, 1, 2, 3);
       l.subList(1, 3).addAll(1, SimpleList.of(7, 8));
