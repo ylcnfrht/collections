@@ -318,6 +318,32 @@ describe('LinkedHashMap · eviction', () => {
     expect(m.putLast('c', 3)).toBeNull();
     expect(m.isEmpty()).toBe(true);
   });
+  it('removeEldestEntry that removes the eldest itself (and returns true) leaves the map intact', () => {
+    class SelfEvict<K> extends LinkedHashMap<K, number> {
+      protected override removeEldestEntry(e: MapEntry<K, number>): boolean {
+        if (this.size() <= 3) return false;
+        this.remove(e.getKey());
+        return true;
+      }
+    }
+    for (const key of [(i: number) => `k${i}`, (i: number) => i, (i: number) => new Point(i, 0)]) {
+      const m = new SelfEvict<unknown>();
+      for (let i = 0; i < 6; i++) m.put(key(i), i);
+      expect([m.size(), m.values().toArray(), m.keySet().size()]).toEqual([3, [3, 4, 5], 3]);
+    }
+  });
+  it('removeEldestEntry that clears the map leaves it empty', () => {
+    class ClearAt3 extends LinkedHashMap<string, number> {
+      protected override removeEldestEntry(): boolean {
+        if (this.size() < 3) return false;
+        this.clear();
+        return true;
+      }
+    }
+    const m = new ClearAt3();
+    for (let i = 1; i <= 3; i++) m.put(`k${i}`, i);
+    expect([m.size(), m.toString(), m.get('k1')]).toEqual([0, '{}', null]);
+  });
   it('LRU model test against a reference cache', () => {
     const cap = 50;
     const m = LinkedHashMap.lru<number, number>(cap);
