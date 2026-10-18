@@ -49,6 +49,13 @@ export function jsIterator<T, R = T>(it: Iterator<T>, f?: (t: T) => R): Iterable
       const v = it.next();
       return { value: f === undefined ? (v as unknown as R) : f(v), done: false };
     },
+    // callers type these as Generator, so the rest of its protocol is there too
+    return(value?: unknown): IteratorResult<R> {
+      return { done: true, value };
+    },
+    throw(e?: unknown): IteratorResult<R> {
+      throw e;
+    },
     [Symbol.iterator]() {
       return this;
     },

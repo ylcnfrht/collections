@@ -16,6 +16,7 @@ import { Spliterator } from '../stream/Spliterator';
 import { IteratorSpliterator } from '../stream/Spliterators';
 import { Map, MapEntry, NavigableMap, SortedMap } from '../interfaces/Map';
 import { NavigableSet, SequencedSet, SortedSet } from '../interfaces/Set';
+import { jsIterator } from './HashMap';
 import { Comparator, naturalCompare } from '../util/Comparator';
 import { isEntry, isMap } from '../util/guards';
 import { INSPECT, equals, requireNonNull } from '../util/Objects';
@@ -199,23 +200,8 @@ export class TreeIter<T> implements Iterator<T> {
   }
 }
 
-/** JS iterator protocol over a cursor: a plain object, which is much faster than a generator. */
-function jsIter<T>(it: Iterator<T>): Generator<T> {
-  return {
-    next(): IteratorResult<T> {
-      return it.hasNext() ? { done: false, value: it.next() } : { done: true, value: undefined };
-    },
-    return(value?: unknown): IteratorResult<T> {
-      return { done: true, value };
-    },
-    throw(e?: unknown): IteratorResult<T> {
-      throw e;
-    },
-    [Symbol.iterator]() {
-      return this;
-    },
-  } as Generator<T>;
-}
+// typed as Generator to match the base signature
+const jsIter = <T>(it: Iterator<T>) => jsIterator(it) as unknown as Generator<T>;
 
 /** What the key/value/entry views need from TreeMap and its range views. @internal */
 export interface TreeBacked<K, V> extends NavigableMap<K, V> {
