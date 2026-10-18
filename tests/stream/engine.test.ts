@@ -1165,3 +1165,16 @@ describe('engine · sorted() on an already sorted stream', () => {
     expect(TreeSet.of(3, 1, 2).stream().sorted().toList().toArray()).toEqual([1, 2, 3]);
   });
 });
+
+describe('engine · toArray(generator) with a miscounted size', () => {
+  it('throws IllegalStateException like the reference instead of padding with null or overflowing', () => {
+    const partly = (s: Stream<number>) => {
+      const sp = s.spliterator();
+      sp.tryAdvance(() => undefined);
+      return StreamSupport.stream(sp, false);
+    };
+    const all = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    expect(() => partly(Stream.of(...all).limit(3)).toArray((n) => new Array<number>(n))).toThrow('End size 2 is less than fixed size 3');
+    expect(() => partly(Stream.of(...all).skip(2)).toArray((n) => new Array<number>(n))).toThrow('Accept exceeded fixed size of 5');
+  });
+});

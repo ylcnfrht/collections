@@ -349,6 +349,10 @@ export abstract class AbstractPipeline<T = any> {
     if (out !== null && out.length !== size) throw new IllegalStateException(`array length ${out.length} is not the stream size ${size}`);
     const a = this.exec(sp, new ArraySink<T>(), false).out;
     const n = a.length;
+    // a SIZED source that miscounted (or a partly used one): fail like the reference instead of padding or overflowing
+    if (size >= 0 && n !== size) {
+      throw new IllegalStateException(n < size ? `End size ${n} is less than fixed size ${size}` : `Accept exceeded fixed size of ${size}`);
+    }
     if (out === null) {
       out = requireNonNull(generator(n));
       if (out.length < n) throw new IndexOutOfBoundsException('does not fit');
