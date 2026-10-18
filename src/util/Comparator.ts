@@ -9,7 +9,8 @@ export interface Comparable<T> {
   compareTo(o: T): number;
 }
 
-function compareNumbers(a: number, b: number): number {
+/** naturalCompare for two numbers, without its type dispatch. @internal */
+export function compareNumbers(a: number, b: number): number {
   if (a < b) return -1;
   if (a > b) return 1;
   // NaN sorts last, like Double.compare; -0 and +0 stay equal to match equals()

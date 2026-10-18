@@ -11,21 +11,13 @@ import { Iterator, ListIterator } from '../interfaces/Iterator';
 import { Spliterator } from '../stream/Spliterator';
 import { OwnedArraySpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
-import { Comparator, naturalCompare, stableSort } from '../util/Comparator';
+import { Comparator, compareNumbers, naturalCompare, stableSort } from '../util/Comparator';
 import { isList, RANDOM_ACCESS } from '../util/guards';
 import { checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 
 // Kept out of line so the hot accessors stay small enough to inline.
 function outOfBounds(index: number, length: number): never {
   throw new IndexOutOfBoundsException(`Index ${index} out of bounds for length ${length}`);
-}
-
-// Same order as naturalCompare for numbers (NaN last, -0 == +0), without its type dispatch.
-function compareNumbers(a: number, b: number): number {
-  if (a < b) return -1;
-  if (a > b) return 1;
-  const an = a !== a;
-  return an === (b !== b) ? 0 : an ? 1 : -1;
 }
 
 /**
