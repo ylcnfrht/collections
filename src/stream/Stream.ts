@@ -10,6 +10,13 @@ import type { Gatherer } from './Gatherer';
 import type { Optional, OptionalDouble, OptionalInt, OptionalLong } from './Optional';
 import type { Spliterator } from './Spliterator';
 
+// so the published typings compile without lib esnext.disposable or @types/node (merges with theirs)
+declare global {
+  interface SymbolConstructor {
+    readonly dispose: unique symbol;
+  }
+}
+
 /**
  * Common stream behaviour. A stream may be operated on (an intermediate or terminal
  * operation invoked) only once; further use throws IllegalStateException.

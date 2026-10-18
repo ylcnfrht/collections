@@ -53,7 +53,7 @@
   },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:diff": "ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --count 20000 --batch 5000",
