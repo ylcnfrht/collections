@@ -313,7 +313,7 @@ These are immutable and cheap to create. Every mutator throws `UnsupportedOperat
 | `emptyList()`, `EMPTY_LIST` | `List<E>` | one shared instance; random access |
 | `emptySet()`, `EMPTY_SET` | `Set<E>` | one shared instance |
 | `emptyMap()`, `EMPTY_MAP` | `Map<K, V>` | one shared instance |
-| `emptySortedSet()`, `emptyNavigableSet()` | `SortedSet` / `NavigableSet` | shared; navigation methods return `null` |
+| `emptySortedSet()`, `emptyNavigableSet()` | `SortedSet` / `NavigableSet` | shared; `lower`/`floor`/`ceiling`/`higher` return `null`, `pollFirst`/`pollLast` throw `UnsupportedOperationException` |
 | `emptySortedMap()`, `emptyNavigableMap()` | `SortedMap` / `NavigableMap` | shared |
 | `singletonList(o)` | `List<E>` of one element | `o` may be `null` |
 | `singleton(o)` | `Set<E>` of one element | |
@@ -453,7 +453,7 @@ console.log(recent.reversed()); // → [c, b, a]
 - `synchronized*`: the same API as the wrapped collection, kept for code ported from the Java API.
 - `checked*`: views that check element types at runtime.
 
-They come in versions for `Collection`, `List`, `Set`, `SortedSet`, `NavigableSet`, `Queue`, `Map`, `SortedMap` and `NavigableMap`. They are documented with the immutable collections in [Immutable collections and wrappers](../collections/immutable-and-wrappers.md).
+`unmodifiable*` and `synchronized*` come in versions for `Collection`, `List`, `Set`, `SortedSet`, `NavigableSet`, `Map`, `SortedMap` and `NavigableMap`, plus `unmodifiableSequencedCollection`/`Set`/`Map`; `checked*` has the same set plus `checkedQueue`. They are documented with the immutable collections in [Immutable collections and wrappers](../collections/immutable-and-wrappers.md).
 
 ```ts
 import { ArrayList, Collections } from 'ts-collections-framework';

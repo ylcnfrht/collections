@@ -110,14 +110,14 @@ A sorted array with binary search **beats `TreeMap` for read-mostly data**: abou
 
 ```mermaid
 flowchart TD
-  K["key"] --> Q1{"non-negative int32, and the table would stay at least 25% full?"}
+  K["key"] --> Q1{"integer in 0..2^30-1, and the table would stay at least 25% full?"}
   Q1 -- yes --> D["dense array indexed by the key"]
   Q1 -- no --> Q2{"equality is SameValueZero? primitives, and objects without equals() that are not Dates"}
   Q2 -- yes --> N["native Map"]
   Q2 -- no --> B["bucket table keyed by hashCode(), each bucket a node or an array of colliding nodes"]
 ```
 
-Small integer keys (ids, indices, counters) never get hashed, so lookups are faster than the native `Map`. Strings and plain objects use the native `Map`, whose equality is exactly `Objects.equals` for those types. Only keys with an `equals()`/`hashCode()` method, and `Date`s, pay for a user-defined hash. `HashSet` uses the same layout. `LinkedHashMap` adds a doubly linked list through the nodes, so ordered iteration, `pollFirstEntry` and LRU moves are O(1).
+Small integer keys (ids, indices, counters) never get hashed, so lookups are faster than the native `Map`. Integers from 2^30 up skip the table altogether: they could never fit it, and since they are not V8 small integers, even probing it would take a slow path. Strings and plain objects use the native `Map`, whose equality is exactly `Objects.equals` for those types. Only keys with an `equals()`/`hashCode()` method, and `Date`s, pay for a user-defined hash. `HashSet` uses the same layout. `LinkedHashMap` adds a doubly linked list through the nodes, so ordered iteration, `pollFirstEntry` and LRU moves are O(1).
 
 **`ArrayDeque`: a power-of-two ring buffer.** `head` is the index of the first element and `tail` is the next free slot. Because the capacity is a power of two, wrapping is a bitmask (`(i + 1) & (cap - 1)`), not a modulo. Vacated slots are filled with a small integer rather than `undefined`, so a deque of numbers stays in V8's fast numeric elements kinds, and removed objects can still be garbage-collected. Removing from the middle shifts whichever side is shorter. `new ArrayDeque(n)` really preallocates, unlike the `ArrayList`/`HashMap` capacity hints, up to 2^25 slots: from 2^26 on V8 turns a preallocated array into a slow dictionary, so larger buffers grow by `push`.
 

@@ -254,7 +254,7 @@ try {
 
 ## Fail-fast iteration
 
-Every collection counts its *structural modifications* (adds and removes, not `set`). An iterator remembers the
+Every collection counts its *structural modifications* (adds and removes, not `set`; `ArrayList` and `Vector` also count `sort` and `replaceAll`, as the reference). An iterator remembers the
 count when it is created and checks it on every step. If someone else changed the collection in between, the next
 step throws `ConcurrentModificationException` instead of silently skipping or repeating elements. This applies to
 `for..of`, spread, `iterator()`, `forEach`, streams and views.
@@ -412,7 +412,7 @@ try { new Vector<number>().elementAt(3); } catch (e) {
 Mutating methods (`add`, `remove`, `put`, `set`, `clear`, …) are *optional operations*: a collection may refuse them
 by throwing `UnsupportedOperationException`. Two kinds of collection do:
 
-| | Immutable: `List.of`, `Set.of`, `Map.of`, `copyOf`, `Collections.emptyList()` … | Unmodifiable view: `Collections.unmodifiableList(x)` … |
+| | Immutable: `List.of`, `Set.of`, `Map.of`, `copyOf` … | Unmodifiable view: `Collections.unmodifiableList(x)` … |
 |---|---|---|
 | Can *you* change it through this reference? | No | No |
 | Can it change at all? | Never — it is a snapshot | Yes, when the backing collection `x` changes |

@@ -55,12 +55,13 @@ console.log(counts.get('apple')); // → 2
 
 ## Quality
 
-- **Tested:** over 9,700 tests at about 99% coverage. Every documentation example runs in the test suite.
+- **Tested:** over 10,000 tests at about 99% coverage. Every documentation example runs in the test suite.
 - **Verified against the JDK:** the same random operation scripts run on a real JDK and on this library. The latest
   run compared 1.69 million operations across every comparable public method and found
-  [0 differences](docs/advanced/testing.md).
+  [0 library differences](docs/advanced/testing.md) (the remaining ones are documented design choices or places
+  where the JDK breaks its own specification).
 - **Fast:** benchmarked against native `Map`/`Set`/`Array` and popular libraries. Highlights:
-  - integer-keyed `HashMap` is several times faster than native `Map`;
+  - `HashMap` with small integer keys (ids, indices) is several times faster than native `Map`;
   - stream pipelines beat native array chains.
 
   See [Performance](docs/advanced/performance.md).

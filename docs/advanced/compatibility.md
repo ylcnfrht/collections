@@ -77,15 +77,15 @@ console.log(closed); // → true
 
 ## Bulk removal when the test throws
 
-`removeIf`, `removeAll` and `retainAll` here make one pass over the storage. If the predicate (or `c.contains`) throws
-partway, what has already been removed can differ from the reference. Lists are never left with duplicated or lost
-survivors either way.
+`removeIf` follows the reference when the predicate throws or modifies the collection: `ArrayList` and `Vector`
+test every element first and remove nothing; `LinkedList` removes as it goes, so elements removed before the throw
+stay removed. Two views differ:
 
 | Call | Reference | Here |
 |---|---|---|
-| `ArrayList`/`Vector` `removeIf` | tests every element first, removes nothing on a throw | elements tested before the throw stay removed |
-| `subList(…).removeIf` on an array-backed list | partial removal (`Vector`) or none (`ArrayList`) | nothing removed |
-| `reversed().removeAll`/`retainAll` | removes through the view, testing in view order | one `removeIf` on the base, testing in base order, so a different subset is removed when `contains` throws |
+| `Vector.subList(…).removeIf` | removes as it goes | tests first, removes nothing on a throw (as `ArrayList.subList`) |
+| `reversed().removeAll`/`retainAll` | removes through the view, testing in view order | one `removeIf` on the base, testing in base order (linear instead of quadratic), so a different subset is removed when `contains` throws |
+| `Collections.sort`/`List.sort` with a comparator that throws | may leave the list partly sorted | leaves it unchanged |
 
 ## Stream differences
 
@@ -118,6 +118,8 @@ contract. In each case this library follows the documentation:
 |---|---|
 | `HashMap`/`HashSet` spliterators drop `SIZED` from `characteristics()` after traversal begins (also through `synchronizedSet`, `unmodifiableSet`, `checkedSet`) | characteristics must be stable; ours keeps `SIZED` |
 | The `ListIterator` of a `reversed()` list view (on `ArrayList`, `LinkedList`, `Vector`, `Stack`, `AbstractList` subclasses, and their `subList`s) accepts `set()`/`remove()` right after `add()` | `ListIterator` specifies `IllegalStateException` there; ours throws it |
+| `ArrayList.subList(…).replaceAll` does not check for a structural change of the list since the view was made | sublists are fail-fast; ours throws `ConcurrentModificationException` |
+| `reversed()` of an unmodifiable or synchronized sorted set/map uses a generic view: `add` of an element already present returns `true`, and `compute`/`merge` may run before the unsupported write is refused | ours refuses the write with `UnsupportedOperationException` up front and keeps set semantics |
 
 ```ts
 import { ArrayList } from 'ts-collections-framework';
@@ -163,7 +165,7 @@ Four layers, from documentation to the real runtime:
 flowchart LR
     doc["Reference API documentation"] --> audit["Doc audit: every interface and method checked"]
     doc --> conf["Black-box conformance suite written from the docs alone"]
-    audit --> unit["Unit and contract tests (over 9,000, about 99% coverage)"]
+    audit --> unit["Unit and contract tests (over 10,000, about 99% coverage)"]
     conf --> unit
     unit --> diff["Differential testing against a real reference runtime"]
     diff --> report["docs/COMPATIBILITY.md (generated)"]
@@ -171,7 +173,7 @@ flowchart LR
 
 1. **Doc audit.** Every interface and class is checked member by member against the Java API
    documentation: names, argument handling, return values, thrown exceptions.
-2. **Unit and contract tests.** Over 9,000 tests (about 99% line coverage), including shared contract suites run
+2. **Unit and contract tests.** Over 10,000 tests (about 99% line coverage), including shared contract suites run
    against every implementation of an interface (`tests/contracts`).
 3. **Conformance suite.** A black-box suite written from the documentation alone, without looking at the
    implementation (`tests/conformance`).
@@ -188,10 +190,10 @@ From the generated [compatibility report](../COMPATIBILITY.md):
 | | |
 |---|---|
 | Scripts | 200,000 (40 batches of 5,000) |
-| Operations compared | 1,693,921 |
+| Operations compared | 1,692,438 |
 | Comparable public API reached | 1,602 / 1,602 rows (100%) |
-| Excluded API rows | 107, each with a reason (JS-only members, APIs newer than the reference, identity hash codes, non-public members, abstract hooks) |
-| Divergent scripts | 58, in 22 signatures — **0 library bugs**: 9 intentional (documented design differences), 13 reference quirks |
+| Excluded API rows | 141, each with a reason (JS-only members, APIs newer than the reference, identity hash codes, non-public members, abstract hooks) |
+| Divergent scripts | 57, in 21 signatures — **0 library bugs**: 8 intentional (documented design differences), 13 reference quirks |
 
 Outputs are compared after documented *normalisations* — for example, hash-ordered collections are compared as
 sorted multisets because their iteration order is unspecified, numbers are compared by value (one JS number type

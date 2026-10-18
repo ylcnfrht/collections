@@ -237,7 +237,9 @@ console.log(DoubleStream.of(3, NaN, 1).sorted().toArray()); // → [ 1, 3, NaN ]
 
 Number streams have the `Stream` operations below (see [operations](operations.md) for the semantics) with
 number-typed functions; `sorted()` takes no comparator (ascending numeric order — sort boxed values with
-`boxed().sorted(cmp)` for anything else).
+`boxed().sorted(cmp)` for anything else; passing one from JS throws `IllegalArgumentException` rather than being
+ignored). The conversions differ per type, see the [conversion table](#converting-between-stream-types): an
+`IntStream` has no `mapToInt`, a `DoubleStream` no `asDoubleStream`, and so on. Number streams have no `gather`.
 
 | Group | Operations |
 |---|---|

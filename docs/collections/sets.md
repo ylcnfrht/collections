@@ -22,7 +22,7 @@ Three rules hold for every set in the package (and for every set you build on `A
 | Rule | What it means |
 | --- | --- |
 | **Uniqueness by `equals`** | `add(e)` returns `false` and changes nothing when an element `equals(e)` is already present. Hash sets find candidates by `hashCode()` first, tree sets by the comparator. |
-| **Value equality** | `a.equals(b)` is `true` when `b` is any `Set` of the same size containing every element of `a` — a `HashSet` equals a `TreeSet` with the same elements. Order never matters. |
+| **Value equality** | `a.equals(b)` is `true` when `b` is any `Set` of the same size and `a` contains every element of `b` — a `HashSet` equals a `TreeSet` with the same elements. Order never matters. (With a comparator that disagrees with `equals`, such as a case-insensitive `TreeSet`, the result can depend on which side you ask.) |
 | **`hashCode` = sum** | A set's `hashCode()` is the sum of its elements' hash codes, so equal sets have equal hashes whatever their implementation or order. |
 
 See [core concepts](../guide/core-concepts.md) for how `equals()`/`hashCode()` work for primitives, plain objects
@@ -366,7 +366,8 @@ console.log(mid.add(25), s.toString()); // → true [10, 20, 25, 30, 40, 50]
 ```
 
 A practical use: everything in a window, e.g. all usernames starting with a prefix. With a string `prefix`, the
-range `[prefix, prefix + '￿')` contains exactly the strings that start with it.
+range `[prefix, prefix + '￿')` contains the strings that start with it, unless the character after the prefix is
+U+FFFF itself (rare in practice).
 
 ```ts
 import { TreeSet } from 'ts-collections-framework';
@@ -438,8 +439,10 @@ console.log(a.containsAll(HashSet.of(1, 2)));        // → true
 console.log(Collections.disjoint(a, HashSet.of(9))); // → true
 ```
 
-The argument of `addAll`/`retainAll`/`removeAll` can be any collection — a list works too, and is checked with its
-own `contains()` (O(n) for a list, so prefer a set argument for large inputs).
+The argument of `addAll`/`retainAll`/`removeAll` can be any collection — a list works too. `retainAll`, and
+`removeAll` when the set is not larger than the argument, check membership with the argument's own `contains()`
+(O(n) for a list, so prefer a set argument for large inputs); a `removeAll` on a larger set walks the argument and
+removes each of its elements instead (as the reference).
 
 ## Pre-sized factories
 

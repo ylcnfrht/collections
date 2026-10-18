@@ -27,7 +27,7 @@ mutable collections.
 | `List.copyOf(collection)` | immutable list of the elements | returns the argument itself if it already is a `List.of`-style list |
 | `Set.of(a, b, …)` | set of the arguments | a duplicate argument throws `IllegalArgumentException` |
 | `Set.copyOf(collection)` | immutable set of the elements | duplicates are dropped silently |
-| `Map.of(k1, v1, k2, v2, …)` | map of the pairs | a duplicate key throws `IllegalArgumentException`; an odd argument count too |
+| `Map.of(k1, v1, k2, v2, …)` | map of the pairs | a duplicate key throws `IllegalArgumentException`; an odd argument count too. Typed overloads up to 10 pairs, as the reference; for more, `Map.ofEntries` keeps keys and values apart by type |
 | `Map.ofEntries(e1, e2, …)` | map of the entries | usually with `Map.entry(k, v)`; duplicate keys throw |
 | `Map.copyOf(map)` | immutable copy of a map | returns the argument itself if it already is a `Map.of`-style map |
 | `Map.entry(k, v)` | immutable entry | `setValue` throws |
@@ -63,7 +63,8 @@ These collections are deliberately strict, so mistakes surface at construction t
 - **No nulls.** A `null` or `undefined` element, key or value throws `NullPointerException` — also in `copyOf`.
 - **Null queries throw too.** Since a null can never be inside, `contains(null)`, `indexOf(null)`, `get(null)`,
   `containsKey(null)` and `containsValue(null)` throw `NullPointerException` rather than returning `false`/`null`.
-  (Unmodifiable *views* and `Collections.emptyList()` & co. answer such queries normally.)
+  (Unmodifiable *views* and `Collections.emptyList()` & co. answer such queries normally, except the sorted and
+  navigable empties, which reject `null` like a `TreeSet`/`TreeMap`.)
 - **No duplicates** in `Set.of` and in the keys of `Map.of`/`Map.ofEntries` (`IllegalArgumentException`).
 
 ```ts
@@ -154,7 +155,8 @@ console.log(attempt()); // → NoSuchElementException
 ## Empty, singleton and nCopies
 
 `Collections` has shared, unmodifiable collections for the trivial cases. Unlike `List.of`, these allow `null`
-elements and answer null queries normally.
+elements and answer null queries normally (except the sorted/navigable empties, which reject `null` like a
+`TreeSet`, as the reference).
 
 | Method | Result |
 | --- | --- |

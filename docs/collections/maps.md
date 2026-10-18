@@ -63,7 +63,7 @@ A callback returning `null` or `undefined` means "no mapping": the key is remove
 
 | Method | Does |
 | --- | --- |
-| `getOrDefault(k, d)` | value of `k`, or `d` if `k` is **absent** (a key mapped to `null` returns `null`) |
+| `getOrDefault(k, d)` | value of `k`, or `d` if `k` is **absent** (a key mapped to `null` returns `null`); `d` may be `null`, which types the result `V \| null` |
 | `putIfAbsent(k, v)` | puts `v` if `k` is absent or mapped to `null`; returns the current value (or `null`) |
 | `computeIfAbsent(k, f)` | if `k` is absent or `null`, stores `f(k)`; returns the (new or existing) value |
 | `computeIfPresent(k, f)` | if `k` has a non-null value, replaces it with `f(k, v)`, or removes `k` if `f` returns null |
@@ -141,7 +141,9 @@ console.log(counts.containsKey('m')); // → false
 The function you pass to `computeIfAbsent`, `computeIfPresent`, `compute` or `merge` must not add or remove keys of
 the same map. If it does, the method detects the structural change and throws `ConcurrentModificationException`
 rather than storing into a map whose layout changed under it (the change the callback made is not rolled back).
-The same rule applies to `forEach` and `replaceAll`, and to iterating any view.
+The same rule applies to `forEach` and `replaceAll`, and to iterating any view. `IdentityHashMap` does not check
+in these four methods (as the reference, whose versions are the plain defaults), so there a modifying callback
+goes unnoticed; the rule still applies.
 
 ```ts
 import { HashMap } from 'ts-collections-framework';

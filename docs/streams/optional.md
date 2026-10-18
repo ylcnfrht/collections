@@ -178,10 +178,11 @@ try {
 - An `Optional` never holds `null` or `undefined`: `of(null)` throws, `ofNullable(null)` and `map(() => null)` are
   empty.
 - `flatMap` must return an optional; returning `null` throws `NullPointerException`.
-- Function arguments (`map(null)`, `or(null)`, `filter(null)` …) throw `NullPointerException`, even on an empty
-  optional.
-- `orElse(null)` is allowed and returns `null` when empty — useful at the edge where you hand a value to code that
-  expects `null`.
+- Function arguments of `map`, `flatMap`, `filter`, `or` and `ifPresentOrElse` throw `NullPointerException` when
+  `null`, even on an empty optional; `ifPresent` and `orElseGet` check theirs only when they would call it (as the
+  reference).
+- `orElse(null)` is allowed and returns `null` when empty (typed `T | null`) — useful at the edge where you hand a
+  value to code that expects `null`. `orElseGet(() => null)` works the same way.
 - Stream terminals that return an `Optional` throw `NullPointerException` if the chosen element is `null`
   (`Stream.of(null).findFirst()`); filter nulls out first.
 

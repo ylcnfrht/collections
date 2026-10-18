@@ -436,4 +436,5 @@ console.log(got); // → [ 'A', 'B' ]
 | `UnsupportedOperationException` | modifying the list returned by `toList()` |
 | `IndexOutOfBoundsException` | `toArray(generator)` returned a too-short array for an unsized stream |
 
-Exceptions thrown by your lambdas propagate unchanged out of the terminal operation.
+Exceptions thrown by your lambdas propagate unchanged out of the terminal operation (except in
+`Gatherers.mapConcurrent`, which wraps errors that are not a `RuntimeException`, see [gatherers](gatherers.md)).

@@ -326,7 +326,7 @@ Ada and Cy have the same age, so stability keeps Ada before Cy. Building compara
 
 ### Fail-fast iteration
 
-Each list counts its *structural modifications* (changes in size). An iterator remembers that count when created and throws `ConcurrentModificationException` as soon as it notices the list was structurally changed by anything other than the iterator itself. This turns a subtle bug — skipping or repeating elements — into an immediate, loud error.
+Each list counts its *structural modifications*: adds and removes, plus `sort` and `replaceAll` on `ArrayList` and `Vector` (as the reference); `set` never counts. An iterator remembers that count when created and throws `ConcurrentModificationException` as soon as it notices the list was structurally changed by anything other than the iterator itself. This turns a subtle bug — skipping or repeating elements — into an immediate, loud error.
 
 ```ts
 import { ArrayList } from 'ts-collections-framework';
@@ -343,7 +343,7 @@ try {
 
 Fail-fast is a debugging aid, not a guarantee: it is "best effort" detection. `set()` is not a structural change and never trips it. The fix is to remove through the iterator, or with `removeIf` — see [remove while iterating](#remove-while-iterating).
 
-> The `for...of` iterator of `ArrayList` is slightly stricter than the cursor returned by `iterator()`: it fails as soon as the size changes, while `iterator()` reproduces the JDK exactly, including its well-known blind spot (removing the second-to-last element ends the loop silently instead of throwing). Either way, do not rely on the exception for correctness.
+> The `for...of` iterator of `ArrayList` is slightly stricter than the cursor returned by `iterator()`: it fails on the next step after any structural change, while `iterator()` reproduces the JDK exactly, including its well-known blind spot (removing the second-to-last element ends the loop silently instead of throwing). Either way, do not rely on the exception for correctness.
 
 ---
 
@@ -421,7 +421,7 @@ flowchart LR
 | `contains`, `indexOf`, `remove(o)` | O(n) | linear scan with `equals()` |
 | `addAll(c)` | O(m) | m = `c.size()` |
 | `addAll(i, c)` | O(n + m) | one shift, not m shifts |
-| `removeIf`, `removeAll`, `retainAll` | O(n) | single compacting pass (×cost of `contains` on the argument for `removeAll`/`retainAll`) |
+| `removeIf`, `removeAll`, `retainAll` | O(n) | tests every element, then compacts once, so a throwing predicate removes nothing (×cost of `contains` on the argument for `removeAll`/`retainAll`) |
 | `sort` | O(n log n) | stable |
 | `subList`, `reversed` | O(1) | live views, no copy |
 | `iterator().next()` | O(1) | |
@@ -507,6 +507,11 @@ LinkedList earns its keep when you insert or remove **at a position you are alre
 ## Vector
 
 `Vector<E>` is the legacy growable array. In this library it is an `ArrayList` subclass that adds the old element-style methods, a simulated capacity, and `ArrayIndexOutOfBoundsException` for bad indexes. JS is single-threaded, so there is no synchronization cost — and no synchronization benefit either. Use `Vector` when porting code that relies on its legacy methods; prefer `ArrayList` otherwise.
+
+Its fail-fast counting follows the reference's `Vector` exactly, including its quirks: `remove(o)` of an element
+that is not there, `removeAt` with a bad index, and `add` at a negative index all count as a change (open iterators
+then throw), while `add` past the end does not. Sublists of a stale `Vector` sublist start fresh, as in the
+reference; on an `ArrayList` they are stale too.
 
 ### Legacy methods
 

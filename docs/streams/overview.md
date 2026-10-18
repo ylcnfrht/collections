@@ -190,12 +190,14 @@ console.log(Stream.iterate(1, (x) => x + 1).anyMatch((x) => x > 100)); // → tr
 ```
 
 A non-short-circuiting terminal (`count`, `toList`, `forEach`, `collect`, …) on an infinite stream never returns,
-and neither does `sorted()` or `distinct()` before `limit`: put the `limit` first.
+and neither does `sorted()` before `limit` (it has to see every element): put the `limit` first. `distinct()`
+before `limit` is fine as long as the source keeps producing new values.
 
 ## Single use
 
 A stream is a one-shot pipeline, not a collection. Once an operation has been called on a stream object
-(intermediate or terminal), using that same object again throws `IllegalStateException`. To traverse the data
+(intermediate or terminal), using that same object again throws `IllegalStateException` (`close()`,
+`isParallel()`, `parallel()` and `sequential()` excepted). To traverse the data
 twice, create a new stream from the source each time (a `() => Stream` function is a handy "reusable stream").
 
 ```ts
@@ -306,7 +308,7 @@ console.log(Stream.of(4, 5, 6).parallel().findAny()); // → Optional[4]
 
 Streams over in-memory data need no cleanup. When a stream owns a resource, register cleanup with
 `onClose(handler)`; `close()` runs the handlers in registration order, once. A terminal operation does **not**
-close the stream. If a handler throws, the rest still run and the first error is rethrown (later ones are added
+close the stream; JS iteration does (see [Iterating a stream from JS](#iterating-a-stream-from-js)). If a handler throws, the rest still run and the first error is rethrown (later ones are added
 as suppressed).
 
 ```ts
@@ -348,8 +350,11 @@ has been consumed (see [operations](operations.md#flatmap)).
 ## Iterating a stream from JS
 
 Streams are JS iterables: `for…of`, spread and destructuring consume them like `iterator()` does (a terminal
-operation, so the stream is used up afterwards). `iterator()` returns the library's `Iterator`
-(`hasNext()`/`next()`).
+operation, so the stream is used up afterwards). Unlike `iterator()`, JS iteration also **closes** the stream (runs
+its `onClose` handlers, and closes a `Stream.from` generator) when it ends: by exhaustion, `break`, or a throw,
+including a throw from a stage. `iterator()` returns the library's `Iterator` (`hasNext()`/`next()`); with it, a
+stage that throws leaves the source open and reading can go on, as in the reference, so close the stream yourself
+(`close()` or `using`).
 
 ```ts
 import { Stream } from 'ts-collections-framework';

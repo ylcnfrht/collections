@@ -123,7 +123,7 @@ try {
 | `IntStream.range(…)` | `ORDERED`, `SIZED`, `SUBSIZED`, `IMMUTABLE`, `NONNULL`, `DISTINCT`, `SORTED` |
 | `Stream.iterate(…)` | `ORDERED`, `IMMUTABLE` (unknown size) |
 | `Stream.generate(…)` | `IMMUTABLE` (unknown size) |
-| `Stream.from(jsIterable)` | `ORDERED` (unknown size) |
+| `Stream.from(jsIterable)` | `ORDERED` (unknown size); a JS array is read like `Stream.ofArray` (`ORDERED`, `SIZED`, `SUBSIZED`, `IMMUTABLE`), and a library collection through its own spliterator |
 
 Collection spliterators are **late-binding** and **fail-fast**: they bind to the collection when traversal
 starts, so changes made after `stream()` but before the terminal operation are seen; structural changes *during*

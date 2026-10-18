@@ -106,7 +106,7 @@ queues (first in, first out) and stacks (last in, first out).
 slot; both wrap around the end, so nothing ever shifts. When the ring fills up, it doubles.
 
 ```text
- after addLast('b'), addFirst('a'), push('top')
+ new ArrayDeque(7) (8 slots), then addLast('b'), addFirst('a'), push('top')
 
  slot:     0       1       2       3       4       5       6       7
         ┌───────┬───────┬───────┬───────┬───────┬───────┬───────┬───────┐

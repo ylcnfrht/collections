@@ -8,7 +8,7 @@ The library claims to behave like the Java Collections Framework, down to which 
 - **Differential testing** runs hundreds of thousands of random scripts on the JDK and on this library, and compares every step.
 - **Doctests** run every example in these docs.
 
-The suite has about 10,000 tests and covers about 99% of lines. This page explains each layer for users who want to know how far to trust the library, and for contributors who want to extend it.
+The suite has about 10,200 tests and covers about 99% of lines. This page explains each layer for users who want to know how far to trust the library, and for contributors who want to extend it.
 
 **Contents**
 
@@ -74,16 +74,18 @@ dequeContract('LinkedList', () => new LinkedList(), { allowsNull: true });
 listContract('LinkedList.reversed()', () => new LinkedList().reversed());
 ```
 
-| Contract | Tests | Options |
-| --- | ---: | --- |
-| `collectionContract` | 112 | `allowsNull`, `allowsDuplicates`, `requiresComparable` |
-| `listContract` | 180 | — |
-| `setContract` | 49 | `skipScale` |
-| `navigableSetContract` | 75 | takes a factory that accepts a comparator |
-| `queueContract` | 31 | `fifo` |
-| `dequeContract` | 51 | `allowsNull` |
-| `mapContract` | 105 | `allowsNullKey`, `allowsNullValue`, `requiresComparableKeys`, `skipScale`, ... |
-| `navigableMapContract` | 59 | takes a factory that accepts a comparator |
+| Contract | Options |
+| --- | --- |
+| `collectionContract` | `allowsNull`, `allowsDuplicates`, `requiresComparable` |
+| `listContract` | — |
+| `setContract` | `skipScale` |
+| `navigableSetContract` | takes a factory that accepts a comparator |
+| `queueContract` | `fifo`, `iteratorRemoveIf` |
+| `dequeContract` | `allowsNull`, `iteratorRemoveIf` |
+| `mapContract` | `allowsNullKey`, `allowsNullValue`, `requiresComparableKeys`, `skipScale`, ... |
+| `navigableMapContract` | takes a factory that accepts a comparator |
+
+Each contract runs from about 30 (`queueContract`) to about 190 (`listContract`) tests per implementation.
 
 The contracts cover more than the happy path:
 
@@ -210,12 +212,12 @@ You need the JDK, version 23 or newer, on `PATH`. Without it, every entry point 
 | --- | --- |
 | Reference runtime | version 23.0.2 |
 | Scripts | 200,000 (seeds 1..40, 40 batches of 5,000) |
-| Operations compared | 1,693,921 |
+| Operations compared | 1,692,438 |
 | Comparable API covered | 1,602 / 1,602 (100.0%) |
-| Excluded API rows (each justified) | 107 |
-| Divergent scripts | 58, in 22 signatures |
-| Assessment | 9 intentional, 13 reference-quirk, **0 library** |
-| Run time | 37 s on 8 worker processes |
+| Excluded API rows (each justified) | 141 |
+| Divergent scripts | 57, in 21 signatures |
+| Assessment | 8 intentional, 13 reference-quirk, **0 library** |
+| Run time | 61 s on 8 worker processes |
 
 So every divergence found in 1.7 million compared operations is either a documented design choice, or a case where the reference breaks its own specification. Some examples:
 
