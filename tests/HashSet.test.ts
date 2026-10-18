@@ -1,3 +1,4 @@
+import { HashMap } from '../src/map/HashMap';
 import { HashSet } from '../src/set/HashSet';
 import { TreeSet } from '../src/set/TreeSet';
 import { collectionContract } from './contracts/collection';
@@ -415,5 +416,24 @@ describe('HashSet dense integer table', () => {
     expect(m.ints.length).toBeLessThanOrEqual(1024 + 4);
     m.add(5);
     expect([m.size(), m.contains(5)]).toEqual([2, true]);
+  });
+});
+
+describe('integer keys around the dense-table limit (2^30) and beyond 32 bits', () => {
+  const keys = [0, 1, 2 ** 30 - 1, 2 ** 30, 2 ** 31 - 1, 2 ** 31, 2 ** 32 - 1, 2 ** 32, 2 ** 53 - 1, -1, -(2 ** 31)];
+  it('HashSet and HashMap store, find, iterate and remove them', () => {
+    const s = new HashSet<number>();
+    const m = new HashMap<number, number>();
+    for (const k of keys) {
+      s.add(k);
+      m.put(k, k + 1);
+    }
+    expect([s.size(), m.size(), keys.every((k) => s.contains(k) && m.get(k) === k + 1)]).toEqual([keys.length, keys.length, true]);
+    expect([...s].sort((a, b) => a - b)).toEqual([...keys].sort((a, b) => a - b));
+    for (const k of keys.slice(0, 6)) {
+      s.remove(k);
+      m.remove(k);
+    }
+    expect([s.size(), m.size(), s.contains(2 ** 30), m.containsKey(2 ** 32)]).toEqual([5, 5, false, true]);
   });
 });

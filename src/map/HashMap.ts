@@ -25,9 +25,12 @@ export function isPlainKey(k: unknown): boolean {
   return (typeof k !== 'object' && typeof k !== 'function') || k === null || (typeof (k as { equals?: unknown }).equals !== 'function' && !(k instanceof Date));
 }
 
-/** Non-negative int32 keys (and -0) that may live in the dense index table. */
+/**
+ * Non-negative integer keys below 2^30 (and -0) that may live in the dense index table. Larger ones never fit it
+ * (fitsIndexTable), and they are not V8 small integers, so even probing the table with one takes a slow path.
+ */
 export function isIndexKey(k: unknown): k is number {
-  return typeof k === 'number' && k >>> 0 === k;
+  return typeof k === 'number' && (k & 0x3fffffff) === k;
 }
 
 /** Index keys go to the dense table only while it stays at least ~25% full; others use the native Map. */
