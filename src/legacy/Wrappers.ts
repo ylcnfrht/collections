@@ -10,6 +10,7 @@ import { NavigableSet, Set, SortedSet } from '../interfaces/Set';
 import { Spliterator } from '../stream/Spliterator';
 import { Spliterators } from '../stream/Spliterators';
 import { streamFactories } from '../stream/hook';
+import { SET_BRAND } from '../util/guards';
 import { identityHashCode, requireNonNull } from '../util/Objects';
 
 type Methods = Record<PropertyKey, unknown>;
@@ -36,9 +37,13 @@ export function delegate<T extends object>(target: T, overrides: (view: T) => Me
   return view;
 }
 
-/** equals/hashCode by identity, for wrappers that do not pass them through (plain Collection, Queue as LIFO). */
+/**
+ * equals/hashCode by identity, for wrappers that do not pass them through (plain Collection, Queue as LIFO).
+ * Such a view is not a List or Set either, so it hides what isList/isSet look for: otherwise list.equals(view)
+ * would be true while view.equals(list) is false.
+ */
 export function identityEquality(view: object): Methods {
-  return { equals: (o: unknown) => o === view, hashCode: () => identityHashCode(view) };
+  return { equals: (o: unknown) => o === view, hashCode: () => identityHashCode(view), get: undefined, listIterator: undefined, [SET_BRAND]: undefined };
 }
 
 // ---- checked wrappers

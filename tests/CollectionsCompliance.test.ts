@@ -701,6 +701,19 @@ describe('checked wrappers', () => {
     expectThrows(() => l.setElementAt('x', 0), CCE);
     expect(base.toArray()).toEqual([0, 2]);
   });
+  it('identity-equality views are neither Lists nor Sets, so equals is symmetric', () => {
+    const l = ArrayList.of(1, 2);
+    const s = HashSet.of(1, 2);
+    const dq = new LinkedList<number>();
+    const views: [unknown, unknown][] = [
+      [C.synchronizedCollection(l), l],
+      [C.checkedCollection(l as List<any>, isNum), l],
+      [C.synchronizedCollection(s), s],
+      [C.checkedCollection(s as any, isNum), s],
+      [C.asLifoQueue(dq), dq],
+    ];
+    for (const [v, base] of views) expect([(v as any).equals(base), (base as any).equals(v)]).toEqual([false, false]);
+  });
   it('checkedCollection uses identity equality; checkedSet/Queue/sorted sets', () => {
     const base = ArrayList.of(1);
     const c = C.checkedCollection(base as any, isNum);
