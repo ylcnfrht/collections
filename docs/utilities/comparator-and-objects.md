@@ -1,26 +1,6 @@
 # Comparator and Objects
 
-Two small modules define how values are ordered and compared everywhere in the library. A **comparator** is a plain function `(a, b) => number`. The `Comparator` object holds factories and combinators for building comparators: by key, reversed, multi-key, and null-friendly. **Natural ordering** (`naturalCompare`) is what `TreeMap`, `TreeSet`, `PriorityQueue`, `sort()` and `sorted()` use when you give them no comparator. **`Objects`** holds the value-equality and hashing rules behind every hash-based collection (`Objects.equals`, `Objects.hashCode`), plus helpers for null checks, index checks and debugging.
-
-**Contents**
-
-- [Comparators are functions](#comparators-are-functions)
-- [Natural ordering](#natural-ordering)
-- [The Comparable interface](#the-comparable-interface)
-- [Comparator helpers](#comparator-helpers)
-  - [naturalOrder, reverseOrder, reversed](#naturalorder-reverseorder-reversed)
-  - [comparing and comparingInt/Long/Double](#comparing-and-comparingintlongdouble)
-  - [thenComparing and friends: multi-key sorts](#thencomparing-and-friends-multi-key-sorts)
-  - [nullsFirst and nullsLast](#nullsfirst-and-nullslast)
-  - [max and min](#max-and-min)
-  - [Recipes](#recipes)
-- [Objects](#objects)
-  - [equals, hash, hashCode, identityHashCode](#equals-hash-hashcode-identityhashcode)
-  - [How hashCode is computed](#how-hashcode-is-computed)
-  - [Null checks](#null-checks)
-  - [Index checks](#index-checks)
-  - [toString, compare, deepEquals, toIdentityString](#tostring-compare-deepequals-toidentitystring)
-- [Writing equals, hashCode and compareTo for your own types](#writing-equals-hashcode-and-compareto-for-your-own-types)
+This page covers how values are ordered and compared throughout the library. A comparator is a function `(a, b) => number`, and the `Comparator` object provides factories and combinators for building one. Natural ordering (`naturalCompare`) applies when no comparator is given. `Objects` holds the equality and hashing rules that every hash-based collection uses, plus null and index checks.
 
 ## Comparators are functions
 
@@ -43,7 +23,8 @@ set.addAll(words);
 console.log(set); // → [banana, apple, fig]
 ```
 
-A sorted collection decides equality with its comparator, not with `equals`. Two elements that compare as `0` count as the same element, so a `TreeSet` ordered by length keeps only one word of each length:
+> [!IMPORTANT]
+> A sorted collection decides equality with its comparator, not with `equals`. Two elements that compare as `0` count as the same element, so a `TreeSet` ordered by length keeps one word per length.
 
 ```ts
 import { TreeSet } from '@nodestd/collections';
@@ -308,7 +289,7 @@ zs.sort(byLenThenAlpha);
 console.log(zs); // → [null, a, ab, bb]
 ```
 
-To sort objects by a key that may be missing, wrap the **key** comparator:
+To sort objects by a key that may be missing, wrap the key comparator:
 
 ```ts
 import { ArrayList, Comparator } from '@nodestd/collections';
@@ -425,7 +406,7 @@ Arrays and plain objects have no `equals` method, so they compare by reference. 
 
 ### How hashCode is computed
 
-`Objects.hashCode` always returns an int32, and **values that are `equals` always get the same hash**. That is the property hash-based collections depend on. Numbers, strings, booleans and bigints hash with the same formulas as the JDK, so values match it bit for bit.
+`Objects.hashCode` always returns an int32, and values that are `equals` always get the same hash. That is the property hash-based collections depend on. Numbers, strings, booleans and bigints hash with the same formulas as the JDK, so values match it bit for bit.
 
 | Value | Hash | Example |
 | --- | --- | --- |
@@ -565,7 +546,7 @@ labels.put(new Point(0, 0), 'origin');
 console.log(labels.get(new Point(0, 0))); // → origin
 ```
 
-Avoid these mistakes:
+### Common mistakes
 
 - **Mutating a key** after inserting it changes its hash or order. The collection then cannot find it. Use immutable fields (`readonly`) for anything `equals`, `hashCode` or `compareTo` reads.
 - **`equals` without `hashCode`**: equal objects that hash differently land in different buckets, and lookups fail.

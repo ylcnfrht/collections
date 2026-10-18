@@ -1,28 +1,11 @@
-# Streams: overview
+# Streams overview
 
-A **stream** is a lazy pipeline that pulls elements from a source (a collection, an array, a generator, a
-range of numbers…), passes them through zero or more **intermediate operations** (`filter`, `map`, `sorted`, …)
-and ends in exactly one **terminal operation** (`toList`, `reduce`, `collect`, `count`, …) that produces a result.
-Nothing happens until the terminal operation runs; then each element travels through the whole pipeline before
-the next one starts, so no intermediate arrays are built and work stops as soon as the result is known. This page
-explains the model; the other stream pages are references for the individual pieces.
-
-- [A first example](#a-first-example)
-- [Sources](#sources)
-- [Intermediate vs terminal operations](#intermediate-vs-terminal-operations)
-- [Laziness and element-by-element evaluation](#laziness-and-element-by-element-evaluation)
-- [Short-circuiting and infinite streams](#short-circuiting-and-infinite-streams)
-- [Single use](#single-use)
-- [Stateless vs stateful operations](#stateless-vs-stateful-operations)
-- [Ordering and `unordered()`](#ordering-and-unordered)
-- [`parallel()`](#parallel)
-- [Closing streams](#closing-streams)
-- [Iterating a stream from JS](#iterating-a-stream-from-js)
-- [Streams vs array methods vs Iterator helpers](#streams-vs-array-methods-vs-iterator-helpers)
-
-Related pages: [operations](operations.md) · [number streams](number-streams.md) · [collectors](collectors.md) ·
-[gatherers](gatherers.md) · [Optional](optional.md) · [spliterators](spliterators.md) ·
-[core concepts](../guide/core-concepts.md)
+A stream is a lazy pipeline over a source of elements. It has zero or more intermediate operations (`filter`,
+`map`, `sorted`, …) and exactly one terminal operation (`toList`, `reduce`, `collect`, `count`, …) that runs the
+pipeline and produces a result. This page explains the model: sources, laziness, short-circuiting, the
+single-use rule and closing. The reference pages cover [operations](operations.md),
+[number streams](number-streams.md), [collectors](collectors.md), [gatherers](gatherers.md),
+[Optional](optional.md) and [spliterators](spliterators.md).
 
 ## A first example
 
@@ -97,8 +80,9 @@ data.push(3); // outside the stream's range
 console.log(s.toList()); // → [100, 2]
 ```
 
-`Stream.concat` nests its inputs, as the JDK's does: chaining it in a loop over thousands of streams is quadratic
-and eventually overflows the call stack. To join many streams, flatten them instead:
+> [!WARNING]
+> `Stream.concat` nests its inputs. Chaining it in a loop over thousands of streams is quadratic and eventually
+> overflows the call stack. To join many streams, flatten them instead:
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -129,10 +113,11 @@ console.log(seen); // → [ 1, 2, 3 ]
 
 ## Laziness and element-by-element evaluation
 
-Array methods work **horizontally**: `filter` processes the whole array and builds a new one, then `map` runs
-over that one, and so on. A stream works **vertically**: the source pushes one element through every stage, then
-the next element. That is why `limit(2)` below stops the source after the fourth element instead of filtering all
-six.
+Nothing runs until the terminal operation is called. Then each element passes through every stage before the
+next element is read. No intermediate arrays are built, and reading stops as soon as the result is known. Array
+methods work the other way: `filter` processes the whole array and builds a new one, then `map` runs over that
+one. In the pipeline below, `limit(2)` stops the source after the second matching element, so `8, 1, 9, 2` are
+never read.
 
 ```mermaid
 sequenceDiagram
@@ -152,7 +137,7 @@ sequenceDiagram
     Note over S,T: 8, 1, 9, 2 are never read
 ```
 
-The `peek` log proves the order:
+The `peek` log shows the order:
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -189,16 +174,17 @@ console.log(Stream.iterate(2, (n) => n + 1).filter(isPrime).limit(6).toList()); 
 console.log(Stream.iterate(1, (x) => x + 1).anyMatch((x) => x > 100)); // → true
 ```
 
-A non-short-circuiting terminal (`count`, `toList`, `forEach`, `collect`, …) on an infinite stream never returns,
-and neither does `sorted()` before `limit` (it has to see every element): put the `limit` first. `distinct()`
-before `limit` is fine as long as the source keeps producing new values.
+> [!WARNING]
+> A terminal operation that does not short-circuit (`count`, `toList`, `forEach`, `collect`, …) never returns on
+> an infinite stream. Neither does `sorted()` before `limit`, because it must see every element: put the `limit`
+> first. `distinct()` before `limit` works as long as the source keeps producing new values.
 
 ## Single use
 
-A stream is a one-shot pipeline, not a collection. Once an operation has been called on a stream object
-(intermediate or terminal), using that same object again throws `IllegalStateException` (`close()`,
-`isParallel()`, `parallel()` and `sequential()` excepted). To traverse the data
-twice, create a new stream from the source each time (a `() => Stream` function is a handy "reusable stream").
+A stream is a one-shot pipeline, not a collection. Once an operation (intermediate or terminal) has been called
+on a stream object, any further operation on that object throws `IllegalStateException`. The exceptions are
+`close()`, `isParallel()`, `parallel()` and `sequential()`. To traverse the data twice, create a new stream from
+the source each time, for example with a `() => Stream` factory function.
 
 ```ts
 import { Stream, List } from '@nodestd/collections';
@@ -232,17 +218,9 @@ console.log(evens().count(), evens().toList()); // → 1 [2]
 | Stateful, streaming | `limit`, `skip`, `takeWhile`, `dropWhile`, `distinct` | a counter, flag or a seen-set | elements still flow one at a time (`distinct` remembers what it saw) |
 | Stateful, barrier | `sorted` | buffers **all** elements | nothing passes until the upstream is exhausted |
 
-`sorted()` is a **barrier**: it cannot emit the smallest element before it has seen every element. Downstream
-work then resumes element by element, and a short-circuit after the barrier stops the *downstream* early, but the
-upstream has already been fully read.
-
-```mermaid
-flowchart LR
-    A["source 3, 1, 2"] --> B["peek a"]
-    B --> C["sorted: buffer everything"]
-    C -->|"after upstream ends: 1"| D["peek b"]
-    D --> E["findFirst"]
-```
+`sorted()` is a barrier: it cannot emit the smallest element before it has seen every element. Downstream work
+then resumes element by element. A short-circuit after the barrier stops the downstream early, but the upstream
+has already been read in full.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -258,7 +236,7 @@ console.log(first); // → Optional[1]
 console.log(log.join(' ')); // → a3 a1 a2 b1
 ```
 
-`distinct()` is stateful but **not** a barrier: it emits an element the first time it sees it.
+`distinct()` is stateful but not a barrier: it emits an element the first time it sees it.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -274,13 +252,13 @@ console.log(log.join(' ')); // → 1 2
 
 ## Ordering and `unordered()`
 
-A stream has an **encounter order** when its source does (lists, arrays, `LinkedHashSet`, `TreeSet`, ranges,
-`iterate`). Hash-based sources (`HashSet`, `HashMap` views) have none. Operations keep the encounter order of an
-ordered stream — `findFirst`, `limit`, `skip`, `toList`, `forEachOrdered` and the like respect it.
+A stream has an encounter order when its source does (lists, arrays, `LinkedHashSet`, `TreeSet`, ranges,
+`iterate`). Hash-based sources (`HashSet`, `HashMap` views) have none. Operations preserve the encounter order of
+an ordered stream, and `findFirst`, `limit`, `skip`, `toList` and `forEachOrdered` respect it.
 
-`unordered()` drops the ordering constraint so an operation *may* choose a cheaper strategy. Since evaluation is
-sequential here, results come out in source order anyway; treat `unordered()` as a declaration of intent, and do
-not rely on any particular order after it.
+`unordered()` removes the ordering constraint so that an operation may choose a cheaper strategy. Evaluation is
+sequential, so results still come out in source order. Treat `unordered()` as a declaration of intent and do not
+rely on any particular order after it.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -290,10 +268,12 @@ console.log(Stream.of(1, 2, 3).unordered().toList()); // → [1, 2, 3]
 
 ## `parallel()`
 
-`parallel()`, `sequential()` and `collection.parallelStream()` set a flag that `isParallel()` reports. JS runs a
-stream on one thread, so **evaluation is always sequential**. Every parallel-capable operation in the classic
-stream API is specified so that a sequential run gives a valid result, so code written for parallel streams
-(associative reducers, combiners, `findAny`) works unchanged and produces the same results.
+`parallel()`, `sequential()` and `collection.parallelStream()` set a flag that `isParallel()` reports.
+
+> [!NOTE]
+> A stream runs on one JavaScript thread, so evaluation is always sequential. Every parallel-capable operation in
+> the Java Stream API is specified so that a sequential run gives a valid result. Code written for parallel
+> streams (associative reducers, combiners, `findAny`) works unchanged and produces the same results.
 
 ```ts
 import { Stream, List } from '@nodestd/collections';
@@ -307,9 +287,12 @@ console.log(Stream.of(4, 5, 6).parallel().findAny()); // → Optional[4]
 ## Closing streams
 
 Streams over in-memory data need no cleanup. When a stream owns a resource, register cleanup with
-`onClose(handler)`; `close()` runs the handlers in registration order, once. A terminal operation does **not**
-close the stream; JS iteration does (see [Iterating a stream from JS](#iterating-a-stream-from-js)). If a handler throws, the rest still run and the first error is rethrown (later ones are added
-as suppressed).
+`onClose(handler)`. `close()` runs the handlers once, in registration order. If a handler throws, the remaining
+handlers still run, and the first error is rethrown with later ones added as suppressed.
+
+> [!IMPORTANT]
+> A terminal operation does not close the stream. JS iteration does (see
+> [Iterating a stream from JS](#iterating-a-stream-from-js)). Otherwise call `close()` or use `using`.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -349,11 +332,13 @@ has been consumed (see [operations](operations.md#flatmap)).
 
 ## Iterating a stream from JS
 
-Streams are JS iterables: `for…of`, spread and destructuring consume them like `iterator()` does (a terminal
-operation, so the stream is used up afterwards). Unlike `iterator()`, JS iteration also **closes** the stream (runs
-its `onClose` handlers, and closes a `Stream.from` generator) when it ends: by exhaustion, `break`, or a throw,
-including a throw from a stage. `iterator()` returns the library's `Iterator` (`hasNext()`/`next()`); with it, a
-stage that throws leaves the source open and reading can go on, as in the reference, so close the stream yourself
+Streams are JS iterables. `for…of`, spread and destructuring consume them like `iterator()` does: this is a
+terminal operation, so the stream is used up afterwards.
+
+The two differ in closing. JS iteration closes the stream when it ends, whether by exhaustion, `break` or a throw
+(including a throw from a stage): it runs the `onClose` handlers and closes a `Stream.from` generator.
+`iterator()` returns the library's `Iterator` (`hasNext()`/`next()`), which does not close anything. A stage that
+throws leaves the source open and reading can continue, as in the Java API, so close the stream yourself
 (`close()` or `using`).
 
 ```ts
@@ -382,7 +367,7 @@ console.log(out); // → [ 'x', 'y' ]
 | Short-circuit over infinite sources | no | yes (`take`, `find`, `some`) | yes |
 | Sorting, distinct, grouping | `sort` (in place), manual | none | `sorted`, `distinct`, [`Collectors`](collectors.md), [`Gatherers`](gatherers.md) |
 | Number aggregates | manual `reduce` | manual | `sum`, `average`, `summaryStatistics` (compensated double sums) |
-| Reusable result | yes, it's an array | single use | single use |
+| Reusable result | yes (an array) | single use | single use |
 
 ```ts
 import { Stream, Collectors } from '@nodestd/collections';
@@ -394,7 +379,7 @@ const orders: Order[] = [
   { customer: 'ann', total: 5 },
 ];
 
-// array methods: fine for short one-off transformations of small arrays
+// array methods: suited to short one-off transformations of small arrays
 console.log(orders.filter((o) => o.total > 10).map((o) => o.customer)); // → [ 'ann', 'bob' ]
 
 // stream: one pass, plus a collector for the grouping
@@ -405,11 +390,11 @@ console.log(totals.get('ann'), totals.get('bob')); // → 35 12
 ```
 
 ```ts nocheck
-// Iterator helpers (ES2025) are lazy too, but stop at map/filter/take/drop/flatMap/reduce:
+// Iterator helpers (ES2025) are lazy too, but have no sorting, grouping or number aggregates:
 const firstBig = [5, 3, 8].values().filter((x) => x > 4).map((x) => x * 10).take(1).toArray(); // [50]
 ```
 
-When to use which:
+Choosing between them:
 
 - **Array methods** for small arrays, when you want an array back and the code reads naturally.
 - **Iterator helpers** for simple lazy chains over JS iterables when you need nothing else.

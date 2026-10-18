@@ -1,20 +1,12 @@
 # Number streams: IntStream, LongStream, DoubleStream
 
-`IntStream`, `LongStream` and `DoubleStream` are streams of numbers with extra terminal operations — `sum`,
-`average`, `min`, `max`, `summaryStatistics` — that return plain numbers or number optionals instead of boxed
-results. They have the same laziness, single-use and short-circuit rules as `Stream` (see the
-[overview](overview.md)) and most of its [operations](operations.md). All three carry JS `number`s; the three
-types exist so that code reads like the Java Stream API and so that each can apply its own rules (for example
-compensated summation for doubles).
+`IntStream`, `LongStream` and `DoubleStream` are streams of numbers. They add aggregates (`sum`, `average`,
+`min`, `max`, `summaryStatistics`) that return plain numbers or number optionals. They follow the same laziness,
+single-use and short-circuit rules as `Stream` (see the [overview](overview.md)) and share most of its
+[operations](operations.md).
 
-- [Creating number streams](#creating-number-streams)
-- [Aggregates: sum, average, min, max](#aggregates-sum-average-min-max)
-- [Summary statistics](#summary-statistics)
-- [Converting between stream types](#converting-between-stream-types)
-- [Primitive iterators](#primitive-iterators)
-- [Compensated (Kahan) double sums](#compensated-kahan-double-sums)
-- [Differences from the classic number streams](#differences-from-the-classic-number-streams)
-- [Operation reference](#operation-reference)
+All three carry JS `number`s. The three types keep code aligned with the Java Stream API and let each type apply
+its own rules, such as compensated summation for doubles.
 
 ## Creating number streams
 
@@ -41,7 +33,7 @@ console.log(IntStream.concat(IntStream.of(1), IntStream.of(2)).toArray()); // �
 console.log(Stream.of('a', 'bb', 'ccc').mapToInt((s) => s.length).toArray()); // → [ 1, 2, 3 ]
 ```
 
-`range` makes a readable replacement for counted loops:
+`range` replaces counted loops:
 
 ```ts
 import { IntStream } from '@nodestd/collections';
@@ -81,8 +73,9 @@ The number optionals are described in [Optional](optional.md).
 ## Summary statistics
 
 `summaryStatistics()` computes count, sum, min, max and average in one pass. The same objects come from
-`Collectors.summarizingInt/Long/Double` ([collectors](collectors.md#counting-summing-averaging-summarizing)) and can
-be used on their own: `accept(value)` adds a value, `combine(other)` merges another statistics object.
+`Collectors.summarizingInt/Long/Double` ([collectors](collectors.md#counting-summing-averaging-summarizing)).
+They can also be used on their own: `accept(value)` adds a value and `combine(other)` merges another statistics
+object.
 
 ```ts
 import { IntStream, LongStream, DoubleStream, IntSummaryStatistics } from '@nodestd/collections';
@@ -104,8 +97,8 @@ manual.combine(other);
 console.log(manual.toString()); // → IntSummaryStatistics{count=3, sum=33, min=3, average=11.000000, max=20}
 ```
 
-`toString()` formats the average (and, for doubles, sum/min/max) with six decimals, like the Java API. Empty
-statistics report the identity values of min/max:
+`toString()` formats the average (and, for doubles, sum, min and max) with six decimals, like the Java API. Empty
+statistics report the identity values of min and max:
 
 ```ts
 import { IntSummaryStatistics, DoubleSummaryStatistics } from '@nodestd/collections';
@@ -130,16 +123,6 @@ try {
 
 ## Converting between stream types
 
-```mermaid
-flowchart LR
-    S["Stream of T"] -->|"mapToInt / mapToLong / mapToDouble"| N["IntStream / LongStream / DoubleStream"]
-    N -->|"boxed()"| SB["Stream of number"]
-    N -->|"mapToObj(f)"| SO["Stream of U"]
-    I["IntStream"] -->|"asLongStream()"| L["LongStream"]
-    I -->|"asDoubleStream()"| D["DoubleStream"]
-    L -->|"asDoubleStream()"| D
-```
-
 | From | Operation | To |
 |---|---|---|
 | `Stream<T>` | `mapToInt`, `mapToLong`, `mapToDouble`, `flatMapToX`, `mapMultiToX` | number stream |
@@ -149,8 +132,9 @@ flowchart LR
 | `LongStream` | `asDoubleStream()`, `mapToInt`, `mapToDouble` | |
 | `DoubleStream` | `mapToInt`, `mapToLong` | |
 
-`boxed()` is how you reach `collect(Collector)`: number streams only have the three-argument
-`collect(supplier, accumulator, combiner)`.
+> [!NOTE]
+> Number streams only have the three-argument `collect(supplier, accumulator, combiner)`. Call `boxed()` first to
+> use a `Collector`.
 
 ```ts
 import { IntStream, Collectors } from '@nodestd/collections';
@@ -185,8 +169,8 @@ console.log(DoubleStream.of(1.5).iterator().nextDouble()); // → 1.5
 ## Compensated (Kahan) double sums
 
 Adding floating-point numbers one by one accumulates rounding error. `DoubleStream.sum()`, `average()`,
-`summaryStatistics()` and `Collectors.summingDouble/averagingDouble/summarizingDouble` use **compensated
-summation**, which tracks the lost low-order bits and adds them back:
+`summaryStatistics()` and `Collectors.summingDouble/averagingDouble/summarizingDouble` use compensated
+summation, which tracks the lost low-order bits and adds them back.
 
 ```ts
 import { DoubleStream, Stream, Collectors } from '@nodestd/collections';
@@ -204,9 +188,39 @@ console.log(DoubleStream.ofArray(tenths).reduce(0, (a, b) => a + b)); // → 0.9
 `IntStream` and `LongStream` sums are plain additions (integers are exact up to `Number.MAX_SAFE_INTEGER`).
 `NaN` and infinities propagate as usual: `DoubleStream.of(1, NaN).sum()` is `NaN`.
 
-## Differences from the classic number streams
+## Operation reference
 
-| Topic | Classic API | Here |
+Number streams have the `Stream` operations below, with number-typed callbacks. See [operations](operations.md)
+for their semantics. The differences:
+
+- `sorted()` takes no comparator and sorts in ascending numeric order. For any other order, use
+  `boxed().sorted(cmp)`. Passing a comparator from JS throws `IllegalArgumentException` rather than being ignored.
+- The conversions differ per type (see the [conversion table](#converting-between-stream-types)): an `IntStream`
+  has no `mapToInt`, a `DoubleStream` has no `asDoubleStream`, and so on.
+- Number streams have no `gather`.
+
+| Group | Operations |
+|---|---|
+| Intermediate | `filter`, `map`, `mapToObj`, `flatMap`, `mapMulti`, `distinct`, `sorted`, `peek`, `limit`, `skip`, `takeWhile`, `dropWhile`, `boxed`, `asLongStream`, `asDoubleStream`, `mapToInt/Long/Double`, `unordered`, `parallel`, `sequential`, `onClose` |
+| Terminal | `forEach`, `forEachOrdered`, `toArray`, `reduce`, `collect(supplier, acc, combiner)`, `sum`, `average`, `min`, `max`, `count`, `summaryStatistics`, `anyMatch`, `allMatch`, `noneMatch`, `findFirst`, `findAny`, `iterator`, `spliterator` |
+
+```ts
+import { IntStream } from '@nodestd/collections';
+
+const evensSquared = IntStream.rangeClosed(1, 10)
+  .filter((i) => i % 2 === 0)
+  .map((i) => i * i)
+  .takeWhile((sq) => sq < 50)
+  .toArray();
+console.log(evensSquared); // → [ 4, 16, 36 ]
+console.log(IntStream.of(3, 1, 3, 2).distinct().sorted().toArray()); // → [ 1, 2, 3 ]
+console.log(IntStream.of(1, 2, 3).anyMatch((i) => i > 2)); // → true
+console.log(IntStream.of(5, 6).findFirst()); // → OptionalInt[5]
+```
+
+## Differences from the Java API
+
+| Topic | Java API | This library |
 |---|---|---|
 | `IntStream` values | 32-bit `int`; arithmetic wraps | JS numbers: no coercion to 32 bits, `sum()` does not wrap, and a non-integer passed in stays as it is |
 | `LongStream` values | 64-bit `long` | JS numbers, exact only up to `Number.MAX_SAFE_INTEGER` (2^53 − 1); use `bigint` in a `Stream<bigint>` for larger values |
@@ -231,31 +245,4 @@ console.log(DoubleStream.of(0.0, -0.0, -1).sorted().toArray()); // → [ -1, -0,
 console.log(Stream.of(0, -0).distinct().count()); // → 1
 console.log(DoubleStream.of(NaN, NaN).distinct().count()); // → 1
 console.log(DoubleStream.of(3, NaN, 1).sorted().toArray()); // → [ 1, 3, NaN ]
-```
-
-## Operation reference
-
-Number streams have the `Stream` operations below (see [operations](operations.md) for the semantics) with
-number-typed functions; `sorted()` takes no comparator (ascending numeric order — sort boxed values with
-`boxed().sorted(cmp)` for anything else; passing one from JS throws `IllegalArgumentException` rather than being
-ignored). The conversions differ per type, see the [conversion table](#converting-between-stream-types): an
-`IntStream` has no `mapToInt`, a `DoubleStream` no `asDoubleStream`, and so on. Number streams have no `gather`.
-
-| Group | Operations |
-|---|---|
-| Intermediate | `filter`, `map`, `mapToObj`, `flatMap`, `mapMulti`, `distinct`, `sorted`, `peek`, `limit`, `skip`, `takeWhile`, `dropWhile`, `boxed`, `asLongStream`, `asDoubleStream`, `mapToInt/Long/Double`, `unordered`, `parallel`, `sequential`, `onClose` |
-| Terminal | `forEach`, `forEachOrdered`, `toArray`, `reduce`, `collect(supplier, acc, combiner)`, `sum`, `average`, `min`, `max`, `count`, `summaryStatistics`, `anyMatch`, `allMatch`, `noneMatch`, `findFirst`, `findAny`, `iterator`, `spliterator` |
-
-```ts
-import { IntStream } from '@nodestd/collections';
-
-const evensSquared = IntStream.rangeClosed(1, 10)
-  .filter((i) => i % 2 === 0)
-  .map((i) => i * i)
-  .takeWhile((sq) => sq < 50)
-  .toArray();
-console.log(evensSquared); // → [ 4, 16, 36 ]
-console.log(IntStream.of(3, 1, 3, 2).distinct().sorted().toArray()); // → [ 1, 2, 3 ]
-console.log(IntStream.of(1, 2, 3).anyMatch((i) => i > 2)); // → true
-console.log(IntStream.of(5, 6).findFirst()); // → OptionalInt[5]
 ```

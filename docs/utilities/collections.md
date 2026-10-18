@@ -1,30 +1,14 @@
 # The `Collections` utility
 
-`Collections` is a plain object of static helpers that work on any `List`, `Set`, `Map`, `Queue` or `Deque` from this library, and on your own classes built from the [abstract skeletons](../advanced/custom-collections.md). It provides the classic algorithms (sort, shuffle, rotate, binary search and so on), shared empty and singleton collections, adapters between the old `Enumeration` style and iterators, and the view wrappers. Every helper throws `NullPointerException` when a collection argument is `null` or `undefined`. The algorithms check whether a list is random-access, so they stay O(n) on a `LinkedList`.
+`Collections` is an object of static helpers for any `List`, `Set`, `Map`, `Queue` or `Deque` from this library, including classes built on the [abstract skeletons](../advanced/custom-collections.md). This page covers its algorithms, empty and singleton collections, enumeration adapters and view wrappers, and ends with a [quick reference](#quick-reference) table.
 
-**Contents**
-
-- [Algorithms](#algorithms)
-  - [sort, reverse, swap, fill, copy](#sort-reverse-swap-fill-copy)
-  - [shuffle with a seeded RandomSource](#shuffle-with-a-seeded-randomsource)
-  - [rotate](#rotate)
-  - [binarySearch and the insertion point](#binarysearch-and-the-insertion-point)
-  - [min, max, frequency, disjoint](#min-max-frequency-disjoint)
-  - [indexOfSubList, lastIndexOfSubList, replaceAll, addAll](#indexofsublist-lastindexofsublist-replaceall-addall)
-  - [nCopies and reverseOrder](#ncopies-and-reverseorder)
-  - [Random access and LinkedList](#random-access-and-linkedlist)
-- [Empty and singleton collections](#empty-and-singleton-collections)
-- [Empty iterators and enumerations](#empty-iterators-and-enumerations)
-- [Enumeration adapters: `enumeration` and `list`](#enumeration-adapters-enumeration-and-list)
-- [Adapters: `asLifoQueue`, `newSetFromMap`, `newSequencedSetFromMap`](#adapters-aslifoqueue-newsetfrommap-newsequencedsetfrommap)
-- [Wrappers](#wrappers)
-- [Quick reference](#quick-reference)
+Every helper throws `NullPointerException` when a collection argument is `null` or `undefined`.
 
 ## Algorithms
 
 ### sort, reverse, swap, fill, copy
 
-`Collections.sort(list, c?)` calls `list.sort(c)`. The sort is **stable**: elements that compare equal keep their relative order. If you omit the comparator or pass `null`, natural ordering is used (see [Comparator and Objects](./comparator-and-objects.md#natural-ordering)). Unlike `Array.prototype.sort`, there is no string conversion, so numbers sort numerically.
+`Collections.sort(list, c?)` calls `list.sort(c)`. The sort is stable: elements that compare equal keep their relative order. If you omit the comparator or pass `null`, natural ordering is used (see [Comparator and Objects](./comparator-and-objects.md#natural-ordering)). Unlike `Array.prototype.sort`, there is no string conversion, so numbers sort numerically.
 
 ```ts
 import { ArrayList, Collections, Comparator } from '@nodestd/collections';
@@ -106,19 +90,6 @@ console.log(c); // → [2, 3, 4, 5, 6, 1]
 
 `rotate(list, distance)` moves the element at index `i` to `(i + distance) mod size`. A positive distance rotates right and a negative one rotates left. Any integer works, including values larger than the size. A distance that is not an integer (such as `1.5` or `NaN`) throws `IllegalArgumentException`.
 
-```mermaid
-flowchart LR
-  subgraph before["before: [a, b, c, d, e]"]
-    direction LR
-    b0["0: a"] --- b1["1: b"] --- b2["2: c"] --- b3["3: d"] --- b4["4: e"]
-  end
-  subgraph after["rotate(list, 2): [d, e, a, b, c]"]
-    direction LR
-    a0["0: d"] --- a1["1: e"] --- a2["2: a"] --- a3["3: b"] --- a4["4: c"]
-  end
-  before -- "each element moves 2 to the right, wrapping around" --> after
-```
-
 ```ts
 import { ArrayList, Collections } from '@nodestd/collections';
 
@@ -140,7 +111,7 @@ On a random-access list, rotation uses the cycle-leader algorithm, so each eleme
 
 ### binarySearch and the insertion point
 
-`binarySearch(list, key, c?)` searches a list that is **already sorted** by `c` (natural ordering when `c` is omitted). If the list is not sorted, the result is undefined.
+`binarySearch(list, key, c?)` searches a list that is already sorted by `c` (natural ordering when `c` is omitted). If the list is not sorted, the result is undefined.
 
 - If `key` is found, the result is its index (≥ 0). With duplicates, any one of the matching indices may be returned.
 - If `key` is not found, the result is `-(insertionPoint) - 1`. The insertion point is the index where `key` would have to be inserted to keep the list sorted: the index of the first greater element, or `size()` if every element is smaller.
@@ -239,7 +210,7 @@ console.log(set); // → [3, 1, 2]
 
 ### nCopies and reverseOrder
 
-`nCopies(n, o)` returns an **immutable** list that contains `o` exactly `n` times. It stores only `o` and the count, so it uses O(1) memory whatever the value of `n`. It is handy for building lists of a fixed size, or for padding. `n` must be a non-negative integer. `nCopies(0, x)` returns the shared empty list.
+`nCopies(n, o)` returns an immutable list that contains `o` exactly `n` times. It stores only `o` and the count, so it uses O(1) memory whatever the value of `n`. Use it to build fixed-size lists or padding. `n` must be a non-negative integer. `nCopies(0, x)` returns the shared empty list.
 
 ```ts
 import { ArrayList, Collections } from '@nodestd/collections';
@@ -388,7 +359,7 @@ console.log(it.next(), it.hasNext()); // → 1 true
 
 ## Adapters: `asLifoQueue`, `newSetFromMap`, `newSequencedSetFromMap`
 
-`asLifoQueue(deque)` gives you a `Queue` view of a deque that is last-in, first-out. `add`/`offer` push at the front, and `poll`/`remove`/`peek`/`element` read the front. This lets code written against `Queue` work as a stack:
+`asLifoQueue(deque)` gives you a `Queue` view of a deque that is last-in, first-out. `add`/`offer` push at the front, and `poll`/`remove`/`peek`/`element` read the front. Code written against `Queue` then works as a stack:
 
 ```ts
 import { ArrayDeque, Collections } from '@nodestd/collections';
@@ -402,7 +373,7 @@ console.log(stack.poll(), stack.poll()); // → second first
 console.log(deque.isEmpty()); // → true
 ```
 
-`newSetFromMap(map)` turns an **empty** map into a `Set` view whose elements are the map's keys. `add(e)` is `map.put(e, true) === null`. Use it to get a set with a map's behaviour, for example identity semantics from an `IdentityHashMap`, or LRU eviction from an access-ordered `LinkedHashMap`. A map that is not empty throws `IllegalArgumentException`.
+`newSetFromMap(map)` turns an empty map into a `Set` view whose elements are the map's keys. `add(e)` is `map.put(e, true) === null`. Use it to get a set with a map's behaviour, for example identity semantics from an `IdentityHashMap`, or LRU eviction from an access-ordered `LinkedHashMap`. A map that is not empty throws `IllegalArgumentException`.
 
 ```ts
 import { Collections, HashMap, IdentityHashMap } from '@nodestd/collections';

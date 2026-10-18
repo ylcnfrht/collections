@@ -1,23 +1,14 @@
 # Collectors
 
-A **collector** describes a mutable reduction: how to create a container, add an element to it, merge two
-containers, and turn the container into the final result. You pass one to `stream.collect(collector)`.
-`Collectors` provides ready-made collectors for collections, maps, strings, numbers, grouping and partitioning;
-most accept a *downstream* collector, so they compose into rich one-pass aggregations. `Collector.of` builds your
-own. This page lists every `Collectors` method with an example and ends with recipes.
+A collector describes a mutable reduction: how to create a container, add an element to it, merge two
+containers, and turn the container into the final result. It is passed to `stream.collect(collector)`. This page
+lists every `Collectors` method with an example, shows how to write a custom collector with `Collector.of`, and
+ends with recipes.
 
-- [The sample data](#the-sample-data)
-- [To collections](#to-collections)
-- [The toMap family](#the-tomap-family)
-- [joining](#joining)
-- [Counting, summing, averaging, summarizing](#counting-summing-averaging-summarizing)
-- [minBy, maxBy, reducing](#minby-maxby-reducing)
-- [groupingBy](#groupingby)
-- [partitioningBy](#partitioningby)
-- [Adapting downstreams: mapping, filtering, flatMapping, collectingAndThen](#adapting-downstreams-mapping-filtering-flatmapping-collectingandthen)
-- [teeing](#teeing)
-- [Custom collectors with Collector.of](#custom-collectors-with-collectorof)
-- [Recipes](#recipes)
+## Overview
+
+`Collectors` provides ready-made collectors for collections, maps, strings, numbers, grouping and partitioning.
+Most accept a downstream collector, so they compose into one-pass aggregations.
 
 | Category | Methods |
 |---|---|
@@ -29,20 +20,8 @@ own. This page lists every `Collectors` method with an example and ends with rec
 | Grouping | `groupingBy`, `groupingByConcurrent`, `partitioningBy` |
 | Adapters | `mapping`, `filtering`, `flatMapping`, `collectingAndThen`, `teeing` |
 
-## The sample data
-
-Most examples use this array. Hash-based results are printed through `get` or collected into a `TreeMap`, so the
-printed order is guaranteed.
-
-```ts nocheck
-type Emp = { name: string; dept: string; salary: number; skills: string[] };
-const staff: Emp[] = [
-  { name: 'Ann', dept: 'eng', salary: 120, skills: ['ts', 'go'] },
-  { name: 'Bob', dept: 'eng', salary: 100, skills: ['ts'] },
-  { name: 'Cid', dept: 'ops', salary: 90, skills: ['bash'] },
-  { name: 'Dee', dept: 'sales', salary: 80, skills: [] },
-];
-```
+Every example below is self-contained. Hash-based results are printed through `get` or collected into a
+`TreeMap`, so the printed order is deterministic.
 
 ## To collections
 
@@ -54,7 +33,9 @@ const staff: Emp[] = [
 | `toUnmodifiableList()` | unmodifiable list | `NullPointerException` | no |
 | `toUnmodifiableSet()` | unmodifiable set (duplicates dropped) | `NullPointerException` | no |
 
-`stream.toList()` (a stream method, not a collector) returns an unmodifiable list that allows `null`.
+> [!NOTE]
+> `stream.toList()` is a stream method, not a collector. It returns an unmodifiable list that allows `null`,
+> unlike `toUnmodifiableList()`.
 
 ```ts
 import { Stream, Collectors, TreeSet, Comparator } from '@nodestd/collections';
@@ -84,11 +65,14 @@ console.log(Stream.of(1, 1, 2).collect(Collectors.toUnmodifiableSet()).size()); 
 
 ## The toMap family
 
-`toMap(keyMapper, valueMapper)` builds a `HashMap`. Keys must be unique: a duplicate key throws
-`IllegalStateException` with the message `Duplicate key K (attempted merging values V1 and V2)`. Pass a merge
-function to combine values for equal keys instead, and a map factory to choose the map type (for example a
-`TreeMap` for sorted keys or a `LinkedHashMap` for encounter order). A `null` value throws `NullPointerException`
-(the map's `merge` semantics do not allow it).
+`toMap(keyMapper, valueMapper)` builds a `HashMap`. Pass a merge function to combine values for equal keys, and a
+map factory to choose the map type (for example a `TreeMap` for sorted keys or a `LinkedHashMap` for encounter
+order).
+
+> [!WARNING]
+> Without a merge function, keys must be unique. A duplicate key throws `IllegalStateException` with the message
+> `Duplicate key K (attempted merging values V1 and V2)`. A `null` value throws `NullPointerException`, because
+> the map's `merge` semantics do not allow it.
 
 | Form | Duplicate keys | Map |
 |---|---|---|
@@ -139,7 +123,7 @@ try {
 ## joining
 
 Concatenates `string` elements (a `null` element is written as `"null"`). Optional delimiter, prefix and suffix;
-an empty stream gives just `prefix + suffix`.
+an empty stream gives `prefix + suffix`.
 
 ```ts
 import { Stream, Collectors } from '@nodestd/collections';
@@ -160,7 +144,7 @@ console.log(Stream.of(1, 2, 3).map(String).collect(Collectors.joining('-'))); //
 | `averagingInt/Long/Double(f)` | `number` | `0` |
 | `summarizingInt/Long/Double(f)` | `Int/Long/DoubleSummaryStatistics` | count 0 |
 
-They shine as downstream collectors of [`groupingBy`](#groupingby). See
+They are most useful as downstream collectors of [`groupingBy`](#groupingby). See
 [number streams](number-streams.md#summary-statistics) for the statistics objects.
 
 ```ts
@@ -213,19 +197,8 @@ console.log(Stream.ofArray(staff).collect(Collectors.reducing(0, (e: Emp) => e.s
 
 ## groupingBy
 
-`groupingBy` puts each element into a bucket chosen by a **classifier** function, then reduces every bucket with
-a **downstream** collector.
-
-```mermaid
-flowchart LR
-    E["each element"] --> K{"classifier(e)"}
-    K -->|"eng"| D1["downstream for eng"]
-    K -->|"ops"| D2["downstream for ops"]
-    K -->|"sales"| D3["downstream for sales"]
-    D1 --> M["map: key to downstream result"]
-    D2 --> M
-    D3 --> M
-```
+`groupingBy` puts each element into a bucket chosen by a classifier function, then reduces every bucket with a
+downstream collector. The result is a map from each key to its bucket's downstream result.
 
 | Form | Map | Downstream |
 |---|---|---|
@@ -283,8 +256,8 @@ try {
 
 ## partitioningBy
 
-`partitioningBy(predicate)` is `groupingBy` with exactly two buckets, `false` and `true`, **both always present**
-(even when empty). The result map prints `false` first. The optional second argument is a downstream collector.
+`partitioningBy(predicate)` is `groupingBy` with exactly two buckets, `false` and `true`. Both are always present,
+even when empty. The result map prints `false` first. The optional second argument is a downstream collector.
 
 ```ts
 import { Stream, Collectors } from '@nodestd/collections';
@@ -301,7 +274,7 @@ console.log(counts); // → {false=1, true=2}
 
 ## Adapting downstreams: mapping, filtering, flatMapping, collectingAndThen
 
-These wrap another collector, which makes them the building blocks of `groupingBy`/`partitioningBy` downstreams:
+These wrap another collector. They are the building blocks of `groupingBy` and `partitioningBy` downstreams.
 
 | Adapter | Does |
 |---|---|
@@ -339,8 +312,8 @@ console.log(size); // → 4
 
 ## teeing
 
-`teeing(c1, c2, merger)` sends every element to two collectors and merges both results — two aggregations in one
-pass.
+`teeing(c1, c2, merger)` sends every element to two collectors and merges both results, computing two
+aggregations in one pass.
 
 ```ts
 import { Stream, Collectors } from '@nodestd/collections';
@@ -363,20 +336,19 @@ console.log(range); // → 80..120
 
 ## Custom collectors with Collector.of
 
-A collector is four functions plus characteristics:
+A collector is four functions plus a set of characteristics:
 
-```mermaid
-flowchart LR
-    S["supplier: new container"] --> A["accumulator(container, e) for each element"]
-    A --> F["finisher(container): result"]
-    S2["supplier: second container"] --> A2["accumulator on another chunk"]
-    A --> C["combiner(left, right): merged container"]
-    A2 --> C
-    C --> F
-```
+| Function | Signature | Role |
+|---|---|---|
+| supplier | `() => A` | creates a new container |
+| accumulator | `(container: A, e: T) => void` | adds one element to a container |
+| combiner | `(left: A, right: A) => A` | merges two containers (used by parallel evaluation) |
+| finisher | `(container: A) => R` | turns the container into the result |
 
-In a sequential run only the top path is taken; the combiner exists for parallel evaluation and must be correct
-even though it is not called here.
+The `Collector` interface exposes each one through a method of the same name (`supplier()`, `accumulator()`, …)
+that returns the function.
+
+Evaluation is sequential, so the combiner is never called. It must still be correct.
 
 | Characteristic | Meaning |
 |---|---|
@@ -424,7 +396,9 @@ console.log(median.characteristics()); // → [UNORDERED]
 
 ## Recipes
 
-**Frequency map**, most frequent first:
+### Frequency map
+
+Count occurrences, then rank the most frequent first:
 
 ```ts
 import { Stream, Collectors, TreeMap, Comparator, MapEntry } from '@nodestd/collections';
@@ -441,7 +415,7 @@ const ranked = freq.entrySet().stream()
 console.log(ranked); // → [the:3, and:2]
 ```
 
-**Top-N per group:**
+### Top-N per group
 
 ```ts
 import { Stream, Collectors, TreeMap, Comparator, List } from '@nodestd/collections';
@@ -460,7 +434,7 @@ const top2 = Stream.ofArray(sales).collect(Collectors.groupingBy(
 console.log(top2); // → {north=[9, 7], south=[8, 3]}
 ```
 
-**Statistics per category:**
+### Statistics per category
 
 ```ts
 import { Stream, Collectors, TreeMap, DoubleSummaryStatistics } from '@nodestd/collections';
@@ -475,7 +449,9 @@ const a = stats.get('a')!;
 console.log(a.getCount(), a.getMin(), a.getMax(), a.getAverage()); // → 2 1.5 2.5 2
 ```
 
-**Index by key** (last one wins on duplicates, in encounter order):
+### Index by key
+
+On duplicate keys the last element wins; keys keep their encounter order.
 
 ```ts
 import { Stream, Collectors, LinkedHashMap } from '@nodestd/collections';

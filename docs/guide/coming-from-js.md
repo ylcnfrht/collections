@@ -1,21 +1,10 @@
 # Coming from JS
 
-You already know `Array`, `Map` and `Set`. This page is a side-by-side cheat sheet: what each built-in idiom looks
-like with this library, how array methods translate to streams, why value equality changes what you can use as a
-key, how to move data back and forth between the two worlds, and the handful of pitfalls that trip up everyone in
-their first hour.
+This page maps built-in `Array`, `Map` and `Set` idioms to their equivalents in this library, translates array
+methods to streams, and covers interop and common pitfalls. For an introduction to deques, heaps and tree maps, see
+the [Data structures primer](./data-structures.md).
 
-New to structures like deques, heaps or tree maps? Start with the [Data structures primer](./data-structures.md).
-
-- [Array ↔ ArrayList / List.of](#array--arraylist--listof)
-- [Map ↔ HashMap / LinkedHashMap / TreeMap](#map--hashmap--linkedhashmap--treemap)
-- [Set ↔ HashSet / LinkedHashSet / TreeSet](#set--hashset--linkedhashset--treeset)
-- [Array methods ↔ streams](#array-methods--streams)
-- [Object and array keys: why value equality matters](#object-and-array-keys-why-value-equality-matters)
-- [Interop](#interop)
-- [Common pitfalls](#common-pitfalls)
-
-## Array ↔ ArrayList / List.of
+## Array to ArrayList
 
 | JS `Array` | This library | Note |
 |---|---|---|
@@ -30,7 +19,7 @@ New to structures like deques, heaps or tree maps? Start with the [Data structur
 | `a.splice(i, 1)` | `list.removeAt(i)` | |
 | `a.splice(i, n)` | `list.subList(i, i + n).clear()` | via a live view |
 | `a.includes(x)` / `a.indexOf(x)` | `list.contains(x)` / `list.indexOf(x)` | value equality |
-| `a.slice(i, j)` | `list.subList(i, j)` | a **view**, not a copy — `new ArrayList(list.subList(i, j))` to copy |
+| `a.slice(i, j)` | `list.subList(i, j)` | a **view**, not a copy; use `new ArrayList(list.subList(i, j))` to copy |
 | `a.reverse()` | `Collections.reverse(list)` (in place) or `list.reversed()` (view) | |
 | `a.sort(cmp)` | `list.sort(cmp)` / `list.sort(null)` | stable; `null` = natural order (numeric for numbers) |
 | `a.filter(p)` in place | `list.removeIf((x) => !p(x))` | |
@@ -54,10 +43,9 @@ Collections.reverse(a);
 console.log(a.toString());        // → [40, 30, 0]
 ```
 
-## Map ↔ HashMap / LinkedHashMap / TreeMap
+## Map to HashMap, LinkedHashMap and TreeMap
 
-A JS `Map` keeps insertion order — that is `LinkedHashMap`. `HashMap` does not promise any order; `TreeMap` sorts by
-key.
+A JS `Map` keeps insertion order, like `LinkedHashMap`. `HashMap` guarantees no order. `TreeMap` sorts by key.
 
 | JS `Map` | This library | Note |
 |---|---|---|
@@ -90,9 +78,9 @@ for (const w of words) lengths.merge(w.slice(0, 1), w.length, (x, y) => x + y);
 console.log(lengths.get('b'), lengths.get('z')); // → 6 null
 ```
 
-## Set ↔ HashSet / LinkedHashSet / TreeSet
+## Set to HashSet, LinkedHashSet and TreeSet
 
-Again, the JS `Set` is insertion-ordered like `LinkedHashSet`.
+A JS `Set` keeps insertion order, like `LinkedHashSet`.
 
 | JS `Set` | This library | Note |
 |---|---|---|
@@ -119,7 +107,7 @@ console.log(union.toString(), inter.toString(), diff.toString()); // → [1, 2, 
 console.log(a.containsAll(inter)); // → true
 ```
 
-## Array methods ↔ streams
+## Array methods to streams
 
 Streams are lazy: nothing runs until a *terminal* operation (`toList`, `collect`, `reduce`, `forEach`,
 `findFirst`, …), and they stop early when they can. A stream can be consumed only once.
@@ -161,13 +149,14 @@ console.log(IntStream.range(0, 4).mapToObj((i) => i * i).collect(Collectors.toLi
 console.log(nums.stream().map(String).collect(Collectors.joining('-'))); // → 5-3-8-1-9-2
 ```
 
-Whole chapters: [Streams overview](../streams/overview.md), [Stream operations](../streams/operations.md),
+Full reference: [Streams overview](../streams/overview.md), [Stream operations](../streams/operations.md),
 [Collectors](../streams/collectors.md).
 
-## Object and array keys: why value equality matters
+## Object and array keys
 
-A JS `Map` compares keys by identity, so a composite key must be serialized into a string. Here, any object with
-`equals()`/`hashCode()` — including every list, set, map and entry of this library — works as a key directly.
+A JS `Map` compares keys by identity, so a composite key must be serialized into a string. In this library, any
+object with `equals()` and `hashCode()`, including every list, set, map and entry the library provides, works as a
+key directly.
 
 ```ts
 import { HashMap, List } from '@nodestd/collections';
@@ -182,7 +171,7 @@ const grid = new HashMap<List<number>, string>();
 grid.put(List.of(1, 2), 'cell');
 console.log(grid.get(List.of(1, 2))); // → cell
 
-// plain arrays have no equals(): still identity, just like JS
+// plain arrays have no equals(): identity, as in JS
 const arrays = new HashMap<number[], string>();
 arrays.put([1, 2], 'cell');
 console.log(arrays.get([1, 2])); // → null
@@ -227,19 +216,14 @@ console.log(Stream.from(new globalThis.Set([3, 4])).map((n) => n * 2).toList().t
 
 ## Common pitfalls
 
-**`Set`, `Map` (and `List`, `Iterator`) shadow globals.** `import { Set } from '@nodestd/collections'` makes
-`new Set()` in that module refer to... nothing constructible — the library's `Set` is an interface plus the `Set.of`
-factory. Alias on import, or use `globalThis.Set`:
+### Imported `Set` and `Map` shadow the built-ins
 
-```ts
-import { Set as CSet, HashSet } from '@nodestd/collections';
+The library exports interfaces named `Set`, `Map`, `List` and `Iterator`. Importing them shadows the JS globals in
+that module. See [Name clashes with built-ins](./getting-started.md#name-clashes-with-built-ins).
 
-const ours: CSet<string> = HashSet.of('a');
-const theirs = new Set<string>(['a']); // still the JS Set, because ours is aliased
-console.log(ours.size(), theirs.size); // → 1 1
-```
+### `remove(index)` is `removeAt(index)`
 
-**`remove(index)` is `removeAt(index)`.** On a `List<number>`, `remove(1)` removes the *value* `1`:
+On a `List<number>`, `remove(1)` removes the value `1`, not the element at index 1.
 
 ```ts
 import { ArrayList } from '@nodestd/collections';
@@ -251,12 +235,15 @@ l.removeAt(1);     // removes the element at index 1
 console.log(l.toString()); // → [10]
 ```
 
-**`get` returns `null`, not `undefined`.** `map.get(k) ?? fallback` still works, but `=== undefined` checks do
-not. Use `containsKey` when `null` is a legitimate value.
+### `get` returns `null`, not `undefined`
 
-**`for..of` is fail-fast.** Adding or removing elements inside a loop over the same collection throws
-`ConcurrentModificationException`. Use `iterator().remove()`, `removeIf`, or collect changes and apply them after the
-loop.
+`map.get(k) ?? fallback` still works, but `=== undefined` checks do not. Use `containsKey` when `null` is a
+legitimate value.
+
+### `for..of` is fail-fast
+
+Adding or removing elements inside a loop over the same collection throws `ConcurrentModificationException`. Use
+`iterator().remove()`, `removeIf`, or collect the changes and apply them after the loop.
 
 ```ts
 import { HashMap } from '@nodestd/collections';
@@ -271,10 +258,15 @@ m.entrySet().removeIf((e) => e.getValue() > 1); // the right way
 console.log(m.toString()); // → {a=1}
 ```
 
-**Natural sort is numeric.** `[10, 9, 1].sort()` sorts as strings (`1, 10, 9`); `list.sort(null)` and `.sorted()`
-sort numbers numerically.
+### Natural order sorts numbers numerically
 
-**`size()` and `isEmpty()` are methods**, and `Map.forEach` passes `(key, value)` — the reverse of the JS `Map`.
+`[10, 9, 1].sort()` sorts as strings (`1, 10, 9`). `list.sort(null)` and `.sorted()` sort numbers numerically.
 
-**Slices and key sets are views.** Clearing `list.subList(…)` or removing from `map.keySet()` changes the original.
-See [Live views](./core-concepts.md#live-views).
+### `size()` and `isEmpty()` are methods
+
+They are not properties. Also, `Map.forEach` passes `(key, value)`, the reverse of the JS `Map`.
+
+### Sub-lists and key sets are views
+
+Clearing `list.subList(…)` or removing from `map.keySet()` changes the original collection. See
+[Live views](./core-concepts.md#live-views).

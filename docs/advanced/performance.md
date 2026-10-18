@@ -1,19 +1,6 @@
 # Performance
 
-The collections have the asymptotic costs the Java Collections Framework documents, and they are tuned for V8. This page covers what each operation costs, how to pick the fastest structure for a workload, and which design choices make the library fast. It also lists the habits that cost speed, and gives measured benchmark results against native `Array`/`Map`/`Set` and against the popular libraries `js-sdsl`, `mnemonist` and `@datastructures-js/priority-queue`. The results include the cases where this library is slower.
-
-**Contents**
-
-- [Complexity tables](#complexity-tables)
-  - [Lists](#lists)
-  - [Queues and deques](#queues-and-deques)
-  - [Sets and maps](#sets-and-maps)
-  - [Streams](#streams)
-- [Choosing for speed](#choosing-for-speed)
-- [Design choices behind the numbers](#design-choices-behind-the-numbers)
-- [Tips](#tips)
-- [Benchmark results](#benchmark-results)
-- [Running the benchmarks](#running-the-benchmarks)
+The collections have the asymptotic costs documented for the Java Collections Framework and are tuned for V8. This page lists the cost of each operation, how to choose a structure for a workload, the design choices behind the numbers, and measured benchmark results against native `Array`/`Map`/`Set`, `js-sdsl`, `mnemonist` and `@datastructures-js/priority-queue`, including the cases where this library is slower.
 
 ## Complexity tables
 
@@ -46,7 +33,7 @@ n is the size of the collection. "Amortized" means occasional resizes are averag
 | `peek` / `peekFirst` / `peekLast` | O(1) | O(1) | O(1) |
 | `contains` / `remove(o)` | O(n) | O(n) | O(n) |
 | `new X(collection)` | O(n) | O(n) | O(n) heapify |
-| iteration order | first to last | first to last | heap order (**not** sorted) |
+| iteration order | first to last | first to last | heap order (not sorted) |
 | `null` elements | rejected | allowed | rejected |
 
 ### Sets and maps
@@ -78,7 +65,7 @@ Streams are lazy. Nothing runs until a terminal operation, and every element the
 | `skip(k)`, `dropWhile` | O(1) per element | |
 | `distinct()` | O(n) expected, O(n) memory | hash-based, by `equals`/`hashCode` |
 | `sorted()` | O(n log n), O(n) memory | a barrier: buffers everything, then replays. Number streams sort a `Float64Array`. |
-| `count()` | O(1) if the size is known | a `SIZED` pipeline (no `filter`/`flatMap`/...) answers from the source size **without running the stages**, so `peek` is not called |
+| `count()` | O(1) if the size is known | a `SIZED` pipeline (no `filter`/`flatMap`/...) answers from the source size without running the stages, so `peek` is not called |
 | `toList`, `toArray`, `collect`, `reduce`, `sum`, `forEach` | O(n) | |
 | `Collectors.groupingBy` / `toMap` | O(n) expected | backed by `HashMap` unless you pass a map factory |
 | `Collectors.toMap` into a `TreeMap` | O(n log n) | |
@@ -90,7 +77,7 @@ Streams are lazy. Nothing runs until a terminal operation, and every element the
 | --- | --- | --- |
 | an indexed list, mostly appends and reads | `ArrayList` | `LinkedList`: O(n) `get(i)` and poor cache locality |
 | a FIFO queue or a stack | `ArrayDeque` | `ArrayList.removeAt(0)` / `Array.shift()`: O(n) per call; `LinkedList`: one allocation per element |
-| many inserts/removes in the middle **through an iterator** | `LinkedList` | `ArrayList` with `iterator().remove()` in a loop (O(n²)); use `ArrayList.removeIf` instead (one O(n) pass) |
+| many inserts/removes in the middle through an iterator | `LinkedList` | `ArrayList` with `iterator().remove()` in a loop (O(n²)); use `ArrayList.removeIf` instead (one O(n) pass) |
 | the smallest (or largest) element repeatedly | `PriorityQueue` | sorting after every insert |
 | membership / lookup by value | `HashSet` / `HashMap` | `list.contains` in a loop |
 | the same, in a predictable order | `LinkedHashSet` / `LinkedHashMap` | sorting a `HashMap`'s keys every time |
@@ -100,41 +87,41 @@ Streams are lazy. Nothing runs until a terminal operation, and every element the
 | a read-only snapshot | `List.of` / `Set.of` / `Map.of` / `copyOf` | defensive copies into modifiable collections |
 | number crunching in a pipeline | `IntStream` / `DoubleStream` (`mapToInt`, `IntStream.range`) | `Stream<number>` with `reduce` for sums and stats |
 
-A sorted array with binary search **beats `TreeMap` for read-mostly data**: about 2.5× on `get` and 3.5× on `floor`/`ceiling` in the benchmarks below, and over 10× on iteration. If you build the data once and then only query it, consider an `ArrayList` plus `Collections.binarySearch`. Use `TreeMap` when inserts and removals are interleaved with queries.
+A sorted array with binary search beats `TreeMap` for read-mostly data: about 2.5× on `get` and 3.5× on `floor`/`ceiling` in the benchmarks below, and over 10× on iteration. If you build the data once and then only query it, consider an `ArrayList` plus `Collections.binarySearch`. Use `TreeMap` when inserts and removals are interleaved with queries.
 
 ## Design choices behind the numbers
 
-**`ArrayList`: a packed native array.** The backing array never has holes. Every index in `[0, size)` holds a value, so V8 keeps it in a packed elements kind, and `get`, `set` and `push` compile to plain array accesses. For that reason the `initialCapacity` argument is only validated, never used to preallocate: preallocating would create holes. `forEach` and `removeIf` check `modCount` once at the end instead of after every callback.
+### `ArrayList`: a packed native array
 
-**`HashMap`: hybrid storage.** One map keeps three kinds of storage, and each key goes to the fastest one that is still correct for it:
+The backing array never has holes. Every index in `[0, size)` holds a value, so V8 keeps it in a packed elements kind, and `get`, `set` and `push` compile to plain array accesses. For that reason the `initialCapacity` argument is only validated, never used to preallocate: preallocating would create holes. `forEach` and `removeIf` check `modCount` once at the end instead of after every callback.
 
-```mermaid
-flowchart TD
-  K["key"] --> Q1{"integer in 0..2^30-1, and the table would stay at least 25% full?"}
-  Q1 -- yes --> D["dense array indexed by the key"]
-  Q1 -- no --> Q2{"equality is SameValueZero? primitives, and objects without equals() that are not Dates"}
-  Q2 -- yes --> N["native Map"]
-  Q2 -- no --> B["bucket table keyed by hashCode(), each bucket a node or an array of colliding nodes"]
-```
+### `HashMap`: hybrid storage
+
+One map keeps three kinds of storage. Each key goes to the fastest one that is still correct for it:
+
+| Key | Storage |
+| --- | --- |
+| integer in `0..2^30-1`, while the table would stay at least 25% full | dense array indexed by the key |
+| equality is SameValueZero: primitives, and objects without `equals()` that are not `Date`s | native `Map` |
+| anything else (objects with `equals()`/`hashCode()`, `Date`s) | bucket table keyed by `hashCode()`, each bucket a node or an array of colliding nodes |
 
 Small integer keys (ids, indices, counters) never get hashed, so lookups are faster than the native `Map`. Integers from 2^30 up skip the table altogether: they could never fit it, and since they are not V8 small integers, even probing it would take a slow path. Strings and plain objects use the native `Map`, whose equality is exactly `Objects.equals` for those types. Only keys with an `equals()`/`hashCode()` method, and `Date`s, pay for a user-defined hash. `HashSet` uses the same layout. `LinkedHashMap` adds a doubly linked list through the nodes, so ordered iteration, `pollFirstEntry` and LRU moves are O(1).
 
-**`ArrayDeque`: a power-of-two ring buffer.** `head` is the index of the first element and `tail` is the next free slot. Because the capacity is a power of two, wrapping is a bitmask (`(i + 1) & (cap - 1)`), not a modulo. Vacated slots are filled with a small integer rather than `undefined`, so a deque of numbers stays in V8's fast numeric elements kinds, and removed objects can still be garbage-collected. Removing from the middle shifts whichever side is shorter. `new ArrayDeque(n)` really preallocates, unlike the `ArrayList`/`HashMap` capacity hints, up to 2^25 slots: from 2^26 on V8 turns a preallocated array into a slow dictionary, so larger buffers grow by `push`.
+### `ArrayDeque`: a power-of-two ring buffer
 
-**`PriorityQueue`: hole-based sifting with a number fast path.** A binary min-heap in a plain array. Sifting moves a *hole* and writes the moving element once at the end, which halves the writes compared with swapping. When the queue uses natural ordering and has only seen non-`NaN` numbers, it compares with a plain `<`. Constructing from a collection heapifies in O(n). `offer` finds the slot with comparisons first and only then shifts, so a comparator that throws leaves the heap intact.
+`head` is the index of the first element and `tail` is the next free slot. Because the capacity is a power of two, wrapping is a bitmask (`(i + 1) & (cap - 1)`), not a modulo. Vacated slots are filled with a small integer rather than `undefined`, so a deque of numbers stays in V8's fast numeric elements kinds, and removed objects can still be garbage-collected. Removing from the middle shifts whichever side is shorter. `new ArrayDeque(n)` really preallocates, unlike the `ArrayList`/`HashMap` capacity hints, up to 2^25 slots: from 2^26 on V8 turns a preallocated array into a slow dictionary, so larger buffers grow by `push`.
 
-**`TreeMap`: a red-black tree with parent pointers.** Nodes link to their parent, so iterators step to the in-order successor without a stack, at O(1) amortized per step. The greatest node is cached, which makes `lastKey()` O(1) and lets ascending inserts attach a new maximum without descending the tree. Number and string keys are compared inline, without the generic natural-ordering dispatch. Node fields are laid out so a descent touches as few cache lines as possible.
+### `PriorityQueue`: hole-based sifting with a number fast path
 
-**Streams: a push-based engine with stage fusion.** A pipeline is a linked list of stages. When the terminal operation runs, every stage wraps the next stage's *sink*, and then the source pushes elements down the chain:
+A binary min-heap in a plain array. Sifting moves a *hole* and writes the moving element once at the end, which halves the writes compared with swapping. When the queue uses natural ordering and has only seen non-`NaN` numbers, it compares with a plain `<`. Constructing from a collection heapifies in O(n). `offer` finds the slot with comparisons first and only then shifts, so a comparator that throws leaves the heap intact.
 
-```mermaid
-flowchart LR
-  SRC["source spliterator"] -- "forEachRemaining or acceptArray" --> F["FilterSink (two filters fused into one)"]
-  F -- "accept(t)" --> M["MapSink"]
-  M -- "accept(t)" --> L["SliceSink for limit(k)"]
-  L -- "accept(t)" --> T["terminal sink, such as reduce or toList"]
-  L -. "stop() sets cancelled on itself and upstream sinks" .-> F
-```
+### `TreeMap`: a red-black tree with parent pointers
+
+Nodes link to their parent, so iterators step to the in-order successor without a stack, at O(1) amortized per step. The greatest node is cached, which makes `lastKey()` O(1) and lets ascending inserts attach a new maximum without descending the tree. Number and string keys are compared inline, without the generic natural-ordering dispatch. Node fields are laid out so a descent touches as few cache lines as possible.
+
+### Streams: a push-based engine with stage fusion
+
+A pipeline is a linked list of stages. When the terminal operation runs, every stage wraps the next stage's *sink*, and the source spliterator pushes elements down the chain of sinks to the terminal sink (`reduce`, `toList`, ...).
 
 - **Bulk push.** If no stage can stop early, the source runs one tight loop (`acceptArray` for array-backed sources), with no per-element `hasNext()`/`next()` protocol.
 - **Pushed cancellation.** A short-circuiting sink calls `stop()`, which flags itself and every sink upstream of it, up to a buffering barrier such as `sorted()`. The driver then reads one `cancelled` field before each element instead of asking every stage.
@@ -144,7 +131,9 @@ flowchart LR
 
 ## Tips
 
-**`forEach` is faster than `for..of`.** A JS iterator has to return a `{ value, done }` result for every element and check for concurrent modification. The collection's own `forEach` is a plain loop with one check at the end. In the benchmarks, `ArrayList.forEach` beats native `Array.forEach`, while `for..of` over an `ArrayList` runs at about a third of native speed. The same holds for maps: `map.forEach((k, v) => ...)` was 1.5× faster than `for (const [k, v] of map)`.
+### Prefer `forEach` over `for..of`
+
+A JS iterator has to return a `{ value, done }` result for every element and check for concurrent modification. The collection's own `forEach` is a plain loop with one check at the end. In the benchmarks, `ArrayList.forEach` beats native `Array.forEach`, while `for..of` over an `ArrayList` runs at about a third of native speed. The same holds for maps: `map.forEach((k, v) => ...)` was 1.5× faster than `for (const [k, v] of map)`.
 
 ```ts
 import { ArrayList, HashMap } from '@nodestd/collections';
@@ -163,11 +152,17 @@ m.forEach((_k, v) => (total += v)); // no [key, value] array per entry
 console.log(total); // → 3
 ```
 
-**Presize hints are hints.** `new ArrayList(n)`, `new HashMap(n)`, `HashMap.newHashMap(n)` and `new PriorityQueue(n)` validate `n`, but the native storage grows on its own, so they do not preallocate. `new ArrayDeque(n)` **does** preallocate. That about doubled `addLast` throughput in the deque benchmark, so presize a deque whenever you know its size.
+### Presize an `ArrayDeque`, not other collections
 
-**Prefer `ArrayDeque` over `LinkedList` for queues and stacks.** Both are O(1) at the ends, but `LinkedList` allocates a node per element and scatters elements across memory. `ArrayDeque` is a single array. Use `LinkedList` only when you need `null` elements, or O(1) inserts and removes in the middle through a `ListIterator`.
+`new ArrayList(n)`, `new HashMap(n)`, `HashMap.newHashMap(n)` and `new PriorityQueue(n)` validate `n`, but the native storage grows on its own, so they do not preallocate. `new ArrayDeque(n)` does preallocate. That about doubled `addLast` throughput in the deque benchmark, so presize a deque whenever you know its size.
 
-**Use `IntStream`/`DoubleStream` for numeric work.** JS numbers are never boxed, so the gain does not come from avoiding allocation as it would in the JDK. It comes from specialised operations: `sum()`, `average()`, `summaryStatistics()`, typed-array `sorted()` and number `distinct()`. In the `distinct + sorted` benchmark, `IntStream` was 2.3× faster than `Stream<number>`. Switch with `mapToInt` and back with `boxed()` or `mapToObj`:
+### Prefer `ArrayDeque` over `LinkedList` for queues and stacks
+
+Both are O(1) at the ends, but `LinkedList` allocates a node per element and scatters elements across memory. `ArrayDeque` is a single array. Use `LinkedList` only when you need `null` elements, or O(1) inserts and removes in the middle through a `ListIterator`.
+
+### Use `IntStream`/`DoubleStream` for numeric work
+
+JS numbers are never boxed, so the gain does not come from avoiding allocation as it would in the JDK. It comes from specialised operations: `sum()`, `average()`, `summaryStatistics()`, typed-array `sorted()` and number `distinct()`. In the `distinct + sorted` benchmark, `IntStream` was 2.3× faster than `Stream<number>`. Switch with `mapToInt` and back with `boxed()` or `mapToObj`:
 
 ```ts
 import { IntStream, List } from '@nodestd/collections';
@@ -178,7 +173,9 @@ console.log(orders.stream().mapToInt((o) => o.qty).distinct().sorted().boxed().t
 console.log(IntStream.range(0, 1000).filter((i) => i % 7 === 0).count()); // → 143
 ```
 
-**`count()` may skip your pipeline.** When the size is known from the source, `count()` returns it without traversing, so side effects in `peek` or `map` never run. This matches the JDK. Do not rely on `peek` for side effects.
+### `count()` may skip the pipeline
+
+When the size is known from the source, `count()` returns it without traversing, so side effects in `peek` or `map` never run. This matches the JDK. Do not rely on `peek` for side effects.
 
 ```ts
 import { List } from '@nodestd/collections';
@@ -188,7 +185,7 @@ const n = List.of(1, 2, 3).stream().peek(() => peeked++).map((x) => x * 2).count
 console.log(n, peeked); // → 3 0
 ```
 
-**Smaller things**
+### Other tips
 
 - Use `removeIf(pred)` instead of removing through an iterator in a loop. On an `ArrayList` it is one O(n) compaction.
 - Use `Stream.ofArray(array)` (or `IntStream.ofArray`) to stream a JS array without copying it.
@@ -206,7 +203,10 @@ All numbers below come from one run of `npm run bench -- <group>` for each group
 | Harness | `tinybench` 6.2.0, 300 ms per case after 100 ms warm-up |
 | Competitors | `js-sdsl` 4.4.2, `mnemonist` 0.40.5, `@datastructures-js/priority-queue` 6.4.0 |
 
-**Read them as rough ratios, not absolutes.** Other work was running on the machine during the run, and some cases show ±10–30% relative margin of error (the `±%` column the harness prints). Re-run them on your own hardware before drawing fine-grained conclusions. In the tables, **>1.00× means this library was faster**. Each ratio is our throughput divided by the other implementation's. "Best competitor" is the fastest of `js-sdsl`, `mnemonist` and `@datastructures-js` in that group.
+> [!WARNING]
+> Read the results as rough ratios, not absolutes. Other work was running on the machine during the run, and some cases show ±10–30% relative margin of error (the `±%` column the harness prints). Re-run them on your own hardware before drawing fine-grained conclusions.
+
+In the tables, >1.00× means this library was faster. Each ratio is our throughput divided by the other implementation's. "Best competitor" is the fastest of `js-sdsl`, `mnemonist` and `@datastructures-js` in that group.
 
 ### ArrayList (vs native Array, js-sdsl Vector)
 
@@ -248,7 +248,7 @@ All numbers below come from one run of `npm run bench -- <group>` for each group
 | LinkedHashSet add+has 100k int | 335 | 2.75× | 2.20× (js-sdsl HashSet) |
 | LinkedHashMap fill + pollFirstEntry drain 100k | 355 | 4.28× | 2.47× (js-sdsl HashMap) |
 
-The large wins on integer keys come from the dense integer table. **String keys are slower than a native `Map`**, by 17% for `HashMap` and 31% for `LinkedHashMap`, because every operation goes through the hybrid dispatch, and `LinkedHashMap` also maintains its list. Sparse integer keys fall back to the native `Map` through that same dispatch, so they are 24% slower. If all your keys are strings and you need neither value equality nor the `Map` interface, a native `Map` is the faster choice.
+The large wins on integer keys come from the dense integer table. String keys are slower than a native `Map`, by 17% for `HashMap` and 31% for `LinkedHashMap`, because every operation goes through the hybrid dispatch, and `LinkedHashMap` also maintains its list. Sparse integer keys fall back to the native `Map` through that same dispatch, so they are 24% slower. If all your keys are strings and you need neither value equality nor the `Map` interface, a native `Map` is the faster choice.
 
 ### TreeMap, TreeSet (vs js-sdsl OrderedMap/OrderedSet, sorted array)
 
@@ -296,7 +296,7 @@ Against `@datastructures-js/priority-queue` alone, the ratios were 2.1× (offer)
 | for..of 10k | 38,269 | **0.26×** | 1.47× (mnemonist) |
 | contains (primitive) 10k | 222,809 | 1.01× (`includes`) | 36.6× (js-sdsl) |
 
-**This is the weakest group.** `ArrayDeque` is 6–38% behind the fastest specialised deque on raw add/poll throughput. Every add does work the competitors skip: a `null` check, which the Java API requires, and a `modCount` update for fail-fast iterators. It is still 12× faster than using `Array.shift()` as a queue, and the gap shrinks to 6–21% when the deque is preallocated.
+This is the weakest group. `ArrayDeque` is 6–38% behind the fastest specialised deque on raw add/poll throughput. Every add does work the competitors skip: a `null` check, which the Java API requires, and a `modCount` update for fail-fast iterators. It is still 12× faster than using `Array.shift()` as a queue, and the gap shrinks to 6–21% when the deque is preallocated.
 
 ### Streams (vs native Array chains, Iterator helpers, hand-written loops)
 

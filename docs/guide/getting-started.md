@@ -1,17 +1,7 @@
 # Getting started
 
-This page takes you from `npm install` to a working program in a few minutes. It covers installation, importing
-the package from ESM and CommonJS, a short tour of lists, sets, maps, streams and collectors, the ways to iterate a
-collection, how the generic types fit together, and what you need to know about bundlers, browsers and Node versions.
-
-- [Install](#install)
-- [Importing](#importing)
-- [A 5-minute tour](#a-5-minute-tour)
-- [Iterating](#iterating)
-- [Using the generics](#using-the-generics)
-- [Browsers and bundlers](#browsers-and-bundlers)
-- [Supported runtimes](#supported-runtimes)
-- [Where next](#where-next)
+This page covers installation, importing from ES modules and CommonJS, a quick tour of the main collection types,
+iteration, typing, and runtime and bundler support.
 
 ## Install
 
@@ -23,13 +13,12 @@ yarn add @nodestd/collections
 pnpm add @nodestd/collections
 ```
 
-The package has **zero runtime dependencies** and ships its own type definitions, so there is no `@types/…` package
-to install.
+The package has no runtime dependencies and ships its own type definitions.
 
 ## Importing
 
-The package is published as both ES modules and CommonJS. The `exports` map picks the right build (and the matching
-`.d.ts`/`.d.mts` types) automatically.
+The package is published as both ES modules and CommonJS. The `exports` map selects the matching build and type
+definitions (`.d.ts` or `.d.mts`).
 
 ```ts
 // ESM / TypeScript
@@ -45,10 +34,14 @@ console.log(names.toString()); // → [Ada]
 const { ArrayList, HashMap, Collectors } = require('@nodestd/collections');
 ```
 
-Everything is a named export of the package root; there are no deep imports.
+Everything is a named export of the package root. There are no deep imports.
 
-**Name clash warning.** The package exports interfaces/factories called `List`, `Set`, `Map` and `Iterator`. When
-you import `Set` or `Map`, they shadow the JS built-ins in that module. Alias them if you need both:
+### Name clashes with built-ins
+
+> [!WARNING]
+> The package exports interfaces and factories named `List`, `Set`, `Map` and `Iterator`. Importing `Set` or `Map`
+> shadows the JS built-in in that module, and the library's `Set` and `Map` are not constructible. Alias them on
+> import, or reach the built-ins through `globalThis`.
 
 ```ts
 import { Map as CMap, HashMap } from '@nodestd/collections';
@@ -58,7 +51,7 @@ const native = new globalThis.Map<string, number>();
 console.log(ours.size(), native.size); // → 0 0
 ```
 
-## A 5-minute tour
+## Quick tour
 
 ### Lists
 
@@ -81,7 +74,7 @@ const fixed = List.of(1, 2, 3); // immutable
 console.log(fixed.contains(2)); // → true
 ```
 
-`toString()` prints the classic `[a, b, c]` format, which is also what the examples in these docs show.
+`toString()` prints the `[a, b, c]` format used by the examples throughout these docs.
 
 ### Sets
 
@@ -121,11 +114,11 @@ console.log(counts.toString());   // → {a=1, b=2}
 console.log(counts.firstKey());   // → a
 ```
 
-Missing keys give `null`, not `undefined` — see [Core concepts](./core-concepts.md#null-and-undefined).
+Missing keys return `null`, not `undefined`. See [Null and undefined](./core-concepts.md#null-and-undefined).
 
 ### Streams and collectors
 
-Streams are lazy pipelines over any collection (or array, or iterable). Collectors turn a stream into a result.
+Streams are lazy pipelines over a collection, array or iterable. Collectors reduce a stream to a result.
 
 ```ts
 import { List, Stream, IntStream, Collectors } from '@nodestd/collections';
@@ -146,11 +139,11 @@ console.log(IntStream.rangeClosed(1, 5).sum());           // → 15
 console.log(Stream.of(3, 1, 2).sorted().findFirst().get()); // → 1
 ```
 
-More in [Streams overview](../streams/overview.md) and [Collectors](../streams/collectors.md).
+See [Streams overview](../streams/overview.md) and [Collectors](../streams/collectors.md).
 
 ## Iterating
 
-Every collection is a JS iterable, so all the usual language features work. Maps iterate as `[key, value]` pairs.
+Every collection is a JS iterable. Maps iterate as `[key, value]` pairs.
 
 ```ts
 import { ArrayList, LinkedHashMap } from '@nodestd/collections';
@@ -171,20 +164,21 @@ for (const [k, v] of m) {
 console.log([...m]); // → [ [ 'a', 1 ], [ 'b', 2 ] ]
 m.forEach((k, v) => { /* map forEach is (key, value) */ });
 
-// The classic explicit iterator, which also lets you remove safely while iterating
+// An explicit iterator can remove elements safely during iteration
 const it = list.iterator();
 while (it.hasNext()) if (it.next() === 2) it.remove();
 console.log(list.toString()); // → [1, 3]
 ```
 
-All iteration is **fail-fast**: changing a collection structurally inside a `for..of` over it throws
-`ConcurrentModificationException`. Use `iterator().remove()` or `removeIf` instead — see
-[Fail-fast iteration](./core-concepts.md#fail-fast-iteration).
+> [!IMPORTANT]
+> Iteration is fail-fast. Structurally modifying a collection inside a `for..of` over it throws
+> `ConcurrentModificationException`. Use `iterator().remove()` or `removeIf` instead. See
+> [Fail-fast iteration](./core-concepts.md#fail-fast-iteration).
 
-## Using the generics
+## Typing collections
 
-Program against the interfaces (`List`, `Set`, `Map`, `Deque`, `NavigableMap`, …) and choose the implementation at
-construction time — the same habit as with the Java API.
+Declare variables and parameters with the interfaces (`List`, `Set`, `Map`, `Deque`, `NavigableMap`, …) and choose
+the implementation at construction time.
 
 ```ts
 import { ArrayList, LinkedList, List, Deque, NavigableMap, TreeMap, Collection } from '@nodestd/collections';
@@ -207,11 +201,10 @@ index.put('docs', 1);
 console.log(index.ceilingKey('a')); // → docs
 ```
 
-Type parameters are usually inferred from factory arguments (`ArrayList.of(1, 2)` is an `ArrayList<number>`), but
-give them explicitly on empty constructors (`new HashMap<string, number>()`), otherwise TypeScript infers
-`unknown`.
+Type parameters are inferred from factory arguments: `ArrayList.of(1, 2)` is an `ArrayList<number>`. Pass them
+explicitly to empty constructors (`new HashMap<string, number>()`); otherwise TypeScript infers `unknown`.
 
-Comparators are plain functions `(a, b) => number`, so they type-check like any callback:
+Comparators are plain functions `(a, b) => number` and type-check like any callback:
 
 ```ts
 import { TreeSet, Comparator } from '@nodestd/collections';
@@ -225,33 +218,37 @@ console.log(byAge.first().name); // → a
 
 ## Browsers and bundlers
 
-- The library is plain ES2020 with no Node-only APIs, so it runs in every modern browser, Deno, Bun, workers and
-  edge runtimes.
-- Bundlers (Vite, webpack, esbuild, Rollup, Parcel) pick the ESM build through the `exports` map. It is a single
-  module, so unused classes are tree-shaken only as far as your bundler can prove them unused; importing the package
-  also registers the stream engine with the collections (that is why `list.stream()` works without importing
-  `Stream`).
-- `Symbol.dispose` support on streams (`using s = list.stream()`) is present only where the runtime defines
+- The library is plain ES2020 with no Node-specific APIs. It runs in modern browsers, Deno, Bun, workers and edge
+  runtimes.
+- Bundlers (Vite, webpack, esbuild, Rollup, Parcel) select the ESM build through the `exports` map. The package is a
+  single module, so unused classes are tree-shaken only as far as the bundler can prove them unused. Importing the
+  package also registers the stream engine with the collections, which is why `list.stream()` works without
+  importing `Stream`.
+- `Symbol.dispose` support on streams (`using s = list.stream()`) is available only where the runtime defines
   `Symbol.dispose`.
-- When your bundler merges the library with your own code it may rename classes whose names clash (`HashMap2`), and a
-  minifier shortens them further. Collections print and compare the same either way; only `constructor.name` and the
-  class names quoted in some error messages (`ClassCastException`) change. Exception `name`s are unaffected.
-- Load one copy of the library. If an app ends up with two (say the CommonJS build through `require` and the ESM
-  build through `import`), collections, maps and optionals from both still compare equal and work together, but
-  `instanceof` across the copies is false: check exceptions by `e.name`.
+- A bundler that merges the library with application code may rename clashing classes (`HashMap2`), and a minifier
+  shortens names further. Printing and equality are unaffected. Only `constructor.name` and class names quoted in
+  some error messages (`ClassCastException`) change. Exception `name`s are unaffected.
+
+> [!WARNING]
+> Load one copy of the library. If an application loads two copies (for example the CommonJS build through
+> `require` and the ESM build through `import`), collections from both still compare equal and interoperate, but
+> `instanceof` across copies is `false`. Check exceptions by `e.name`.
 
 ## Supported runtimes
 
 | Runtime | Support |
 |---|---|
-| Node.js | **18 and newer** (`engines: { node: ">=18" }`) |
-| Browsers | Any evergreen browser (ES2020) |
-| TypeScript | 5.x recommended; the typings use standard generics and overloads |
+| Node.js | 18 and newer (`engines: { node: ">=18" }`) |
+| Browsers | Evergreen browsers (ES2020) |
+| TypeScript | 5.x recommended |
 
-## Where next
+## Next steps
 
-- [Data structures primer](./data-structures.md) — what `ArrayList`, `ArrayDeque`, `TreeMap` & co. are and how they store data, if these names are new to you.
-- [Core concepts](./core-concepts.md) — the semantics that differ from plain JS collections. **Read this next.**
-- [Choosing a collection](./choosing-a-collection.md) — which class to pick.
-- [Coming from JS](./coming-from-js.md) — a cheat sheet from `Array`/`Map`/`Set`.
-- [Documentation home](../README.md) — the full map of pages.
+| Page | Read it for |
+|---|---|
+| [Core concepts](./core-concepts.md) | The semantics that differ from built-in JS collections. Recommended next. |
+| [Data structures primer](./data-structures.md) | What `ArrayList`, `ArrayDeque`, `TreeMap` and the other structures are and how they store data |
+| [Choosing a collection](./choosing-a-collection.md) | Which class to pick |
+| [Coming from JS](./coming-from-js.md) | `Array`, `Map` and `Set` equivalents |
+| [Introduction](../README.md) | The full list of pages |

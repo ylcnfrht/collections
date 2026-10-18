@@ -1,30 +1,16 @@
 # How the library is tested
 
-The library claims to behave like the Java Collections Framework, down to which exception a call throws and the state a collection is left in. Several layers of tests back that claim:
+This page describes the test layers that back the library's behaviour, down to which exception a call throws and the state a collection is left in. It is written for users who want to know how far to trust the library and for contributors who want to extend the tests.
 
-- **Contract suites** run against every implementation and view.
-- **Model-based random tests** compare each structure with a trivially correct model.
-- **A conformance suite** is written from the reference documentation.
-- **Differential testing** runs hundreds of thousands of random scripts on the JDK and on this library, and compares every step.
-- **Doctests** run every example in these docs.
+| Layer | What it checks |
+| --- | --- |
+| [Contract suites](#contract-suites) | shared behavioural tests run against every implementation and view |
+| [Model-based random tests](#model-based-random-tests) | each structure against a trivially correct model |
+| [Conformance suite](#conformance-suite) | behaviour written from the reference documentation |
+| [Differential testing](#differential-testing-against-the-jdk) | hundreds of thousands of random scripts run on the JDK and on this library, compared step by step |
+| [Doctests](#doctests) | every example in these docs |
 
-The suite has about 10,200 tests and covers about 99% of lines. This page explains each layer for users who want to know how far to trust the library, and for contributors who want to extend it.
-
-**Contents**
-
-- [Commands](#commands)
-- [Test layout](#test-layout)
-  - [Contract suites](#contract-suites)
-  - [Model-based random tests](#model-based-random-tests)
-  - [Conformance suite](#conformance-suite)
-  - [Doctests](#doctests)
-  - [Coverage](#coverage)
-- [Differential testing against the JDK](#differential-testing-against-the-jdk)
-  - [How it works](#how-it-works)
-  - [Running it](#running-it)
-  - [The compatibility report](#the-compatibility-report)
-- [Timing budgets (PERF=1)](#timing-budgets-perf1)
-- [Adding a new collection with contract tests](#adding-a-new-collection-with-contract-tests)
+The suite has about 10,200 tests and covers about 99% of lines.
 
 ## Commands
 
@@ -61,7 +47,7 @@ tests/
 
 ### Contract suites
 
-A contract is a function that registers a full `describe` block of behavioural tests for **any** implementation of an interface. Each test file calls the contracts that apply to its class:
+A contract is a function that registers a full `describe` block of behavioural tests for any implementation of an interface. Each test file calls the contracts that apply to its class:
 
 ```ts nocheck
 // tests/LinkedList.test.ts
@@ -92,7 +78,7 @@ The contracts cover more than the happy path:
 - fail-fast iteration (`ConcurrentModificationException` after a structural change);
 - iterator `remove()` state rules (`IllegalStateException`);
 - exceptions for bad indices and `null`;
-- equality and hashing across *different* implementations;
+- equality and hashing across different implementations;
 - live views (`subList`, `keySet`, `headMap`, `descendingMap`, ...) writing through to the base;
 - `toString` formats;
 - spliterator characteristics;
@@ -150,28 +136,15 @@ Blocks fenced as ` ```ts nocheck ` (signatures, pseudo-code, test excerpts) are 
 
 ### Coverage
 
-`npm run test:cov` measures `src/**` (except type-only interfaces and the barrel file). The current figures are about **99.0% of lines, 97.7% of branches and 98.3% of functions**. The thresholds in `jest.config.ts` (95/95/95/90) stop coverage from silently regressing. Most of what remains uncovered is defensive branches that need a misbehaving user callback to reach.
+`npm run test:cov` measures `src/**` (except type-only interfaces and the barrel file). The current figures are about 99.0% of lines, 97.7% of branches and 98.3% of functions. The thresholds in `jest.config.ts` (95/95/95/90) stop coverage from silently regressing. Most of what remains uncovered is defensive branches that need a misbehaving user callback to reach.
 
 ## Differential testing against the JDK
 
-Unit tests can only check what their authors thought to check. The differential harness in `tools/differential/` removes that limit. It generates random operation scripts, runs each one on the **reference runtime** and on this library, and compares the outputs after every single operation.
+Unit tests can only check what their authors thought to check. The differential harness in `tools/differential/` removes that limit. It generates random operation scripts, runs each one on the reference runtime and on this library, and compares the outputs after every single operation.
 
 ### How it works
 
-```mermaid
-flowchart LR
-  G["generator (gen.ts), seeded"] --> S["scripts: a target, then one op per line"]
-  S --> R["reference runner (tools/differential)"]
-  S --> T["TS runner (tsRunner.ts)"]
-  R --> NR["normalised output: result ;; state"]
-  T --> NT["normalised output: result ;; state"]
-  NR --> C{"compare line by line"}
-  NT --> C
-  C -- "equal" --> OK["next batch"]
-  C -- "divergent" --> SH["shrink to a minimal script"]
-  SH --> AS["group by signature and assess"]
-  AS --> REP["report / docs/COMPATIBILITY.md"]
-```
+Each batch of scripts goes through six steps:
 
 1. **Generate.** `gen.ts` is seeded (mulberry32). It picks a base target, often wraps it in a view or wrapper (`subList`, `reversed`, `keySet`, `headMap`, `descendingMap`, `unmodifiable*`, `checked*`, `asLifoQueue`, ..., even nested), and writes operations with arguments drawn from small domains, so collisions, duplicates and edge cases are common. The targets are every concrete collection and map, the immutable/empty/singleton factories, harness subclasses of every `Abstract*` skeleton, `LinkedHashMap` with a `removeEldestEntry` override, stream pipelines, and `Misc` scripts that drive `Objects`, `Comparator`, `Optional`, statistics, spliterators, collectors and gatherers by hand. Iterators, list iterators, enumerations and spliterators are driven by small step programs.
 2. **Run both sides.** The reference runner and `tsRunner.ts` are two implementations of the same script interpreter. Each prints one line per operation: `<result> ;; <state of the target after the op>`. An exception prints as `EXC:<ClassName>`, so exception types are compared too.
@@ -202,7 +175,10 @@ npx ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts \
 npx ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --script repro.txt
 ```
 
-You need the JDK, version 23 or newer, on `PATH`. Without it, every entry point prints a message and exits 0, and the Jest smoke test is skipped, so contributors without it can still run `npm test`. Every script id is `<seed>-<n>`, so `--seed S --count N` regenerates exactly the same scripts.
+> [!NOTE]
+> The harness needs a JDK, version 23 or newer, on `PATH`. Without one, every entry point prints a message and exits 0, and the Jest smoke test is skipped, so `npm test` still passes.
+
+Every script id is `<seed>-<n>`, so `--seed S --count N` regenerates exactly the same scripts.
 
 ### The compatibility report
 
@@ -216,7 +192,7 @@ You need the JDK, version 23 or newer, on `PATH`. Without it, every entry point 
 | Comparable API covered | 1,602 / 1,602 (100.0%) |
 | Excluded API rows (each justified) | 141 |
 | Divergent scripts | 57, in 21 signatures |
-| Assessment | 8 intentional, 13 reference-quirk, **0 library** |
+| Assessment | 8 intentional, 13 reference-quirk, 0 library |
 | Run time | 61 s on 8 worker processes |
 
 So every divergence found in 1.7 million compared operations is either a documented design choice, or a case where the reference breaks its own specification. Some examples:
@@ -226,13 +202,13 @@ So every divergence found in 1.7 million compared operations is either a documen
 - **Reference quirk:** the reference's `HashSet` spliterator drops `SIZED` after traversal.
 - **Reference quirk:** a reversed list view accepts `set()` right after `add()`.
 
-The report lists each divergence with a minimal script. For a reader's guide to the report, see [Compatibility](./compatibility.md).
+The report lists each divergence with a minimal script. For the documented differences in readable form, see [Compatibility](./compatibility.md).
 
 ## Timing budgets (PERF=1)
 
 A few tests guard against accidental quadratic behaviour. Examples: `removeAll` of 50k elements from a 100k `ArrayList`, 50k removals through a `HashMap` key set, and `removeIf` on a 100k `HashSet`. They wrap the workload in `timeIt()` and assert a generous budget (`expect(ms).toBeLessThan(1000)`).
 
-Wall-clock budgets are flaky on busy CI machines. So `timeIt` always runs and checks the workload, but **reports the time only when `PERF=1` is set**, and returns 0 otherwise:
+Wall-clock budgets are flaky on busy CI machines, so `timeIt` always runs and checks the workload but reports the time only when `PERF=1` is set. Otherwise it returns 0:
 
 ```sh
 PERF=1 npx jest tests/ArrayList tests/HashMap tests/HashSet tests/Collections
@@ -242,7 +218,7 @@ Run with `PERF=1` on a quiet machine before merging work that touches a hot path
 
 ## Adding a new collection with contract tests
 
-Say you add a new class, or a [custom collection](./custom-collections.md) in your own project that you want held to the same standard. The steps:
+These steps apply to a new class in this library, and to a [custom collection](./custom-collections.md) in your own project that you want held to the same standard.
 
 1. **Pick the contracts** that match the interfaces it implements. A list gets `collectionContract` + `listContract`. A deque gets `collectionContract` + `queueContract` + `dequeContract`. A sorted set gets `collectionContract` + `setContract` + `navigableSetContract`. A map gets `mapContract` (+ `navigableMapContract`).
 2. **Create a test file** `tests/<Name>.test.ts` that calls them with a factory for an empty instance, and with options that describe your class honestly (`allowsNull`, `allowsDuplicates`, `fifo`, ...). An option set wrongly makes the contract expect the wrong behaviour, so failures are informative.

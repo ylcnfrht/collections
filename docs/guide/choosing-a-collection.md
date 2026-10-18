@@ -1,14 +1,9 @@
 # Choosing a collection
 
-Picking the right class is mostly a matter of answering four questions: do you map keys to values, does order
-matter (and which order), are duplicates allowed, and how will you access the data (by index, by key, from the
-ends, by priority)? This page turns those questions into a decision flowchart, then compares every concrete class
-on ordering, null handling, duplicates and operation cost, with short examples of the most common choices.
-
-- [Decision flowchart](#decision-flowchart)
-- [Comparison table](#comparison-table)
-- [Rules of thumb](#rules-of-thumb)
-- [Common picks in code](#common-picks-in-code)
+The right class depends on four questions: whether you map keys to values, whether order matters and which order,
+whether duplicates are allowed, and how you access the data (by index, by key, from the ends or by priority). This
+page answers them with a decision flowchart, then compares every concrete class on ordering, `null` handling,
+duplicates and operation cost.
 
 ## Decision flowchart
 
@@ -44,12 +39,12 @@ flowchart TD
     mid -- no --> al["ArrayList"]
 ```
 
-`Vector` and `Stack` are legacy classes kept for compatibility; prefer `ArrayList` and `ArrayDeque`.
+`Vector` and `Stack` are legacy classes kept for compatibility. Prefer `ArrayList` and `ArrayDeque`.
 
-## Comparison table
+## Comparison tables
 
-n = size of the collection. "amortized" means occasionally O(n) when the backing array grows. Hash-based
-costs assume reasonable `hashCode()`s.
+In these tables, n is the size of the collection. "Amortized" means occasionally O(n) when the backing array
+grows. Hash-based costs assume well-distributed `hashCode()` values.
 
 ### Lists
 
@@ -90,25 +85,29 @@ costs assume reasonable `hashCode()`s.
 
 `containsValue` is O(n) on every map.
 
-### Thread notes
+### Thread safety
 
-Not applicable: JS runs your code on one thread, so there is no locking to choose. The `Collections.synchronized*`
+JS runs application code on a single thread, so there is no locking strategy to choose. The `Collections.synchronized*`
 wrappers exist for API compatibility and behave like plain delegating wrappers. `parallelStream()` is accepted but
 evaluates sequentially (see [Compatibility](../advanced/compatibility.md#stream-differences)).
 
 ## Rules of thumb
 
-- **Start with `ArrayList`, `HashMap` and `HashSet`.** Switch only when you need something they don't give.
-- **Need order you can rely on?** `LinkedHash*` for insertion order, `Tree*` for sorted order. Hash-based
-  iteration order is unspecified — never let output depend on it.
-- **Need "the nearest key ≤ x", ranges or min/max?** `TreeMap`/`TreeSet` (navigable API: `floor`, `ceiling`,
+- Start with `ArrayList`, `HashMap` and `HashSet`. Switch only when you need a capability they lack.
+- For a predictable order, use `LinkedHash*` (insertion order) or `Tree*` (sorted order).
+- For nearest-key lookups, ranges or min/max, use `TreeMap`/`TreeSet` and the navigable API (`floor`, `ceiling`,
   `headMap`, `subSet`, `pollFirst`, …).
-- **Queue or stack?** `ArrayDeque` (`offer`/`poll` for FIFO, `push`/`pop` for LIFO). Use `PriorityQueue` when the
-  next element is "the most urgent", not "the oldest".
-- **Data that never changes?** `List.of`/`Set.of`/`Map.of`: cheaper, safe to share, null-free.
-- **`LinkedList` is rarely faster than `ArrayList`.** It wins only for insertions/removals at a position you are
-  already at with a `ListIterator`. Its `get(i)` is O(n).
-- Measured numbers and tuning tips: [Performance](../advanced/performance.md).
+- For a queue or stack, use `ArrayDeque`: `offer`/`poll` for FIFO, `push`/`pop` for LIFO. Use `PriorityQueue` when
+  the next element is the highest-priority one rather than the oldest.
+- For data that never changes, use `List.of`/`Set.of`/`Map.of`. They are cheaper, safe to share and `null`-free.
+- `LinkedList` is rarely faster than `ArrayList`. It wins only for insertions and removals at a position already
+  reached with a `ListIterator`. Its `get(i)` is O(n).
+
+> [!WARNING]
+> Iteration order of `HashMap`, `HashSet`, `IdentityHashMap`, `Set.of` and `Map.of` is unspecified. Do not let
+> program output depend on it.
+
+Measured numbers and tuning tips are in [Performance](../advanced/performance.md).
 
 ## Common picks in code
 
@@ -153,6 +152,6 @@ const unique = new LinkedHashSet<string>();
 console.log(unique.toString()); // → [b, a, c]
 ```
 
-See the per-family pages for the full APIs: [Lists](../collections/lists.md),
+The full APIs are on the per-family pages: [Lists](../collections/lists.md),
 [Queues and deques](../collections/queues-and-deques.md), [Sets](../collections/sets.md),
 [Maps](../collections/maps.md), [Immutable collections and wrappers](../collections/immutable-and-wrappers.md).

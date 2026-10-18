@@ -1,22 +1,8 @@
 # Core concepts
 
-JS `Array`, `Map` and `Set` compare objects by identity, let you change a collection while you loop over it, and
-copy when you slice. This library follows the Java Collections Framework instead: **value equality** through
-`equals()`/`hashCode()`, **natural ordering** through `compareTo()` or comparators, a strict policy for **absent
-values** (`null`), **fail-fast iterators**, **live views** that write through to their backing collection, a
-hierarchy of **typed exceptions**, and **optional operations** on unmodifiable collections. This page explains each
-rule, why it exists, and shows it running.
-
-- [Value equality](#value-equality)
-- [Writing your own equals, hashCode and compareTo](#writing-your-own-equals-hashcode-and-compareto)
-- [Ordering: natural order and comparators](#ordering-natural-order-and-comparators)
-- [Null and undefined](#null-and-undefined)
-- [Fail-fast iteration](#fail-fast-iteration)
-- [Live views](#live-views)
-- [Exceptions](#exceptions)
-- [Optional operations: unmodifiable vs immutable](#optional-operations-unmodifiable-vs-immutable)
-- [Sequenced collections](#sequenced-collections)
-- [RandomAccess](#randomaccess)
+Built-in JS collections compare objects by identity, allow modification during iteration and copy on `slice`.
+This library follows the semantics of the Java Collections Framework instead. This page describes each rule and
+the behaviour it produces.
 
 ## Value equality
 
@@ -76,14 +62,15 @@ console.log(Objects.hashCode(null));      // → 0
 
 | Rule | Why |
 |---|---|
-| `a.equals(a)` is true (reflexive) | otherwise you cannot find what you just added |
+| `a.equals(a)` is true (reflexive) | otherwise a lookup cannot find an element that was added |
 | `a.equals(b)` ⇔ `b.equals(a)` (symmetric) | lookup order must not matter |
 | transitive, and consistent over time | hashed and sorted structures assume it |
 | `a.equals(b)` ⇒ `a.hashCode() === b.hashCode()` | a `HashMap` looks in the bucket chosen by the hash *first*; an equal key in the wrong bucket is never found |
 | `a.equals(null)` is false | |
 
-Never mutate an element in a way that changes its `equals`/`hashCode` while it is in a hashed collection, or its
-`compareTo` while it is in a sorted one: the structure will not find it any more.
+> [!WARNING]
+> Do not mutate an element in a way that changes its `equals`/`hashCode` while it is in a hashed collection, or its
+> `compareTo` while it is in a sorted one. The collection can no longer find it.
 
 ## Writing your own equals, hashCode and compareTo
 
@@ -126,9 +113,10 @@ const sorted = new TreeSet<Point>();               // uses compareTo
 console.log(sorted.toString());                    // → [(1,1), (1,5), (2,0)]
 ```
 
-Sorted collections use **only** `compareTo` (or the comparator) to decide equality — two elements comparing as `0`
-are the same element to a `TreeSet`, even if `equals` says otherwise. Keep `compareTo` *consistent with equals*
-unless you mean it.
+> [!IMPORTANT]
+> Sorted collections use only `compareTo` (or the comparator) to decide equality. Two elements that compare as `0`
+> are the same element to a `TreeSet`, even if `equals` returns `false`. Keep `compareTo` consistent with `equals`
+> unless that difference is intended.
 
 ## Ordering: natural order and comparators
 
@@ -140,10 +128,12 @@ unless you mean it.
 | objects with `compareTo` | `a.compareTo(b)` |
 | `number` | numeric; `-0` compares equal to `0`, `NaN` sorts after everything else |
 | `string` | UTF-16 code unit order (like the classic `String.compareTo`, *not* `localeCompare`) |
-| `bigint`, `boolean` (`false < true`), `Date` (by time) | the obvious order |
+| `bigint` | numeric |
+| `boolean` | `false < true` |
+| `Date` | by time |
 | anything else | throws `ClassCastException` |
 
-A **comparator** is just a function `(a, b) => number` (negative, zero, positive). The `Comparator` object holds the
+A **comparator** is a function `(a, b) => number` (negative, zero, positive). The `Comparator` object holds the
 classic helpers as functions that take and return comparators:
 
 ```ts
@@ -221,10 +211,11 @@ const s = TreeSet.of(10, 20);
 console.log(s.ceiling(25));           // → null
 ```
 
-Because `null` means "absent", a map that stores `null` *values* makes `get` ambiguous: use `containsKey` or
-`getOrDefault` there.
+> [!NOTE]
+> Because `null` means "absent", `get` is ambiguous on a map that stores `null` values. Use `containsKey` or
+> `getOrDefault` there.
 
-Which collections accept `null`?
+### Which collections accept null
 
 | Accepts `null` elements / keys | Rejects (throws `NullPointerException`) |
 |---|---|
@@ -259,23 +250,6 @@ count when it is created and checks it on every step. If someone else changed th
 step throws `ConcurrentModificationException` instead of silently skipping or repeating elements. This applies to
 `for..of`, spread, `iterator()`, `forEach`, streams and views.
 
-```mermaid
-sequenceDiagram
-    participant Code as Your code
-    participant List as ArrayList
-    participant It as Iterator
-    Code->>List: iterator() / for..of
-    List-->>It: expectedModCount = modCount (3)
-    Code->>It: next()
-    It->>List: modCount == 3?
-    It-->>Code: "a"
-    Code->>List: add("x")
-    Note over List: modCount becomes 4
-    Code->>It: next()
-    It->>List: modCount == 3?
-    It-->>Code: throws ConcurrentModificationException
-```
-
 ```ts
 import { ArrayList } from '@nodestd/collections';
 
@@ -293,8 +267,9 @@ list.removeIf((s) => s === 'x');                        // or a bulk operation
 console.log(list.toString()); // → [a, c]
 ```
 
-Fail-fast is a debugging aid, not a guarantee: it detects most mistakes, but do not write code that depends on the
-exception being thrown.
+> [!NOTE]
+> Fail-fast behaviour is a debugging aid, not a guarantee. It detects most mistakes, but code must not depend on the
+> exception being thrown.
 
 ## Live views
 
@@ -309,16 +284,6 @@ reads from and writes to the backing collection, so changes go both ways and no 
 | `headSet`/`tailSet`/`subSet`, `descendingSet()` | `NavigableSet` |
 | `headMap`/`tailMap`/`subMap`, `descendingMap()`, `navigableKeySet()` | `NavigableMap` |
 | `Collections.unmodifiable*`, `synchronized*`, `checked*` | any collection |
-
-```mermaid
-flowchart LR
-    subgraph backing["ArrayList storage"]
-        e0["0: a"] --- e1["1: b"] --- e2["2: c"] --- e3["3: d"]
-    end
-    sub["subList(1, 3)"] -. "reads/writes" .-> e1
-    sub -. "reads/writes" .-> e2
-    rev["reversed()"] -. "reads/writes, index i maps to size-1-i" .-> backing
-```
 
 ```ts
 import { ArrayList, TreeMap } from '@nodestd/collections';
@@ -344,35 +309,22 @@ prices.keySet().remove('apple');          // removing from keySet removes the ma
 console.log(prices.toString());           // → {avocado=9, banana=1, cherry=2, date=3}
 ```
 
-Two rules to remember:
+Two rules apply to views:
 
 - A `subList` is only valid while the backing list is modified *through it*. A structural change made directly to
   the backing list invalidates the sub-list, and its next use throws `ConcurrentModificationException`.
 - Sorted views have a range. Adding a key outside it (for example `headMap('c').put('x', …)`) throws
   `IllegalArgumentException`.
 
-Want a copy instead? Use a copy constructor (`new ArrayList(view)`) or `List.copyOf(view)`.
+To get an independent copy, use a copy constructor (`new ArrayList(view)`) or `List.copyOf(view)`.
 
 ## Exceptions
 
-All library exceptions extend `RuntimeException`, which extends the built-in `Error`. Each sets `name`
-explicitly, so `e.name` survives minification; `instanceof` works too, as long as one copy of the library is
-loaded (see [Browsers and bundlers](getting-started.md#browsers-and-bundlers)). Checking `e.name` works everywhere.
+All library exceptions extend `RuntimeException`, which extends the built-in `Error`. Each one extends
+`RuntimeException` directly, except `ArrayIndexOutOfBoundsException`, which extends `IndexOutOfBoundsException`.
 
-```mermaid
-classDiagram
-    Error <|-- RuntimeException
-    RuntimeException <|-- IndexOutOfBoundsException
-    IndexOutOfBoundsException <|-- ArrayIndexOutOfBoundsException
-    RuntimeException <|-- NoSuchElementException
-    RuntimeException <|-- EmptyStackException
-    RuntimeException <|-- NullPointerException
-    RuntimeException <|-- IllegalArgumentException
-    RuntimeException <|-- IllegalStateException
-    RuntimeException <|-- UnsupportedOperationException
-    RuntimeException <|-- ConcurrentModificationException
-    RuntimeException <|-- ClassCastException
-```
+Each exception sets `name` explicitly, so `e.name` survives minification. `instanceof` also works, provided a single
+copy of the library is loaded (see [Browsers and bundlers](./getting-started.md#browsers-and-bundlers)).
 
 | Exception | Typical cause |
 |---|---|
@@ -410,12 +362,12 @@ try { new Vector<number>().elementAt(3); } catch (e) {
 ## Optional operations: unmodifiable vs immutable
 
 Mutating methods (`add`, `remove`, `put`, `set`, `clear`, …) are *optional operations*: a collection may refuse them
-by throwing `UnsupportedOperationException`. Two kinds of collection do:
+by throwing `UnsupportedOperationException`. Two kinds of collection refuse them:
 
 | | Immutable: `List.of`, `Set.of`, `Map.of`, `copyOf` … | Unmodifiable view: `Collections.unmodifiableList(x)` … |
 |---|---|---|
 | Can *you* change it through this reference? | No | No |
-| Can it change at all? | Never — it is a snapshot | Yes, when the backing collection `x` changes |
+| Can it change at all? | Never; it is a snapshot | Yes, when the backing collection `x` changes |
 | Nulls | Rejected | Whatever `x` allows |
 | Use it to | share fixed data, constants, map keys | hand out read-only access to state you still own |
 
@@ -474,15 +426,15 @@ try {
 }
 ```
 
-Sorted collections decide position themselves, so `addFirst`/`addLast` (and `putFirst`/`putLast` on `TreeMap`)
-throw `UnsupportedOperationException`. Empty collections throw `NoSuchElementException` from `getFirst()` and
-friends, while the map methods return `null`.
+Sorted collections determine element position themselves, so `addFirst`/`addLast` (and `putFirst`/`putLast` on
+`TreeMap`) throw `UnsupportedOperationException`. On an empty collection, `getFirst()`, `getLast()`,
+`removeFirst()` and `removeLast()` throw `NoSuchElementException`; the map methods return `null`.
 
 ## RandomAccess
 
 `List` implementations whose `get(index)` is O(1) (`ArrayList`, `Vector`, `Stack`, the immutable lists, …) carry
 the `RandomAccess` marker. `LinkedList` does not: its `get(i)` walks the list. Generic algorithms
-(`Collections.binarySearch`, `shuffle`, …) use the marker to pick an index loop or an iterator walk. Your own code
+(`Collections.binarySearch`, `shuffle`, …) use the marker to pick an index loop or an iterator walk. Application code
 can do the same with `isRandomAccess`:
 
 ```ts

@@ -1,24 +1,17 @@
 # Data structures primer
 
-JS gives you arrays, `Map` and `Set`. This library adds the classic data structures from the Java Collections
-Framework, each built for a different access pattern. If names like `ArrayList`, `ArrayDeque` or `TreeMap` are new to
-you, this page explains what each one is, when to reach for it, and how it lays out your data in memory. Every
-section has the same shape: what it is, when to use it, how it stores data, and what it costs.
-
-- [At a glance](#at-a-glance)
-- [ArrayList](#arraylist) · [LinkedList](#linkedlist) · [ArrayDeque](#arraydeque) · [PriorityQueue](#priorityqueue)
-- [HashMap and HashSet](#hashmap-and-hashset) · [LinkedHashMap and LinkedHashSet](#linkedhashmap-and-linkedhashset) · [TreeMap and TreeSet](#treemap-and-treeset)
-- [Immutable collections](#immutable-collections)
-- [Reading the costs](#reading-the-costs)
+This page describes each data structure the library provides: what it is, when to use it, how it stores data and
+what its operations cost. Read it if names such as `ArrayList`, `ArrayDeque` or `TreeMap` are new to you. To pick
+a class for a specific task, see [Choosing a collection](./choosing-a-collection.md).
 
 ## At a glance
 
 | Structure | Closest JS equivalent | Order | Use it for |
 |---|---|---|---|
-| `ArrayList` | `Array` | insertion, by index | the default list: index access, appending |
+| `ArrayList` | `Array` | insertion, by index | the default list: index access, appending, sorting |
 | `LinkedList` | none | insertion | frequent adds/removes at both ends or through an iterator |
 | `ArrayDeque` | `Array` used with `push`/`shift` | insertion | queues and stacks (FIFO / LIFO) |
-| `PriorityQueue` | none | smallest first | "always give me the most urgent item" |
+| `PriorityQueue` | none | smallest first | retrieving the highest-priority item first |
 | `HashMap` / `HashSet` | `Map` / `Set` | none | fast lookup by key, with value-equal keys |
 | `LinkedHashMap` / `LinkedHashSet` | `Map` / `Set` | insertion or access | lookup plus a predictable order; LRU caches |
 | `TreeMap` / `TreeSet` | none | sorted | sorted data, ranges, "nearest key" queries |
@@ -29,22 +22,11 @@ section has the same shape: what it is, when to use it, how it stores data, and 
 **What it is:** a resizable array. It is the closest relative of a JS array, plus the list API (`get`, `set`,
 `removeAt`, `indexOf`, `subList`, …), value equality and fail-fast iteration.
 
-**Use it when:** you need a general-purpose list: reading by index, appending, sorting. This is the default
-choice; pick something else only when its access pattern fits better.
+**Use it when:** you need a general-purpose list: reading by index, appending, sorting. It is the default
+choice.
 
 **How it stores data:** one contiguous array. Index access jumps straight to a slot; inserting in the middle
 shifts every later element.
-
-```text
- ArrayList ['a', 'x', 'b', 'c']
-
- index:    0     1     2     3
-        ┌─────┬─────┬─────┬─────┐
-        │ 'a' │ 'x' │ 'b' │ 'c' │      one contiguous array
-        └─────┴─────┴─────┴─────┘
- get(2)       → read slot 2 directly                 O(1)
- add(1, 'x')  → shift 'b', 'c' one slot right, then write   O(n)
-```
 
 ```ts
 import { ArrayList } from '@nodestd/collections';
@@ -137,7 +119,7 @@ More: [Queues and deques](../collections/queues-and-deques.md#arraydeque).
 **What it is:** a queue that always hands out its smallest element first (by natural order or by a comparator you
 pass). It is a binary heap.
 
-**Use it when:** you repeatedly need "the next most important item": schedulers, Dijkstra's shortest path, merging
+**Use it when:** you repeatedly need the highest-priority item: schedulers, Dijkstra's shortest path, merging
 sorted streams, keeping the top-k results.
 
 **How it stores data:** a tree kept in a plain array. The smallest element sits at the root (index 0), and every
@@ -175,20 +157,11 @@ idea (`HashSet`). They play the roles of JS `Map` and `Set`, with one important 
 `equals()`/`hashCode()` when your objects define them, so two different objects with the same content are the same
 key.
 
-**Use them when:** you look things up by key or check membership, and you don't care about order.
+**Use them when:** you look things up by key or check membership, and iteration order does not matter.
 
 **How they store data:** each key's `hashCode()` picks a bucket; lookup checks only that bucket, comparing with
 `equals()`. Primitive keys (numbers, strings, …) and objects without `equals()` take a fast path through JS's own
 `Map`, so they cost about the same as a native `Map`.
-
-```text
- key ──hashCode()──▶ bucket            (one lookup touches one bucket)
-
- bucket 0 │
- bucket 1 │ ── Point(1, 2) → 'home'
- bucket 2 │ ── Point(3, 0) → 'shop' ── Point(0, 3) → 'park'    ← a shared bucket: entries told apart by equals()
- bucket 3 │
-```
 
 ```ts
 import { HashSet } from '@nodestd/collections';
@@ -221,7 +194,7 @@ lookup; the list gives a predictable order.
 access order, every read moves the entry to the end, which makes an LRU cache: the least recently used entry is
 always at the front, ready to evict.
 
-**How they store data:**
+**How they store data:** a hash table for lookup, plus a linked list through the entries for order.
 
 ```text
  hash table (lookup)       +       linked list through the entries (order)
@@ -321,5 +294,4 @@ The costs above use big-O notation: how the time of one operation grows with the
 | O(n) | proportional to size | up to a million steps |
 
 "Amortized" means an operation is usually O(1) and occasionally more expensive (for example when an array doubles),
-averaging out to O(1). Full tables for every operation: [Performance](../advanced/performance.md). To pick a
-structure step by step: [Choosing a collection](./choosing-a-collection.md).
+averaging out to O(1). Complexity tables for every operation are in [Performance](../advanced/performance.md).

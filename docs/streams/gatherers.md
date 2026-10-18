@@ -1,22 +1,14 @@
 # Gatherers
 
-A **gatherer** is a custom intermediate operation, applied with `stream.gather(gatherer)`. Where a
-[collector](collectors.md) reduces a whole stream to one result at the end, a gatherer transforms the stream
-*in flight*: it can map one element to many or many to one, keep state between elements, emit extra elements at
-the end, and stop the upstream early. `Gatherers` has the common built-ins (`fold`, `scan`, windows,
-`mapConcurrent`); `Gatherer.of`, `Gatherer.ofSequential` and `Integrator` let you write your own in a few lines.
-
-- [How a gatherer works](#how-a-gatherer-works)
-- [Built-in gatherers](#built-in-gatherers)
-- [Writing your own](#writing-your-own)
-- [Short-circuiting](#short-circuiting)
-- [Downstream.isRejecting](#downstreamisrejecting)
-- [Composition with andThen](#composition-with-andthen)
-- [Gatherer.of vs Gatherer.ofSequential, and the arity rule](#gathererof-vs-gathererofsequential-and-the-arity-rule)
+A gatherer is a custom intermediate operation, applied with `stream.gather(gatherer)`. A
+[collector](collectors.md) reduces a whole stream to one result at the end; a gatherer transforms the stream
+while it flows. It can map one element to many or many to one, keep state between elements, emit extra elements
+at the end, and stop the upstream early. This page covers the built-ins in `Gatherers` and how to write your own
+with `Gatherer.of`, `Gatherer.ofSequential` and `Integrator`.
 
 ## How a gatherer works
 
-A gatherer has four parts; only the **integrator** is required.
+A gatherer has four parts. Only the integrator is required.
 
 | Part | Signature | Default |
 |---|---|---|
@@ -25,26 +17,15 @@ A gatherer has four parts; only the **integrator** is required.
 | combiner | `(left, right) => state` | none: the gatherer is sequential-only |
 | finisher | `(state, downstream) => void` | does nothing |
 
-```mermaid
-sequenceDiagram
-    participant U as upstream
-    participant G as gatherer
-    participant D as downstream
-    G->>G: state = initializer()
-    loop for each element
-        U->>G: integrator(state, e, downstream)
-        G->>D: downstream.push(x), zero or more times
-        G-->>U: true to continue, false to stop
-    end
-    U->>G: end of input
-    G->>D: finisher(state, downstream) may push more
-```
+Evaluation proceeds as follows:
 
-- `downstream.push(x)` sends `x` to the next stage and returns `false` once the downstream wants no more
-  elements (for example a `limit` was reached).
-- The integrator returns `false` to stop the upstream. Returning `downstream.push(x)` is the usual way to stop
-  exactly when the downstream does.
-- The finisher runs once, after the last element (or after a stop), and can push what is still in the state.
+1. The initializer creates the state once.
+2. The integrator is called for each upstream element. It may call `downstream.push(x)` zero or more times;
+   `push` sends `x` to the next stage and returns `false` once the downstream wants no more elements (for
+   example, a `limit` was reached).
+3. The integrator returns `true` to continue or `false` to stop the upstream. Returning `downstream.push(x)` is
+   the usual way to stop exactly when the downstream does.
+4. The finisher runs once, after the last element or after a stop, and can push what is still in the state.
 
 ## Built-in gatherers
 
@@ -82,10 +63,15 @@ try {
 `fold` emits its result even for an empty stream (the initial value). Windows are unmodifiable lists; adding to one
 throws `UnsupportedOperationException`.
 
-**`mapConcurrent`** keeps the signature of the Java API, but JS runs it on one thread: the mapper is called
-synchronously, one element at a time, in encounter order; `maxConcurrency` is validated (must be at least 1) and
-otherwise ignored. It does not await promises — map to promises and `Promise.all` the result if you need real
-concurrency. A mapper error that is not a `RuntimeException` is wrapped in one (the original is its `cause`).
+### mapConcurrent
+
+`mapConcurrent` keeps the signature of the Java API. A mapper error that is not a `RuntimeException` is wrapped
+in one, with the original as its `cause`.
+
+> [!WARNING]
+> `mapConcurrent` does not run anything concurrently. The mapper is called synchronously, one element at a time,
+> in encounter order. `maxConcurrency` is validated (it must be at least 1) and otherwise ignored. Promises are
+> not awaited: for real concurrency, map to promises and pass the result to `Promise.all`.
 
 ```ts
 import { Stream, Gatherers } from '@nodestd/collections';
@@ -104,10 +90,12 @@ try {
 
 Use `Gatherer.ofSequential(initializer, integrator, finisher?)` for stateful gatherers and wrap the integrator in
 `Integrator.ofGreedy(…)` when it never stops on its own (it only returns what `downstream.push` returns, or `true`).
-Greedy is a hint that lets the engine skip short-circuit checks; `Integrator.of(…)` marks an integrator that may
+Greedy is a hint that lets the engine skip short-circuit checks. `Integrator.of(…)` marks an integrator that may
 stop by itself.
 
-**distinctBy** — keep the first element for each key:
+### Example: distinctBy
+
+Keep the first element for each key:
 
 ```ts
 import { Stream, Gatherer, Integrator, HashSet, Downstream } from '@nodestd/collections';
@@ -123,7 +111,9 @@ const fruit = Stream.of('apple', 'avocado', 'banana', 'blueberry', 'cherry');
 console.log(fruit.gather(distinctBy((s: string) => s[0])).toList()); // → [apple, banana, cherry]
 ```
 
-**Running average** — one output per input:
+### Example: running average
+
+One output per input:
 
 ```ts
 import { Stream, Gatherer, Integrator, Downstream } from '@nodestd/collections';
@@ -141,7 +131,9 @@ const runningAverage = () =>
 console.log(Stream.of(2, 4, 6, 8).gather(runningAverage()).toList()); // → [2, 3, 4, 5]
 ```
 
-**chunkWhile** — group consecutive elements while a condition holds; the finisher emits the last chunk:
+### Example: chunkWhile
+
+Group consecutive elements while a condition holds. The finisher emits the last chunk:
 
 ```ts
 import { Stream, Gatherer, Integrator, Downstream, List } from '@nodestd/collections';
@@ -169,7 +161,9 @@ const runs = Stream.of(1, 2, 4, 5, 6, 9).gather(chunkWhile((a: number, b: number
 console.log(runs.toList()); // → [[1, 2], [4, 5, 6], [9]]
 ```
 
-**Throttle by key** — a rate-limiter-style dedupe that drops repeats of a key within a time window:
+### Example: throttle by key
+
+Drop repeats of a key that arrive within a time window:
 
 ```ts
 import { Stream, Gatherer, Integrator, Downstream } from '@nodestd/collections';
@@ -194,7 +188,9 @@ const events: Event[] = [
 console.log(Stream.ofArray(events).gather(throttle(100)).map((e) => `${e.key}@${e.at}`).toList()); // → [a@0, b@60, a@120]
 ```
 
-A gatherer can also be a plain object with an `integrator()` method; missing members take their defaults:
+### Plain-object gatherers
+
+A gatherer can also be a plain object with an `integrator()` method. Missing members take their defaults:
 
 ```ts
 import { Stream, Downstream } from '@nodestd/collections';
@@ -205,8 +201,8 @@ console.log(Stream.of(1, 2).gather(tag).toList()); // → [#1, #2]
 
 ## Short-circuiting
 
-An integrator that returns `false` stops the upstream: no more elements are read, the finisher still runs. This
-makes gatherers work on infinite streams.
+An integrator that returns `false` stops the upstream: no more elements are read, and the finisher still runs.
+This lets gatherers work on infinite streams.
 
 ```ts
 import { Stream, Gatherer, Integrator, Downstream } from '@nodestd/collections';
@@ -245,7 +241,7 @@ console.log(Stream.of(1, 2, 3, 4).gather(expensive).limit(2).toList(), calls); /
 ## Composition with andThen
 
 `a.andThen(b)` feeds the output of gatherer `a` into gatherer `b`, giving one gatherer. It is equivalent to
-`stream.gather(a).gather(b)` and is handy for packaging a reusable pipeline.
+`stream.gather(a).gather(b)` and packages a reusable pipeline as one value.
 
 ```ts
 import { Stream, Gatherers, List } from '@nodestd/collections';
@@ -285,10 +281,12 @@ const sum = Gatherer.of(
 console.log(Stream.of(1, 2, 3).gather(sum).toList()); // → [6]
 ```
 
-**The arity rule.** `ofSequential(a, b)` has two overloads with two functions each — `(initializer, integrator)`
-and `(integrator, finisher)` — and TS types are gone at run time. The library decides by the first function's
-declared parameter count (`fn.length`): a function that declares **no parameters** (and is not marked greedy) is
-an initializer; otherwise it is an integrator.
+### The arity rule
+
+`ofSequential(a, b)` has two overloads that both take two functions: `(initializer, integrator)` and
+`(integrator, finisher)`. TypeScript types are erased at run time, so the library decides by the first function's
+declared parameter count (`fn.length`). A function that declares no parameters, and is not marked greedy, is an
+initializer. Otherwise it is an integrator.
 
 ```ts
 import { Stream, Gatherer, Downstream } from '@nodestd/collections';
@@ -310,6 +308,7 @@ const withEnd = Gatherer.ofSequential(
 console.log(Stream.of(7, 8).gather(withEnd).toList()); // → [7, 8, -1]
 ```
 
-An integrator that declares no parameters (for example `() => true`, or one using `arguments`) would be read as
-an initializer. Wrap it with `Integrator.ofGreedy(…)` (greedy integrators are never mistaken for initializers) or
-use the three-argument form `ofSequential(initializer, integrator, finisher)`.
+> [!WARNING]
+> An integrator that declares no parameters (for example `() => true`, or one using `arguments`) is read as an
+> initializer. Wrap it with `Integrator.ofGreedy(…)`, which is never mistaken for an initializer, or use the
+> three-argument form `ofSequential(initializer, integrator, finisher)`.

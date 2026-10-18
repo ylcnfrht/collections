@@ -1,21 +1,9 @@
 # Stream operations
 
-This page is a reference for every operation on `Stream<T>`, each with a small runnable example. Intermediate
-operations return a new stream and run nothing; terminal operations run the pipeline and produce a result (see the
-[overview](overview.md) for laziness and the single-use rule). The number streams share most of these operations
-and add a few of their own — see [number streams](number-streams.md).
-
-- [At a glance](#at-a-glance)
-- [Intermediate operations](#intermediate-operations): [filter](#filter) · [map](#map) ·
-  [mapToInt / mapToLong / mapToDouble](#maptoint--maptolong--maptodouble) · [flatMap](#flatmap) ·
-  [flatMapToInt / Long / Double](#flatmaptoint--long--double) · [mapMulti](#mapmulti) · [distinct](#distinct) ·
-  [sorted](#sorted) · [peek](#peek) · [limit and skip](#limit-and-skip) ·
-  [takeWhile and dropWhile](#takewhile-and-dropwhile) · [gather](#gather)
-- [Terminal operations](#terminal-operations): [forEach / forEachOrdered](#foreach--foreachordered) ·
-  [toArray](#toarray) · [reduce](#reduce) · [collect](#collect) · [toList](#tolist) · [min / max / count](#min--max--count) ·
-  [anyMatch / allMatch / noneMatch](#anymatch--allmatch--nonematch) · [findFirst / findAny](#findfirst--findany) ·
-  [iterator / spliterator](#iterator--spliterator)
-- [Exceptions](#exceptions)
+This page is the reference for every operation on `Stream<T>`, each with a runnable example. Intermediate
+operations return a new stream and run nothing; terminal operations run the pipeline and produce a result. The
+[overview](overview.md) explains laziness and the single-use rule. Number streams share most of these
+operations and add their own, see [number streams](number-streams.md).
 
 ## At a glance
 
@@ -61,7 +49,7 @@ console.log(Stream.of(1, 2, 3, 4, 5).filter((x) => x % 2 === 1).toList()); // �
 
 ### map
 
-Transforms each element. The mapper may return `null`; nulls flow through like any other element.
+Transforms each element. The mapper may return `null`, which flows through like any other element.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -72,7 +60,8 @@ console.log(Stream.of(1, 2).map((x) => (x === 1 ? null : x)).toList()); // → [
 
 ### mapToInt / mapToLong / mapToDouble
 
-Map to a [number stream](number-streams.md), which adds `sum`, `average`, `summaryStatistics` and friends.
+Map to a [number stream](number-streams.md), which adds `sum`, `average`, `summaryStatistics` and other
+aggregates.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -86,8 +75,8 @@ console.log(Stream.of(2, 3).mapToLong((x) => x ** 40).max().getAsLong() > 2 ** 6
 ### flatMap
 
 Replaces each element by the elements of the stream the mapper returns. A `null`/`undefined` result counts as an
-empty stream. Each inner stream is **closed** right after its elements have been pushed downstream, even when a
-short-circuit stops the pipeline early, so `onClose` handlers of inner streams always run.
+empty stream. Each inner stream is closed right after its elements have been pushed downstream, even when a
+short-circuit stops the pipeline early, so the `onClose` handlers of inner streams always run.
 
 ```ts
 import { Stream, List } from '@nodestd/collections';
@@ -119,9 +108,9 @@ console.log(ranges.toArray()); // → [ 0, 1, 0, 1, 2 ]
 
 ### mapMulti
 
-A push-style alternative to `flatMap`: the mapper calls `consumer` zero or more times per element. No inner
-stream is created, which makes it cheaper when an element expands to a few values or when you want to filter and
-map in one step. `mapMultiToInt/Long/Double` produce number streams.
+A push-style alternative to `flatMap`: the mapper calls the `emit` callback zero or more times per element. No
+inner stream is created, which makes it cheaper when an element expands to a few values or when filtering and
+mapping happen in one step. `mapMultiToInt/Long/Double` produce number streams.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -185,7 +174,8 @@ try {
 ### peek
 
 Runs an action on each element as it passes, without changing it. Meant for debugging and logging: since the
-pipeline may skip elements (`limit`, short-circuits) or not run at all, do not put required side effects here.
+pipeline may skip elements (`limit`, short-circuits) or not run the stage at all, do not put required side effects
+here.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -218,9 +208,9 @@ try {
 
 ### takeWhile and dropWhile
 
-`takeWhile(p)` keeps elements while `p` holds and stops at the first failure (short-circuiting — it works on
-infinite streams). `dropWhile(p)` discards elements while `p` holds, then passes everything after. Unlike `filter`,
-both look at a **prefix** only.
+`takeWhile(p)` keeps elements while `p` holds and stops at the first failure. It short-circuits, so it works on
+infinite streams. `dropWhile(p)` discards elements while `p` holds, then passes everything after. Unlike
+`filter`, both look at a prefix only.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -233,7 +223,7 @@ console.log(Stream.iterate(1, (x) => x * 2).takeWhile((x) => x < 100).count()); 
 
 ### gather
 
-Applies a **gatherer**, a custom intermediate operation that can be one-to-one, one-to-many, many-to-one, stateful
+Applies a gatherer, a custom intermediate operation that can be one-to-one, one-to-many, many-to-one, stateful
 or short-circuiting. Built-ins live in `Gatherers`; see [gatherers](gatherers.md) for writing your own.
 
 ```ts
@@ -247,9 +237,9 @@ console.log(Stream.of(1, 2, 3, 4).gather(Gatherers.scan(() => 0, (acc: number, x
 
 ### forEach / forEachOrdered
 
-Run an action for each element. `forEach` makes no ordering promise in the Java API (for parallel streams);
-`forEachOrdered` follows the encounter order. Since evaluation is sequential here, both visit elements in
-encounter order — use `forEachOrdered` when your code depends on it, to state the intent.
+Run an action for each element. In the Java API, `forEach` makes no ordering promise (for parallel streams) and
+`forEachOrdered` follows the encounter order. Evaluation is sequential here, so both visit elements in encounter
+order. Use `forEachOrdered` when the code depends on the order, to state that intent.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -261,9 +251,10 @@ console.log(out.join('')); // → abc
 
 ### toArray
 
-`toArray()` returns a new JS array. `toArray(generator)` lets you choose the array: the generator receives the
-element count and must return an array-like of exactly that length (a sized stream) or at least that length;
-otherwise `IllegalStateException` / `IndexOutOfBoundsException` is thrown. Typed arrays work.
+`toArray()` returns a new JS array. `toArray(generator)` lets the caller choose the array, including typed
+arrays. The generator receives the element count. For a sized stream it must return an array-like of exactly
+that length, otherwise `IllegalStateException` is thrown. For an unsized stream it must be at least that long,
+otherwise `IndexOutOfBoundsException` is thrown.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -281,7 +272,7 @@ try {
 
 ### reduce
 
-Folds the elements into one value. Three forms:
+Folds the elements into one value.
 
 | Form | Result | Empty stream |
 |---|---|---|
@@ -289,21 +280,12 @@ Folds the elements into one value. Three forms:
 | `reduce(accumulator)` | `Optional<T>` | `Optional.empty` |
 | `reduce(identity, accumulator, combiner)` | `U` (may differ from `T`) | `identity` |
 
-`identity` must be a neutral value for the operation (`0` for `+`, `1` for `*`, `''` for concatenation) and the
-operations must be **associative**, because a parallel evaluation may reduce chunks separately and merge them with
-the combiner. Here evaluation is sequential, so the combiner is never needed, but it must still be correct.
+`identity` must be a neutral value for the operation (`0` for `+`, `1` for `*`, `''` for concatenation).
 
-```mermaid
-flowchart LR
-    I["identity 0"] --> A1["acc(0, 'ab') = 2"]
-    A1 --> A2["acc(2, 'cde') = 5"]
-    I2["identity 0"] --> B1["acc(0, 'f') = 1"]
-    A2 --> C["combiner(5, 1) = 6"]
-    B1 --> C
-```
-
-The diagram shows how `reduce(0, (n, s) => n + s.length, (a, b) => a + b)` *could* be evaluated in two chunks;
-a sequential run is the left chain alone.
+> [!IMPORTANT]
+> The accumulator and combiner must be associative. A parallel evaluation may reduce chunks separately and merge
+> them with the combiner. Evaluation here is sequential, so the combiner is never called, but it must still be
+> correct.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -320,7 +302,7 @@ console.log(totalLength); // → 6
 ### collect
 
 `collect(collector)` performs a mutable reduction with a `Collector` — see [collectors](collectors.md) for the
-full catalogue. `collect(supplier, accumulator, combiner)` is the do-it-yourself form: `supplier` creates a
+full catalogue. `collect(supplier, accumulator, combiner)` is the manual form: `supplier` creates a
 container, `accumulator` adds an element to it, `combiner` merges the second container into the first.
 
 ```ts
@@ -339,7 +321,7 @@ console.log(arr); // → [ 2, 4, 6 ]
 
 ### toList
 
-Returns an **unmodifiable** `List` in encounter order. Unlike `Collectors.toUnmodifiableList()`, it accepts `null`
+Returns an unmodifiable `List` in encounter order. Unlike `Collectors.toUnmodifiableList()`, it accepts `null`
 elements. Mutators throw `UnsupportedOperationException`.
 
 ```ts
@@ -357,9 +339,11 @@ try {
 ### min / max / count
 
 `min(cmp)` and `max(cmp)` return an `Optional` (empty for an empty stream); a `null` result throws
-`NullPointerException` because an `Optional` cannot hold it. `count()` returns the number of elements; on a
-sized source with no filtering stage it may compute the count without running the pipeline, so do not rely on
-`peek` side effects there.
+`NullPointerException` because an `Optional` cannot hold it. `count()` returns the number of elements.
+
+> [!WARNING]
+> On a sized source with no filtering stage, `count()` may compute the result without running the pipeline.
+> Side effects in `peek` or `map` then do not happen.
 
 ```ts
 import { Stream, Comparator } from '@nodestd/collections';
@@ -373,7 +357,7 @@ console.log(words().filter((w) => w.length < 5).count()); // → 2
 
 ### anyMatch / allMatch / noneMatch
 
-Short-circuiting predicates: they stop as soon as the answer is known. On an empty stream `allMatch` and
+Short-circuiting predicates that stop as soon as the answer is known. On an empty stream `allMatch` and
 `noneMatch` are `true` and `anyMatch` is `false`.
 
 ```ts
@@ -391,8 +375,8 @@ console.log(tested); // → 2
 
 ### findFirst / findAny
 
-Return the first element (`findAny`: any element; here it is always the first) as an `Optional`, short-circuiting.
-A `null` element throws `NullPointerException`.
+Return the first element as an `Optional` and short-circuit. `findAny` may return any element; here it always
+returns the first. A `null` element throws `NullPointerException`.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -409,9 +393,10 @@ try {
 
 ### iterator / spliterator
 
-Escape hatches to pull elements yourself. `iterator()` returns the library's `Iterator` (`hasNext()`/`next()`),
-`spliterator()` a [`Spliterator`](spliterators.md). Both are terminal; elements are produced on demand. Streams are
-also JS iterables (`for…of`, spread).
+Pull elements on demand. `iterator()` returns the library's `Iterator` (`hasNext()`/`next()`),
+`spliterator()` a [`Spliterator`](spliterators.md). Both are terminal. Streams are also JS iterables
+(`for…of`, spread); see [Iterating a stream from JS](overview.md#iterating-a-stream-from-js) for how the two
+differ in closing.
 
 ```ts
 import { Stream } from '@nodestd/collections';
@@ -436,5 +421,5 @@ console.log(got); // → [ 'A', 'B' ]
 | `UnsupportedOperationException` | modifying the list returned by `toList()` |
 | `IndexOutOfBoundsException` | `toArray(generator)` returned a too-short array for an unsized stream |
 
-Exceptions thrown by your lambdas propagate unchanged out of the terminal operation (except in
+Exceptions thrown by callbacks propagate unchanged out of the terminal operation (except in
 `Gatherers.mapConcurrent`, which wraps errors that are not a `RuntimeException`, see [gatherers](gatherers.md)).

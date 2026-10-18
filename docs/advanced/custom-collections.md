@@ -1,23 +1,8 @@
 # Implementing your own collections
 
-The library exports the same skeleton classes as the Java Collections Framework: `AbstractCollection`, `AbstractList`, `AbstractSequentialList`, `AbstractQueue`, `AbstractSet` and `AbstractMap`. Implement a few primitive methods (often just `size()` plus `get(i)` or `iterator()`), and the skeleton supplies the rest of the interface: `contains`, `indexOf`, `subList`, `equals`/`hashCode`/`toString`, bulk operations, `stream()`, `spliterator()`, `for..of`, sequenced methods such as `getFirst`/`reversed`, and fail-fast iteration. The result works anywhere a library collection does: in `Collections.*` algorithms, as a constructor argument to `ArrayList`/`HashSet`/..., in `equals` against built-in collections, and as a stream source. This page covers what each skeleton needs, the contracts you must keep, and gives complete worked examples.
+The library exports skeleton classes that implement most of a collection interface on top of a few primitive methods: `AbstractCollection`, `AbstractList`, `AbstractSequentialList`, `AbstractQueue`, `AbstractSet` and `AbstractMap`. This page covers what each skeleton requires, the contracts an implementation must keep, and complete worked examples.
 
-**Contents**
-
-- [The skeletons at a glance](#the-skeletons-at-a-glance)
-- [What each skeleton requires](#what-each-skeleton-requires)
-- [Contracts you must keep](#contracts-you-must-keep)
-  - [modCount and fail-fast iteration](#modcount-and-fail-fast-iteration)
-  - [addAtIndex / addAllAt instead of overriding add](#addatindex--addallat-instead-of-overriding-add)
-  - [The RANDOM_ACCESS brand](#the-random_access-brand)
-  - [Sorted sets and spliterator characteristics](#sorted-sets-and-spliterator-characteristics)
-- [Worked example: a read-only range (AbstractCollection)](#worked-example-a-read-only-range-abstractcollection)
-- [Worked example: a fixed-capacity ring list (AbstractList)](#worked-example-a-fixed-capacity-ring-list-abstractlist)
-- [Worked example: a bounded queue (AbstractQueue)](#worked-example-a-bounded-queue-abstractqueue)
-- [Worked example: a sorted array set (AbstractSet)](#worked-example-a-sorted-array-set-abstractset)
-- [Worked example: a bidirectional map (AbstractMap)](#worked-example-a-bidirectional-map-abstractmap)
-- [equals, hashCode and compareTo on your element types](#equals-hashcode-and-compareto-on-your-element-types)
-- [Checklist](#checklist)
+A subclass that implements the primitives (often `size()` plus `get(i)` or `iterator()`) inherits `contains`, `indexOf`, `subList`, `equals`/`hashCode`/`toString`, bulk operations, `stream()`, `spliterator()`, `for..of`, sequenced methods such as `getFirst`/`reversed`, and fail-fast iteration. It works anywhere a library collection does: in `Collections.*` algorithms, as a constructor argument to `ArrayList`/`HashSet`/..., in `equals` against built-in collections, and as a stream source.
 
 ## The skeletons at a glance
 
@@ -25,51 +10,30 @@ The library exports the same skeleton classes as the Java Collections Framework:
 classDiagram
   class AbstractCollection {
     <<abstract>>
-    +iterator()* Iterator
-    +size()* number
-    +add(e) throws UOE
-    contains / toArray / remove / addAll / removeIf
-    containsAll / removeAll / retainAll / clear
-    forEach / stream / spliterator / toString
+    +iterator()*
+    +size()*
   }
   class AbstractList {
     <<abstract>>
-    +modCount number
-    +get(index)* E
-    +set(index, e) throws UOE
-    #addAtIndex(index, e) throws UOE
-    +removeAt(index) throws UOE
-    #addAllAt(index, c)
-    indexOf / lastIndexOf / subList / listIterator
-    sort / replaceAll / reversed / getFirst / removeLast
-    equals / hashCode by elements
+    +get(index)*
+    +modCount
   }
   class AbstractSequentialList {
     <<abstract>>
-    +listIterator(index)* ListIterator
-    get / set / add / removeAt via listIterator
+    +listIterator(index)*
   }
   class AbstractQueue {
     <<abstract>>
-    +offer(e)* boolean
-    +poll()* E or null
-    +peek()* E or null
-    add / remove / element / clear / addAll
+    +offer(e)*
+    +poll()*
+    +peek()*
   }
   class AbstractSet {
     <<abstract>>
-    equals with any Set
-    hashCode as sum of element hashes
-    removeAll / spliterator
   }
   class AbstractMap {
     <<abstract>>
-    +entrySet()* Set
-    +put(k, v) throws UOE
-    #findEntry(key)
-    get / containsKey / remove / keySet / values
-    compute / merge / putIfAbsent / replaceAll
-    equals / hashCode / toString
+    +entrySet()*
   }
   AbstractCollection <|-- AbstractList
   AbstractList <|-- AbstractSequentialList
@@ -77,7 +41,7 @@ classDiagram
   AbstractCollection <|-- AbstractSet
 ```
 
-Methods marked `*` (shown in italics) are abstract: you must implement them. Methods marked "throws UOE" have a default that throws `UnsupportedOperationException`. Override them to make the collection modifiable. Everything else is provided, built on the primitives. `AbstractMap` is a separate root: a map is not a collection.
+The diagram shows the abstract methods each skeleton adds. `AbstractMap` is a separate root, because a map is not a collection. Mutators such as `add`, `set` and `put` have defaults that throw `UnsupportedOperationException`; override them to make the collection modifiable. The next section lists exactly what to implement.
 
 ## What each skeleton requires
 
@@ -92,7 +56,10 @@ Methods marked `*` (shown in italics) are abstract: you must implement them. Met
 
 The defaults are correct but generic. `AbstractCollection.contains` is a linear scan, and `AbstractMap.get` walks `entrySet()`. Override any method your storage can do faster. The worked examples override `contains` and `findEntry` for this reason.
 
-`AbstractQueue` assumes the queue **rejects `null`**, because `poll()` and `peek()` return `null` to mean "empty". `AbstractMap` also exports `SimpleEntry` (a mutable pair) and `SimpleImmutableEntry` (whose `setValue` throws), for building entry sets.
+> [!IMPORTANT]
+> `AbstractQueue` assumes the queue rejects `null`, because `poll()` and `peek()` return `null` to mean "empty".
+
+`AbstractMap` also exports `SimpleEntry` (a mutable pair) and `SimpleImmutableEntry` (whose `setValue` throws), for building entry sets.
 
 ## Contracts you must keep
 
@@ -100,7 +67,7 @@ The defaults are correct but generic. `AbstractCollection.contains` is a linear 
 
 Every iterator `AbstractList` hands out records `modCount` when it is created. On each `next()`/`previous()` it checks that the value has not changed. If it has, the iterator throws `ConcurrentModificationException` instead of silently skipping or repeating elements. `subList` views and the list spliterator use the same counter to detect changes made around them.
 
-That only works if **you increment `modCount` on every structural change**: any `add` or `remove` that changes the size, `clear()`, and evictions. `set(i, e)` is not structural, so leave `modCount` alone there. The iterator's own `remove()` and `add()` go through `removeAt` and `addAtIndex`, then adopt the new count, so they keep working.
+That only works if you increment `modCount` on every structural change: any `add` or `remove` that changes the size, `clear()`, and evictions. `set(i, e)` is not structural, so leave `modCount` alone there. The iterator's own `remove()` and `add()` go through `removeAt` and `addAtIndex`, then adopt the new count, so they keep working.
 
 | Operation | Bump `modCount`? |
 | --- | --- |
@@ -108,7 +75,7 @@ That only works if **you increment `modCount` on every structural change**: any 
 | `set(i, e)`, `sort` (it uses `set`) | no |
 | a failed operation that changed nothing | no |
 
-`AbstractCollection`, `AbstractSet` and `AbstractMap` have no `modCount` of their own. Their iterators are whatever `iterator()` or `entrySet().iterator()` returns. If you write that iterator yourself, give your class a counter and check it the same way. If you delegate to a library collection, as the queue, set and map examples below do, you inherit its fail-fast behaviour for free.
+`AbstractCollection`, `AbstractSet` and `AbstractMap` have no `modCount` of their own. Their iterators are whatever `iterator()` or `entrySet().iterator()` returns. If you write that iterator yourself, give your class a counter and check it the same way. If you delegate to a library collection, as the queue, set and map examples below do, you inherit its fail-fast behaviour.
 
 ### addAtIndex / addAllAt instead of overriding add
 
@@ -122,11 +89,14 @@ addAll(index, c)  → addAllAt(index, c)
 addFirst / addLast, listIterator().add, subList(...).add  → all end up in addAtIndex
 ```
 
-So **override `addAtIndex(index, e)`, not `add`**. If you override `add(e)` alone, `add(0, x)` would arrive as `add(0)` with an extra argument, and inserting through a `subList` or list iterator would bypass your code. `addAllAt(index, c)` defaults to a loop of `addAtIndex` calls. Override it when your storage can insert a batch more cheaply, for example with one splice. Validate the index with `Objects.checkIndex` (for `get`/`set`/`removeAt`) or a position check `0 <= index <= size()` (for `addAtIndex`), so bad indices throw `IndexOutOfBoundsException` like the built-in lists.
+> [!IMPORTANT]
+> Override `addAtIndex(index, e)`, not `add`.
+
+If you override `add(e)` alone, `add(0, x)` would arrive as `add(0)` with an extra argument, and inserting through a `subList` or list iterator would bypass your code. `addAllAt(index, c)` defaults to a loop of `addAtIndex` calls. Override it when your storage can insert a batch more cheaply, for example with one splice. Validate the index with `Objects.checkIndex` (for `get`/`set`/`removeAt`) or a position check `0 <= index <= size()` (for `addAtIndex`), so bad indices throw `IndexOutOfBoundsException` like the built-in lists.
 
 ### The RANDOM_ACCESS brand
 
-TypeScript interfaces vanish at runtime, so whether a list has fast `get(i)` is signalled with a symbol brand. `ArrayList`, `Vector`, `List.of` and the others expose `[RANDOM_ACCESS]: true`. `AbstractList` does **not** add the brand for you. Add it when `get(i)` is O(1):
+TypeScript interfaces vanish at runtime, so whether a list has fast `get(i)` is signalled with a symbol brand. `ArrayList`, `Vector`, `List.of` and the others expose `[RANDOM_ACCESS]: true`. `AbstractList` does not add the brand for you. Add it when `get(i)` is O(1):
 
 ```ts nocheck
 import { AbstractList, RANDOM_ACCESS } from '@nodestd/collections';
@@ -358,10 +328,10 @@ try {
 console.log(recent.stream().map((x) => x * 10).toList()); // → [50, 40]
 ```
 
-Notes on the design:
+Design notes:
 
-- **`set` does not touch `modCount`**, so `sort`, `Collections.reverse` and `Collections.shuffle`, which only use `set`, do not invalidate other iterators. That matches `ArrayList`.
-- **The eviction is structural.** The list's contents shift by one, so open iterators must fail. That is why the `for..of` above throws.
+- `set` does not touch `modCount`, so `sort`, `Collections.reverse` and `Collections.shuffle`, which only use `set`, do not invalidate other iterators. That matches `ArrayList`.
+- The eviction is structural. The list's contents shift by one, so open iterators must fail. That is why the `for..of` above throws.
 - `removeIf` goes through the list iterator's `remove()`, which calls `removeAt` and then adopts the new `modCount`, so it never trips the check.
 - `subList`, `reversed()` and the list iterators are live views over `get`/`set`/`addAtIndex`/`removeAt`. They work with no extra code.
 
@@ -678,7 +648,7 @@ The full rules are in [Comparator and Objects](../utilities/comparator-and-objec
 - [ ] Lists: override `addAtIndex`/`removeAt`, not `add`/`remove`. Increment `modCount` on every structural change, and never in `set`.
 - [ ] Validate indices with `Objects.checkIndex` (and `0..size()` for insert positions), so callers get `IndexOutOfBoundsException`.
 - [ ] Add `[RANDOM_ACCESS]` only when `get(i)` is O(1).
-- [ ] Iterators: implement all four of `hasNext`, `next`, `remove`, `forEachRemaining`. `next()` past the end throws `NoSuchElementException`, and `remove()` without a preceding `next()` throws `IllegalStateException`. Delegating to a library iterator gets this right for free.
+- [ ] Iterators: implement all four of `hasNext`, `next`, `remove`, `forEachRemaining`. `next()` past the end throws `NoSuchElementException`, and `remove()` without a preceding `next()` throws `IllegalStateException`. Delegating to a library iterator handles this.
 - [ ] Override `contains` / `findEntry` / `size` when your storage can answer faster than a scan.
 - [ ] Queues built on `AbstractQueue` must reject `null`.
 - [ ] Test the class with the same contract suites the library uses (see [Testing](./testing.md#adding-a-new-collection-with-contract-tests)).

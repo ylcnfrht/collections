@@ -1,34 +1,73 @@
 # Immutable collections and wrappers
 
-Not every collection should be changeable by whoever holds it. This page covers the two ways to hand out a
-collection that cannot be modified — **immutable copies** (`List.of`, `Set.copyOf`, `Map.of`, …), which are frozen
-snapshots, and **unmodifiable views** (`Collections.unmodifiableList` and friends), which are read-only windows onto a
-collection that may still change underneath — plus the ready-made empty, singleton and repeated-element collections,
-lazily computed collections, and the checked and synchronized wrappers. The last section lists exactly which calls
-throw `UnsupportedOperationException`.
+This page covers the collections that cannot be modified by whoever holds them: immutable copies (`List.of`, `Set.copyOf`, `Map.of`, …), unmodifiable views (`Collections.unmodifiableList` and related methods), lazy collections, and the empty, singleton and repeated-element collections. It also covers the checked and synchronized wrappers, and lists exactly which calls throw `UnsupportedOperationException`.
 
-- [Immutable factories: List.of, Set.of, Map.of](#immutable-factories-listof-setof-mapof)
-- [Lazy collections (preview)](#lazy-collections-preview)
-- [Empty, singleton and nCopies](#empty-singleton-and-ncopies)
-- [Unmodifiable views vs immutable copies](#unmodifiable-views-vs-immutable-copies)
-- [All the wrappers](#all-the-wrappers)
-- [Sets backed by maps](#sets-backed-by-maps)
-- [Which mutators throw](#which-mutators-throw)
+## Unmodifiable views vs immutable copies
 
-## Immutable factories: List.of, Set.of, Map.of
+Both kinds throw `UnsupportedOperationException` from mutators such as `add`, but they serve different needs. The general model is described in [optional operations](../guide/core-concepts.md#optional-operations-unmodifiable-vs-immutable).
 
-`List`, `Set` and `Map` are both TypeScript interfaces and factory objects. Their factories build compact, truly
-immutable collections that behave like any other `List`/`Set`/`Map` for reading — including value equality with
-mutable collections.
+| | Unmodifiable view | Immutable copy |
+| --- | --- | --- |
+| Created with | `Collections.unmodifiableList(src)` and related methods | `List.copyOf(src)`, `List.of(…)` and related factories |
+| Cost to create | O(1): stores a reference to the source | O(n): copies the elements once |
+| Changes to the source | visible through the view | never visible |
+| Keeps the source alive | yes | no |
+| Use it to | expose internal state read-only | hand out a snapshot, a constant or a defensive copy |
+
+```ts
+import { ArrayList, Collections, List } from '@nodestd/collections';
+
+const source = ArrayList.of('a', 'b');
+const view = Collections.unmodifiableList(source);
+const copy = List.copyOf(source);
+
+source.add('c');
+console.log(view.toString()); // → [a, b, c]
+console.log(copy.toString()); // → [a, b]
+
+try {
+  view.add('d');
+} catch (e) {
+  console.log((e as Error).name); // → UnsupportedOperationException
+}
+```
+
+A class typically exposes a view of its private state:
+
+```ts
+import { ArrayList, Collections, List } from '@nodestd/collections';
+
+class Playlist {
+  private readonly tracks = new ArrayList<string>();
+  add(track: string): void {
+    this.tracks.add(track);
+  }
+  /** read-only, always up to date */
+  getTracks(): List<string> {
+    return Collections.unmodifiableList(this.tracks);
+  }
+}
+
+const p = new Playlist();
+const tracks = p.getTracks();
+p.add('Intro');
+console.log(tracks.size(), tracks.get(0)); // → 1 Intro
+```
+
+Views of views do not stack: wrapping an unmodifiable list again returns the same wrapper. The views of an unmodifiable map (`keySet()`, `values()`, `entrySet()`) are unmodifiable too, and its entries reject `setValue`.
+
+## Immutable factories
+
+`List`, `Set` and `Map` are both TypeScript interfaces and factory objects. The factories build compact, immutable collections that behave like any other `List`, `Set` or `Map` for reading, including value equality with mutable collections.
 
 | Factory | Builds | Notes |
 | --- | --- | --- |
 | `List.of(a, b, …)` | list of the arguments | random access |
 | `List.copyOf(collection)` | immutable list of the elements | returns the argument itself if it already is a `List.of`-style list |
 | `Set.of(a, b, …)` | set of the arguments | a duplicate argument throws `IllegalArgumentException` |
-| `Set.copyOf(collection)` | immutable set of the elements | duplicates are dropped silently |
-| `Map.of(k1, v1, k2, v2, …)` | map of the pairs | a duplicate key throws `IllegalArgumentException`; an odd argument count too. Typed overloads up to 10 pairs, as the reference; for more, `Map.ofEntries` keeps keys and values apart by type |
-| `Map.ofEntries(e1, e2, …)` | map of the entries | usually with `Map.entry(k, v)`; duplicate keys throw |
+| `Set.copyOf(collection)` | immutable set of the elements | duplicates are dropped |
+| `Map.of(k1, v1, k2, v2, …)` | map of the pairs | a duplicate key, or an odd argument count, throws `IllegalArgumentException`; typed overloads up to 10 pairs, as in the reference |
+| `Map.ofEntries(e1, e2, …)` | map of the entries | usually with `Map.entry(k, v)`; duplicate keys throw; use it beyond 10 pairs |
 | `Map.copyOf(map)` | immutable copy of a map | returns the argument itself if it already is a `Map.of`-style map |
 | `Map.entry(k, v)` | immutable entry | `setValue` throws |
 
@@ -56,16 +95,13 @@ const snapshot = Map.copyOf(HashMap.of<string, number>(['x', 1]));
 console.log(snapshot.equals(HashMap.of<string, number>(['x', 1]))); // → true
 ```
 
-### Strict about null and duplicates
+### Null and duplicate rules
 
-These collections are deliberately strict, so mistakes surface at construction time instead of later:
+These collections report mistakes at construction time:
 
-- **No nulls.** A `null` or `undefined` element, key or value throws `NullPointerException` — also in `copyOf`.
-- **Null queries throw too.** Since a null can never be inside, `contains(null)`, `indexOf(null)`, `get(null)`,
-  `containsKey(null)` and `containsValue(null)` throw `NullPointerException` rather than returning `false`/`null`.
-  (Unmodifiable *views* and `Collections.emptyList()` & co. answer such queries normally, except the sorted and
-  navigable empties, which reject `null` like a `TreeSet`/`TreeMap`.)
-- **No duplicates** in `Set.of` and in the keys of `Map.of`/`Map.ofEntries` (`IllegalArgumentException`).
+- **No nulls.** A `null` or `undefined` element, key or value throws `NullPointerException`, in `copyOf` as well.
+- **Null queries throw.** Because a null can never be inside, `contains(null)`, `indexOf(null)`, `get(null)`, `containsKey(null)` and `containsValue(null)` throw `NullPointerException` instead of returning `false` or `null`.
+- **No duplicates** in `Set.of` or in the keys of `Map.of` and `Map.ofEntries` (`IllegalArgumentException`).
 
 ```ts
 import { List, Set, Map } from '@nodestd/collections';
@@ -87,10 +123,12 @@ console.log(nameOf(() => Set.of(1, 1)));                 // → IllegalArgumentE
 console.log(nameOf(() => Map.of('a', 1, 'a', 2)));       // → IllegalArgumentException
 ```
 
-### Iteration order of Set.of and Map.of is unspecified
+> [!NOTE]
+> Unmodifiable views and `Collections.emptyList()` and related collections answer null queries normally. The exceptions are the sorted and navigable empties, which reject `null` like a `TreeSet` or `TreeMap`.
 
-`List.of` keeps argument order, of course. `Set.of` and `Map.of` do **not** promise any order — treat it like a
-`HashSet`'s. If you need order, sort, or use a `LinkedHashSet`/`TreeMap` copy:
+### Iteration order
+
+`List.of` keeps argument order. `Set.of` and `Map.of` promise no order; treat it like a `HashSet`'s. To get an order, sort, or copy into a `LinkedHashSet`, `TreeSet` or `TreeMap`:
 
 ```ts
 import { Set, Map, TreeSet, TreeMap } from '@nodestd/collections';
@@ -104,19 +142,18 @@ console.log(new TreeMap(m).toString()); // → {a=1, b=2}
 
 ## Lazy collections (preview)
 
-`List.ofLazy`, `Set.ofLazy` and `Map.ofLazy` build immutable collections whose contents are **computed on first
-access, at most once**, by a function you supply. They are a preview feature: the API may still change.
+`List.ofLazy`, `Set.ofLazy` and `Map.ofLazy` build immutable collections whose contents are computed on first access, at most once, by a function you supply.
+
+> [!IMPORTANT]
+> Lazy collections are a preview feature. The API may change.
 
 | Factory | Content |
 | --- | --- |
 | `List.ofLazy(size, i => value)` | `size` elements; element `i` is computed the first time it is read |
 | `Set.ofLazy(candidates, e => boolean)` | the candidates for which the predicate returns `true`, each decided on first query |
-| `Map.ofLazy(keys, k => value)` | the given keys; each value computed on first `get`/iteration |
+| `Map.ofLazy(keys, k => value)` | the given keys; each value is computed on first `get` or iteration |
 
-Reading a whole lazy collection (`toString`, `equals`, iteration, `size()` for a lazy set) computes everything it
-needs. A function that throws or returns `null` makes that slot fail with `NoSuchElementException` — then and on
-every later access, without calling the function again. Later changes to the candidates/keys collection are not
-seen.
+Reading a whole lazy collection (`toString`, `equals`, iteration, `size()` of a lazy set) computes everything it needs. A function that throws or returns `null` makes that slot fail with `NoSuchElementException`, then and on every later access, without calling the function again. Later changes to the candidates or keys collection are not seen.
 
 ```ts
 import { List, Map, Set, TreeSet } from '@nodestd/collections';
@@ -154,16 +191,14 @@ console.log(attempt()); // → NoSuchElementException
 
 ## Empty, singleton and nCopies
 
-`Collections` has shared, unmodifiable collections for the trivial cases. Unlike `List.of`, these allow `null`
-elements and answer null queries normally (except the sorted/navigable empties, which reject `null` like a
-`TreeSet`, as the reference).
+`Collections` provides shared, unmodifiable collections for the trivial cases. Unlike `List.of`, they allow `null` elements and answer null queries normally, except the sorted and navigable empties, which reject `null` like a `TreeSet`, as in the reference.
 
 | Method | Result |
 | --- | --- |
 | `Collections.emptyList()`, `emptySet()`, `emptyMap()` | one shared empty instance each |
-| `Collections.emptySortedSet()`, `emptyNavigableSet()`, `emptySortedMap()`, `emptyNavigableMap()` | empty sorted/navigable collections |
+| `Collections.emptySortedSet()`, `emptyNavigableSet()`, `emptySortedMap()`, `emptyNavigableMap()` | empty sorted and navigable collections |
 | `Collections.emptyIterator()`, `emptyListIterator()`, `emptyEnumeration()` | iterators with nothing to iterate |
-| `Collections.singletonList(e)`, `singleton(e)`, `singletonMap(k, v)` | exactly one element/mapping |
+| `Collections.singletonList(e)`, `singleton(e)`, `singletonMap(k, v)` | exactly one element or mapping |
 | `Collections.nCopies(n, e)` | list of `n` times the same element, in O(1) space |
 | `Collections.EMPTY_LIST`, `EMPTY_SET`, `EMPTY_MAP` | the shared empties as constants |
 
@@ -183,98 +218,27 @@ slots.set(2, 42);
 console.log(slots.toString());                             // → [null, null, 42, null]
 ```
 
-## Unmodifiable views vs immutable copies
+## Wrappers
 
-These two look alike — both throw `UnsupportedOperationException` from `add` — but they answer different needs.
-
-```mermaid
-flowchart LR
-  subgraph View["Collections.unmodifiableList(src)"]
-    W["read-only wrapper"] -- "every read is forwarded" --> S1[("src: ArrayList")]
-  end
-  subgraph Copy["List.copyOf(src)"]
-    F[("frozen array, copied once")]
-  end
-  O["owner keeps mutating src"] --> S1
-  S1 -. "changes visible through the view" .-> W
-  S1 -. "copy never changes" .-> F
-```
-
-- An **unmodifiable view** stores a reference to the source. It costs O(1) to create, and every change the owner
-  makes to the source **shows through** the view. Use it to expose internal state read-only ("you may look, only I
-  may change it").
-- An **immutable copy** copies the elements once. It costs O(n) to create, never changes afterwards, and does not
-  keep the source alive. Use it for values that must not change after you hand them out (a snapshot, a constant,
-  a defensive copy of an argument).
-
-```ts
-import { ArrayList, Collections, List } from '@nodestd/collections';
-
-const source = ArrayList.of('a', 'b');
-const view = Collections.unmodifiableList(source);
-const copy = List.copyOf(source);
-
-source.add('c');
-console.log(view.toString()); // → [a, b, c]
-console.log(copy.toString()); // → [a, b]
-
-try {
-  view.add('d');
-} catch (e) {
-  console.log((e as Error).name); // → UnsupportedOperationException
-}
-```
-
-A typical class exposes a view of its private state:
-
-```ts
-import { ArrayList, Collections, List } from '@nodestd/collections';
-
-class Playlist {
-  private readonly tracks = new ArrayList<string>();
-  add(track: string): void {
-    this.tracks.add(track);
-  }
-  /** read-only, always up to date */
-  getTracks(): List<string> {
-    return Collections.unmodifiableList(this.tracks);
-  }
-}
-
-const p = new Playlist();
-const tracks = p.getTracks();
-p.add('Intro');
-console.log(tracks.size(), tracks.get(0)); // → 1 Intro
-```
-
-Views of views do not stack: wrapping an unmodifiable list again returns the same wrapper. The views of an
-unmodifiable map (`keySet()`, `values()`, `entrySet()`) are unmodifiable too, and its entries reject `setValue`.
-
-## All the wrappers
-
-All wrappers are views: they forward to the collection they wrap, which stays the single source of truth.
+All wrappers are views: they forward to the collection they wrap, which remains the single source of truth.
 
 ### Unmodifiable
 
 | Method | Wraps |
 | --- | --- |
-| `Collections.unmodifiableCollection(c)` | any `Collection` (equality is by identity, since a plain collection has no value equality contract) |
+| `Collections.unmodifiableCollection(c)` | any `Collection`; equality is by identity, since a plain collection has no value equality contract |
 | `Collections.unmodifiableSequencedCollection(c)` | a `SequencedCollection` |
 | `Collections.unmodifiableList(l)` | a `List` |
 | `Collections.unmodifiableSet(s)` | a `Set` |
-| `Collections.unmodifiableSequencedSet(s)` | a `SequencedSet` (e.g. `LinkedHashSet`) |
+| `Collections.unmodifiableSequencedSet(s)` | a `SequencedSet` such as `LinkedHashSet` |
 | `Collections.unmodifiableSortedSet(s)`, `unmodifiableNavigableSet(s)` | a `TreeSet`; range views are unmodifiable too |
 | `Collections.unmodifiableMap(m)` | a `Map` |
-| `Collections.unmodifiableSequencedMap(m)` | a `SequencedMap` (e.g. `LinkedHashMap`) |
+| `Collections.unmodifiableSequencedMap(m)` | a `SequencedMap` such as `LinkedHashMap` |
 | `Collections.unmodifiableSortedMap(m)`, `unmodifiableNavigableMap(m)` | a `TreeMap`; range views are unmodifiable too |
 
 ### Checked
 
-`Collections.checked*` wrappers guard a collection against elements of the wrong runtime type — useful when data
-crosses an untyped boundary (parsed JSON, a plugin, `any`). TypeScript's types are erased at run time, so instead of
-a class token you pass a **type-check predicate**. Every way an element can get in is checked — `add`, `addAll`,
-`set`, `offer`, `push`, list iterators, sub-views, and for maps `put`, `putAll`, `compute*`/`merge` results and
-`entry.setValue` — and a failing element throws `ClassCastException` before the collection is touched.
+`Collections.checked*` wrappers reject elements of the wrong runtime type, which is useful when data crosses an untyped boundary (parsed JSON, a plugin, `any`). TypeScript types are erased at run time, so instead of a class token you pass a type-check predicate. Every way an element can enter is checked: `add`, `addAll`, `set`, `offer`, `push`, list iterators and sub-views, and for maps `put`, `putAll`, the results of `compute*` and `merge`, and `entry.setValue`. A failing element throws `ClassCastException` before the collection is touched.
 
 | Method | Checks |
 | --- | --- |
@@ -311,11 +275,7 @@ console.log(scores.get('ada')); // → 10
 
 ### Synchronized
 
-`Collections.synchronizedCollection`, `synchronizedList`, `synchronizedSet`, `synchronizedSortedSet`,
-`synchronizedNavigableSet`, `synchronizedMap`, `synchronizedSortedMap` and `synchronizedNavigableMap` exist so code
-ported from the Java Collections Framework keeps working. JS runs your code on a single thread (workers do not share
-these objects), so there is nothing to lock: the wrappers are plain delegating views. They add no safety and no
-measurable cost; in new code just use the collection directly.
+`Collections.synchronizedCollection`, `synchronizedList`, `synchronizedSet`, `synchronizedSortedSet`, `synchronizedNavigableSet`, `synchronizedMap`, `synchronizedSortedMap` and `synchronizedNavigableMap` exist so that code ported from the Java Collections Framework keeps working. JS runs your code on a single thread, and workers do not share these objects, so there is nothing to lock: the wrappers are plain delegating views. They add no safety and no measurable cost. New code uses the collection directly.
 
 ```ts
 import { ArrayList, Collections } from '@nodestd/collections';
@@ -328,11 +288,7 @@ console.log(list.toString()); // → [1, 2]
 
 ## Sets backed by maps
 
-`Collections.newSetFromMap(map)` turns an **empty** map into a set: `add(e)` is `map.put(e, true)`, and everything
-else goes through `map.keySet()`. The set inherits the map's key semantics — the only reason to use it. Pair it
-with `IdentityHashMap` for an identity set, or with an access-ordered `LinkedHashMap`, and so on.
-`Collections.newSequencedSetFromMap(map)` does the same for a `SequencedMap`, adding `addFirst`/`addLast`/`reversed`.
-A non-empty map throws `IllegalArgumentException`.
+`Collections.newSetFromMap(map)` turns an empty map into a set: `add(e)` is `map.put(e, true)`, and every other operation goes through `map.keySet()`. The set inherits the map's key semantics, which is the reason to use it: pair it with `IdentityHashMap` for an identity set, or with an access-ordered `LinkedHashMap`. `Collections.newSequencedSetFromMap(map)` does the same for a `SequencedMap` and adds `addFirst`, `addLast` and `reversed`. A non-empty map throws `IllegalArgumentException`.
 
 ```ts
 import { Collections, IdentityHashMap, LinkedHashMap, ArrayList, List } from '@nodestd/collections';
@@ -357,22 +313,18 @@ try {
 
 ## Which mutators throw
 
-An unmodifiable collection throws `UnsupportedOperationException` from its mutators. The details — whether a call
-that would change nothing also throws — differ by kind, and follow the JDK exactly:
+An unmodifiable collection throws `UnsupportedOperationException` from its mutators. Whether a call that would change nothing also throws differs by kind, and follows the reference exactly:
 
 | Collection | Mutator that would change something | Mutator call that would change nothing |
 | --- | --- | --- |
-| `List.of`, `Set.of`, `Map.of` and their `copyOf` | throws | **throws** (e.g. `List.of().clear()`, `Set.of(1).remove(9)`) |
+| `List.of`, `Set.of`, `Map.of` and their `copyOf` | throws | throws (e.g. `List.of().clear()`, `Set.of(1).remove(9)`) |
 | `keySet()`/`values()` of a `Map.of` map | throws | returns `false` (e.g. `keySet().remove('missing')`) |
-| `Collections.unmodifiable*` views, and their views | throws | **throws** |
+| `Collections.unmodifiable*` views, and their views | throws | throws |
 | `Collections.emptyList()`/`emptySet()`/`emptyMap()` | throws (`add`, `put`, `compute*`, …) | no-op: `clear()` does nothing, `remove`/`removeIf`/`removeAll`/`retainAll` return `false` (`remove` on the map returns `null`) |
 | `Collections.singletonList`/`singleton`/`singletonMap` | throws | `remove(absent)` returns `false` (`null` for the map); `clear()` and `removeIf` throw |
 | `Collections.nCopies` | throws | `remove(absent)`/`removeIf(nothing)` return `false`; `clear()` throws |
-| `Collections.emptySortedSet()` & co. | throws | throws (they are unmodifiable views of empty tree collections) |
+| `Collections.emptySortedSet()` and related | throws | throws (they are unmodifiable views of empty tree collections) |
 | `Map.entry`, `SimpleImmutableEntry`, navigation entries of `TreeMap` | `setValue` throws | — |
-
-In short: never rely on a no-op mutator succeeding on a collection you did not create. If you need to know whether
-you may modify a collection, own it — make a copy (`new ArrayList(c)`) and modify that.
 
 ```ts
 import { List, Map, Collections, ArrayList } from '@nodestd/collections';
@@ -395,6 +347,7 @@ console.log(nameOf(() => Collections.singleton(1).remove(2)));                  
 console.log(nameOf(() => Collections.singleton(1).remove(1)));                  // → UnsupportedOperationException
 ```
 
-See also [the Collections utilities](../utilities/collections.md) for the algorithms (`sort`, `shuffle`,
-`binarySearch`, …), [lists](./lists.md), [sets](./sets.md) and [maps](./maps.md) for the mutable implementations,
-and [core concepts](../guide/core-concepts.md) for equality and views in general.
+> [!TIP]
+> Do not rely on a no-op mutator succeeding on a collection you did not create. To modify a collection safely, own it: make a copy (`new ArrayList(c)`) and modify that.
+
+The algorithms (`sort`, `shuffle`, `binarySearch`, …) are on [the Collections utilities page](../utilities/collections.md). The mutable implementations are described in [lists](./lists.md), [sets](./sets.md) and [maps](./maps.md).

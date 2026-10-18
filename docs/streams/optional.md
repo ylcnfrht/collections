@@ -1,20 +1,10 @@
 # Optional
 
-`Optional<T>` is a container that holds either one non-null value or nothing. Stream operations that may have no
-answer — `findFirst`, `min`, `max`, `reduce(op)`, `Collectors.minBy` — return one instead of `null`, so the
-"nothing" case is visible in the type and handled with methods like `orElse`, `map` and `ifPresent` rather than
-`if (x !== null)` checks. `OptionalInt`, `OptionalLong` and `OptionalDouble` are the number variants returned by
+`Optional<T>` holds either one non-null value or nothing. Stream operations that may have no result
+(`findFirst`, `min`, `max`, `reduce(op)`, `Collectors.minBy`) return an `Optional` instead of `null`. The empty
+case is then visible in the type and handled with `orElse`, `map` or `ifPresent` instead of `null` checks.
+`OptionalInt`, `OptionalLong` and `OptionalDouble` are the number variants returned by
 [number streams](number-streams.md).
-
-- [Creating optionals](#creating-optionals)
-- [Getting the value out](#getting-the-value-out)
-- [Transforming: map, flatMap, filter, or](#transforming-map-flatmap-filter-or)
-- [Side effects: ifPresent, ifPresentOrElse](#side-effects-ifpresent-ifpresentorelse)
-- [stream()](#stream)
-- [equals, hashCode, toString](#equals-hashcode-tostring)
-- [Number optionals](#number-optionals)
-- [Null rules](#null-rules)
-- [Idioms: replacing null checks](#idioms-replacing-null-checks)
 
 ## Creating optionals
 
@@ -70,7 +60,9 @@ try {
 }
 ```
 
-Prefer `orElseGet` when the fallback is expensive: `orElse(compute())` always calls `compute()`.
+> [!TIP]
+> Prefer `orElseGet` when the fallback is expensive: `orElse(compute())` always calls `compute()`, even when a
+> value is present.
 
 ## Transforming: map, flatMap, filter, or
 
@@ -100,6 +92,9 @@ console.log(Optional.empty<string>().or(() => Optional.of('fallback'))); // → 
 
 ## Side effects: ifPresent, ifPresentOrElse
 
+`ifPresent(action)` calls `action(value)` when a value is present. `ifPresentOrElse(action, emptyAction)` also
+calls `emptyAction()` when the optional is empty.
+
 ```ts
 import { Optional } from '@nodestd/collections';
 
@@ -112,8 +107,8 @@ console.log(log); // → [ 'saved', 'nothing to save' ]
 
 ## stream()
 
-`optional.stream()` is a stream of zero or one element. It is the clean way to drop empties from a stream of
-optionals:
+`optional.stream()` is a stream of zero or one element. With `flatMap`, it drops the empty optionals from a stream
+of optionals:
 
 ```ts
 import { Stream, Optional } from '@nodestd/collections';
@@ -145,8 +140,8 @@ console.log(Optional.of(List.of(1, 2)).toString()); // → Optional[[1, 2]]
 `OptionalInt`, `OptionalLong` and `OptionalDouble` hold a `number`. They have `of`, `empty`, `isPresent`,
 `isEmpty`, `ifPresent`, `ifPresentOrElse`, `orElse`, `orElseGet`, `orElseThrow`, `stream()` (an `IntStream`,
 `LongStream` or `DoubleStream`), `equals`, `hashCode` and `toString`, plus a typed getter: `getAsInt()`,
-`getAsLong()`, `getAsDouble()`. Like the Java API they have **no** `map`, `filter` or `flatMap` — box the
-stream first (`boxed()`) if you need an `Optional<number>`.
+`getAsLong()`, `getAsDouble()`. As in the Java API, they have no `map`, `filter` or `flatMap`. To get an
+`Optional<number>`, box the stream first with `boxed()`.
 
 ```ts
 import { IntStream, OptionalInt, OptionalLong, OptionalDouble } from '@nodestd/collections';
@@ -179,12 +174,12 @@ try {
   empty.
 - `flatMap` must return an optional; returning `null` throws `NullPointerException`.
 - Function arguments of `map`, `flatMap`, `filter`, `or` and `ifPresentOrElse` throw `NullPointerException` when
-  `null`, even on an empty optional; `ifPresent` and `orElseGet` check theirs only when they would call it (as the
-  reference).
-- `orElse(null)` is allowed and returns `null` when empty (typed `T | null`) — useful at the edge where you hand a
-  value to code that expects `null`. `orElseGet(() => null)` works the same way.
+  `null`, even on an empty optional. `ifPresent` and `orElseGet` check theirs only when they would call it, as in
+  the Java API.
+- `orElse(null)` is allowed and returns `null` when empty (typed `T | null`). This is useful when handing a value
+  to code that expects `null`. `orElseGet(() => null)` works the same way.
 - Stream terminals that return an `Optional` throw `NullPointerException` if the chosen element is `null`
-  (`Stream.of(null).findFirst()`); filter nulls out first.
+  (`Stream.of(null).findFirst()`). Filter out nulls first.
 
 ```ts
 import { Optional, Stream } from '@nodestd/collections';
@@ -222,5 +217,5 @@ console.log(price('tea').map((p) => p * 2).orElse(0), price('cake').map((p) => p
 console.log(Stream.of('alpha', 'beta').filter((s) => s.startsWith('g')).findFirst().orElse('none')); // → none
 ```
 
-Use `Optional` for return values that may be absent. For fields and parameters, plain `T | null` is usually
-simpler.
+> [!TIP]
+> Use `Optional` for return values that may be absent. For fields and parameters, `T | null` is usually simpler.

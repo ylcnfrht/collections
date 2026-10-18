@@ -1,24 +1,14 @@
 # Compatibility with the Java API
 
-This library aims to behave exactly like the Java Collections Framework: same method names, same results, same
-exceptions, same edge cases. Where TypeScript or the JS runtime makes an exact copy impossible or harmful, the
-library adapts in a small, documented set of ways. This page lists every adaptation, the stream-specific
-differences, the reference behaviours we deliberately do not copy, the APIs that are newer than the reference
-runtime used for testing, and how all of this is verified.
-
-- [TypeScript adaptations](#typescript-adaptations)
-- [Stream differences](#stream-differences)
-- [Reference quirks we deliberately do not copy](#reference-quirks-we-deliberately-do-not-copy)
-- [APIs newer than the JDK](#apis-newer-than-the-jdk)
-- [How compatibility is verified](#how-compatibility-is-verified)
+The library follows the Java Collections Framework: the same method names, results, exceptions and edge cases. Where TypeScript or the JS runtime makes an exact copy impossible or harmful, it adapts in a small, documented set of ways. This page lists those adaptations, the stream differences, the reference behaviours it deliberately does not copy, and the APIs newer than the reference runtime used for testing.
 
 ## TypeScript adaptations
 
 | Classic API | Here | Why |
 |---|---|---|
 | `list.remove(int index)` | `list.removeAt(index)` | On a `List<number>`, `remove(1)` could mean either; `remove(o)` always means "the element equal to `o`". |
-| `Comparator` objects with default methods (`c.reversed()`, `c.thenComparing(…)`) | comparators are functions `(a, b) => number`; the helpers are on the `Comparator` object: `Comparator.reversed(c)`, `Comparator.thenComparing(c1, c2)`, `Comparator.thenComparingBy(c, key)` | Lambdas are plain functions, and functions can't carry default methods without wrapping. |
-| Functional interfaces (`Predicate`, `Function`, `BiFunction`, `Supplier`, `Consumer`, …) | plain functions | Same reason. `Predicate.not(p)` is just `(x) => !p(x)`. |
+| `Comparator` objects with default methods (`c.reversed()`, `c.thenComparing(…)`) | comparators are functions `(a, b) => number`; the helpers are on the `Comparator` object: `Comparator.reversed(c)`, `Comparator.thenComparing(c1, c2)`, `Comparator.thenComparingBy(c, key)` | Lambdas are plain functions, and functions cannot carry default methods without wrapping. |
+| Functional interfaces (`Predicate`, `Function`, `BiFunction`, `Supplier`, `Consumer`, …) | plain functions | Same reason. `Predicate.not(p)` becomes `(x) => !p(x)`. |
 | `Set`, `Map`, `Iterator`, `List` type names | same names | They shadow the JS globals in a module that imports them; alias (`import { Map as CMap }`) or use `globalThis.Map`. |
 | `new TreeMap(SortedMap)` vs `new TreeMap(Map)`, likewise `TreeSet`, `PriorityQueue` | one constructor; a *sorted* source always keeps its comparator | Overloads are resolved at compile time in the reference; here the static type is gone at run time, so the runtime type decides. |
 | `Gatherer.ofSequential(a, b)` | resolved by the first function's arity | Both two-argument overloads take two functions. A first function declaring no parameters is the initializer (`ofSequential(initializer, integrator)`); otherwise it is `ofSequential(integrator, finisher)`. Use `Integrator.ofGreedy` or the 3-argument form if your integrator declares no parameters. |
@@ -75,11 +65,11 @@ let closed = false;
 console.log(closed); // → true
 ```
 
-## Bulk removal when the test throws
+## Behaviour when a callback throws
 
-`removeIf` follows the reference when the predicate throws or modifies the collection: `ArrayList` and `Vector`
-test every element first and remove nothing; `LinkedList` removes as it goes, so elements removed before the throw
-stay removed. Two views differ:
+`removeIf` follows the reference when the predicate throws or modifies the collection. `ArrayList` and `Vector`
+test every element first and remove nothing. `LinkedList` removes as it goes, so elements removed before the throw
+stay removed. These calls differ from the reference:
 
 | Call | Reference | Here |
 |---|---|---|
@@ -111,7 +101,7 @@ console.log(DoubleStream.of(0, -0).distinct().count(), Stream.of(0, -0).distinct
 
 ## Reference quirks we deliberately do not copy
 
-The differential run (below) found a few places where the JDK contradicts its *own* documented
+The [differential tests](./testing.md#differential-testing-against-the-jdk) found a few places where the JDK contradicts its own documented
 contract. In each case this library follows the documentation:
 
 | Quirk in the reference | What the contract says / what we do |
@@ -159,60 +149,6 @@ console.log(Comparator.max(Comparator.naturalOrder<string>(), 'pear', 'apple'));
 
 ## How compatibility is verified
 
-Four layers, from documentation to the real runtime:
+Every interface and class was audited member by member against the Java API documentation: names, argument handling, return values and thrown exceptions. The test suite then checks that behaviour in four layers: contract suites, a black-box conformance suite written from the documentation, model-based random tests, and differential testing against a real JDK. In the latest proof run, 1,692,438 operations were compared and no divergence was classified as a library bug. Every divergence is either an intentional difference listed on this page or a reference quirk.
 
-```mermaid
-flowchart LR
-    doc["Reference API documentation"] --> audit["Doc audit: every interface and method checked"]
-    doc --> conf["Black-box conformance suite written from the docs alone"]
-    audit --> unit["Unit and contract tests (over 10,000, about 99% coverage)"]
-    conf --> unit
-    unit --> diff["Differential testing against a real reference runtime"]
-    diff --> report["docs/COMPATIBILITY.md (generated)"]
-```
-
-1. **Doc audit.** Every interface and class is checked member by member against the Java API
-   documentation: names, argument handling, return values, thrown exceptions.
-2. **Unit and contract tests.** Over 10,000 tests (about 99% line coverage), including shared contract suites run
-   against every implementation of an interface (`tests/contracts`).
-3. **Conformance suite.** A black-box suite written from the documentation alone, without looking at the
-   implementation (`tests/conformance`).
-4. **Differential testing.** A harness generates random operation scripts — on every concrete collection, many
-   constructor variants, every immutable/empty/singleton factory, the `Abstract*` skeletons, nested views and
-   wrappers, stream pipelines, collectors, gatherers, `Optional`, `Objects`, `Comparator`, spliterators — and runs
-   each script on the real reference runtime and on this library. Every return value, every exception class and the
-   full collection state after every operation are compared.
-
-### Latest proof run
-
-From the generated [compatibility report](../COMPATIBILITY.md):
-
-| | |
-|---|---|
-| Scripts | 200,000 (40 batches of 5,000) |
-| Operations compared | 1,692,438 |
-| Comparable public API reached | 1,602 / 1,602 rows (100%) |
-| Excluded API rows | 141, each with a reason (JS-only members, APIs newer than the reference, identity hash codes, non-public members, abstract hooks) |
-| Divergent scripts | 57, in 21 signatures — **0 library bugs**: 8 intentional (documented design differences), 13 reference quirks |
-
-Outputs are compared after documented *normalisations* — for example, hash-ordered collections are compared as
-sorted multisets because their iteration order is unspecified, numbers are compared by value (one JS number type
-vs. separate int/long/double), and only the sign of a comparator result is compared. The report lists every
-normalisation with its reason, every divergence with a shrunk reproduction, and the per-member API coverage matrix.
-
-### Running it yourself
-
-The differential harness needs a real JDK of version 23 or newer on your `PATH`. Without one, every
-entry point prints a message and exits successfully (and the jest smoke test is skipped).
-
-```sh
-npm run test:diff          # 20,000 random scripts; shrinks and reports any divergence, exits 1 on one
-npm run test:diff:proof    # 200,000 scripts across worker processes + API coverage; regenerates docs/COMPATIBILITY.md
-npx jest tests/differential  # 200-script smoke test
-```
-
-Every script has a seed-based id, so any divergence is reproducible; the harness's own README
-(`tools/differential/README.md`) explains the script format, how to rerun a single script, and how to add new
-operations.
-
-See also: [Testing](./testing.md) for testing your own code that uses the library.
+[How the library is tested](./testing.md#differential-testing-against-the-jdk) explains the differential harness and how to run it. The generated [compatibility report](../COMPATIBILITY.md) lists every normalisation, every divergence with a minimal reproduction, and the per-member API coverage.

@@ -1,19 +1,13 @@
 # Spliterators and custom stream sources
 
-A **spliterator** ("splittable iterator") is the low-level protocol every stream reads its source through. It
+A spliterator ("splittable iterator") is the low-level protocol through which every stream reads its source. It
 hands out elements one at a time (`tryAdvance`) or all at once (`forEachRemaining`), can split off part of its
-elements for parallel work (`trySplit`), and describes the source with a size estimate and **characteristic
-flags** (ordered, sized, sorted, distinct, …) that let the stream engine skip work — for example `count()` on a
-`SIZED` source without traversing it. You only need this page to build a stream over a custom data source, or to
-understand why an operation is fast on one collection and slower on another.
+elements for parallel work (`trySplit`), and describes the source with a size estimate and characteristic flags.
+The stream engine uses the flags to skip work, for example to answer `count()` on a `SIZED` source without
+traversing it.
 
-- [The protocol](#the-protocol)
-- [Splitting](#splitting)
-- [Characteristic flags](#characteristic-flags)
-- [What each collection reports](#what-each-collection-reports)
-- [Spliterators utilities](#spliterators-utilities)
-- [AbstractSpliterator and the number variants](#abstractspliterator-and-the-number-variants)
-- [Building a stream with StreamSupport](#building-a-stream-with-streamsupport)
+This page is needed to build a stream over a custom data source, or to understand why an operation is fast on
+one collection and slower on another.
 
 ## The protocol
 
@@ -43,16 +37,9 @@ A spliterator is single-use and, like an iterator, not meant to be shared.
 
 ## Splitting
 
-`trySplit()` is how a parallel runtime divides work: each call hands out a prefix and keeps the suffix, and the
-pieces together cover the source exactly once, in order. Array-backed and range spliterators split in half.
-
-```mermaid
-flowchart TD
-    A["range 0..8, estimateSize 8"] -->|"trySplit()"| B["returned prefix: 0..4"]
-    A -->|"keeps"| C["remaining: 4..8"]
-    B -->|"trySplit()"| D["returned prefix: 0..2"]
-    B -->|"keeps"| E["remaining: 2..4"]
-```
+`trySplit()` is how a parallel runtime divides work. Each call returns a new spliterator over a prefix and keeps
+the suffix; together the pieces cover the source exactly once, in order. Array-backed and range spliterators
+split in half: a range `0..8` splits into `0..4` (returned) and `4..8` (kept).
 
 ```ts
 import { IntStream } from '@nodestd/collections';
@@ -67,8 +54,9 @@ quarter.forEachRemaining((x) => a.push(x));
 console.log(a, prefix.estimateSize()); // → [ 0, 1 ] 2
 ```
 
-Streams here always run sequentially, so the engine never calls `trySplit` for you; it is still part of the
-contract, and a custom spliterator may simply return `null`.
+> [!NOTE]
+> Streams always run sequentially, so the engine never calls `trySplit`. It is still part of the contract, and a
+> custom spliterator may return `null` from it.
 
 ## Characteristic flags
 
@@ -86,8 +74,10 @@ The flags are constants on `Spliterator` (same bit values as the Java API):
 | `Spliterator.CONCURRENT` | `0x1000` | the source may change safely during traversal |
 
 The engine uses them: `distinct()` on a `DISTINCT` source and `sorted()` on a naturally `SORTED` one are no-ops,
-`count()` and `toArray()` on a `SIZED` pipeline need no counting pass. Report only what is true — a wrong flag gives
-wrong results.
+and `count()` and `toArray()` on a `SIZED` pipeline need no counting pass.
+
+> [!WARNING]
+> Report only flags that are true. The engine trusts them, so a wrong flag gives wrong results.
 
 ```ts
 import { Spliterator, TreeSet, List } from '@nodestd/collections';
@@ -125,9 +115,9 @@ try {
 | `Stream.generate(…)` | `IMMUTABLE` (unknown size) |
 | `Stream.from(jsIterable)` | `ORDERED` (unknown size); a JS array is read like `Stream.ofArray` (`ORDERED`, `SIZED`, `SUBSIZED`, `IMMUTABLE`), and a library collection through its own spliterator |
 
-Collection spliterators are **late-binding** and **fail-fast**: they bind to the collection when traversal
-starts, so changes made after `stream()` but before the terminal operation are seen; structural changes *during*
-traversal throw `ConcurrentModificationException`.
+Collection spliterators are late-binding and fail-fast. They bind to the collection when traversal starts, so
+changes made after `stream()` but before the terminal operation are seen. Structural changes during traversal
+throw `ConcurrentModificationException`.
 
 ```ts
 import { ArrayList } from '@nodestd/collections';
@@ -249,10 +239,12 @@ const sum = StreamSupport.intStream(Spliterators.spliterator(Int32Array.of(5, 6)
 console.log(sum); // → 11
 ```
 
-**The supplier form** — `StreamSupport.stream(() => spliterator, characteristics, parallel)` — defers creating the
-spliterator until the terminal operation starts (or `spliterator()`/`iterator()` is first called). Use it when the
-source must be bound late, for example a mutable structure that may still change between building the pipeline
-and running it. `characteristics` must match what the supplied spliterator will report.
+### The supplier form
+
+`StreamSupport.stream(() => spliterator, characteristics, parallel)` defers creating the spliterator until the
+terminal operation starts (or `spliterator()`/`iterator()` is first called). Use it when the source must be bound
+late, for example a mutable structure that may still change between building the pipeline and running it.
+`characteristics` must match what the supplied spliterator will report.
 
 ```ts
 import { StreamSupport, Spliterator, ArrayList } from '@nodestd/collections';
@@ -264,7 +256,9 @@ buffer.add('second'); // the supplier has not run yet
 console.log(s.toList()); // → [first, second]
 ```
 
-A complete custom source — a stream over the lines of a string, read lazily:
+### Example: a custom source
+
+A stream over the lines of a string, read lazily:
 
 ```ts
 import { Spliterators, Spliterator, StreamSupport } from '@nodestd/collections';
@@ -289,5 +283,6 @@ console.log(lines('a\nbb\n\nccc').filter((l) => l.length > 0).toList()); // → 
 console.log(lines('x\ny\nz').skip(1).findFirst()); // → Optional[y]
 ```
 
-For JS iterables you usually don't need any of this: `Stream.from(iterable)` does it for you (see
-[sources](overview.md#sources)).
+> [!TIP]
+> For JS iterables, a custom spliterator is rarely needed: `Stream.from(iterable)` wraps any iterable (see
+> [sources](overview.md#sources)).
