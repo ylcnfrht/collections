@@ -91,7 +91,6 @@ Targets are base types. Many scripts operate on a view or wrapper of the base (s
 | Comparator results and Objects.compare are compared by sign | only the sign of a comparison is specified. |
 | Spliterator estimateSize/getExactSizeIfKnown only before traversal | after tryAdvance/forEachRemaining/trySplit the estimate is unspecified (printed `~`). |
 | trySplit prints prefix ++ rest | where (and whether) a spliterator splits is unspecified; for ORDERED spliterators prefix followed by the rest is the encounter order, which is compared. |
-| No peek before a natural sorted() | the reference elides sorted() on already-SORTED streams, which changes how many elements an upstream peek observes (unspecified). |
 | Parallel streams: only integer/string element types, no peek/forEach, order-independent or encounter-order terminals | execution is sequential in JS; results of these terminals are specified to be the same, double sums are not (summation order). |
 | unordered() only right before order-insensitive terminals | the reference may then pick any elements for limit/distinct. |
 | IdentityHashMap: small int keys/values only, no value-growing ops, no hashCode | reference identity equals JS === only for cached boxed ints (-128..127); its hashCode is identity-based. |

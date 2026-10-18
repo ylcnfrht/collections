@@ -439,12 +439,6 @@ export class Gen {
       ty = nt;
       types.add(ty);
     }
-    // the reference elides sorted() on an already-SORTED stream (ranges, TreeSet sources, sorted twice), which changes
-    // how many elements an upstream peek observes; that is unspecified, so no peek before a natural sorted()
-    // ... and the elision also makes the rest of the pipeline lazier: with a natural sorted() anywhere, no peek at all
-    const kept = parts.filter((p) => p !== 'peek' || !parts.includes('sorted'));
-    parts.length = 0;
-    parts.push(...kept);
     if (r.chance(0.06)) parts.push(`onClose h${r.int(1, 3)}`, ...(r.chance(0.5) ? [`onClose h${r.int(4, 6)}`] : []));
     if (r.chance(0.05)) parts.splice(r.int(1, parts.length), 0, 'sequential');
     // parallel: only integer/string element types (double sums are order-sensitive), no peek, deterministic terminals
