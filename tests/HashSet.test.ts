@@ -405,3 +405,15 @@ describe('an element whose hash changed after insertion', () => {
     expect(s.toArray().map((x) => x.id).sort()).toEqual([2, 3]);
   });
 });
+
+describe('HashSet dense integer table', () => {
+  it('shrinks when removing the top integers leaves it mostly empty', () => {
+    const m = new HashSet<number>();
+    for (let i = 0; i < 10_000; i++) m.add(i);
+    for (let i = 9_999; i > 0; i--) m.remove(i);
+    expect(m.size()).toBe(1);
+    expect(m.ints.length).toBeLessThanOrEqual(1024 + 4);
+    m.add(5);
+    expect([m.size(), m.contains(5)]).toEqual([2, true]);
+  });
+});

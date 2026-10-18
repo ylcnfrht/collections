@@ -644,3 +644,15 @@ describe('a key whose hash changed after insertion', () => {
     expect([m.size(), m.get(other), m.get(k)]).toEqual([1, 'other', null]);
   });
 });
+
+describe('HashMap dense integer table', () => {
+  it('shrinks when removing the top integers leaves it mostly empty', () => {
+    const m = new HashMap<number, number>();
+    for (let i = 0; i < 10_000; i++) m.put(i, i);
+    for (let i = 9_999; i > 0; i--) m.remove(i);
+    expect(m.size()).toBe(1);
+    expect(m.ints.length).toBeLessThanOrEqual(1024 + 4);
+    m.put(5, 5);
+    expect([m.size(), m.containsKey(5)]).toEqual([2, true]);
+  });
+});

@@ -293,9 +293,16 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   removeNode(node: HashNode<K, V>): void {
     const k = node.key;
     if (isIndexKey(k) && this.ints[k] === node) {
-      this.ints[k] = undefined;
+      const ints = this.ints;
+      ints[k] = undefined;
       // a fresh array frees memory; live iterators keep scanning the old (now empty) one
       if (--this.intCount === 0) this.ints = [];
+      else if (ints.length >= 4 * this.intCount + 1024) {
+        // below the ~25% fill that fitsIndexTable keeps on insert: drop the trailing holes (each is scanned once)
+        let n = ints.length;
+        while (ints[n - 1] === undefined) n--;
+        if (n !== ints.length) ints.length = n;
+      }
     } else if (isPlainKey(k)) {
       this.fast.delete(k);
     } else {
