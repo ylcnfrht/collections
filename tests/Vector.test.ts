@@ -25,6 +25,15 @@ describe('Vector · implementation', () => {
       expect([v.size(), v.capacity()]).toEqual([0, 10]);
     });
     it('initial capacity is reported', () => expect(new Vector(50).capacity()).toBe(50));
+    it('setSize, indexOf(o, i) and lastIndexOf(o, i) reject fractional and NaN indices', () => {
+      const v = Vector.of(1, 2, 3);
+      for (const bad of [1.5, NaN]) {
+        expectThrows(() => v.setSize(bad), 'ArrayIndexOutOfBoundsException');
+        expectThrows(() => v.indexOf(2, bad), 'IndexOutOfBoundsException');
+        expectThrows(() => v.lastIndexOf(2, bad), 'IndexOutOfBoundsException');
+      }
+      expect([v.size(), v.indexOf(2, 1), v.lastIndexOf(2, 2)]).toEqual([3, 1, 1]);
+    });
     it('of() reports a capacity that holds its elements', () => {
       const v = Vector.of(...Array.from({ length: 30 }, (_, i) => i));
       expect([v.size(), v.capacity() >= 30, Vector.of(1, 2).capacity()]).toEqual([30, true, 10]);

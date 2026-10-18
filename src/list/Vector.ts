@@ -110,7 +110,7 @@ export class Vector<E> extends ArrayList<E> {
   override indexOf(o: unknown, index?: number): number {
     if (arguments.length < 2) return super.indexOf(o);
     const i0 = index as number;
-    if (i0 < 0) throw new IndexOutOfBoundsException(`Index: ${i0}`);
+    if (!Number.isInteger(i0) || i0 < 0) throw new IndexOutOfBoundsException(`Index: ${i0}`);
     const a = this.es;
     for (let i = i0, n = a.length; i < n; i++) if (equals(o, a[i])) return i;
     return -1;
@@ -121,7 +121,7 @@ export class Vector<E> extends ArrayList<E> {
     if (arguments.length < 2) return super.lastIndexOf(o);
     const i0 = index as number;
     const a = this.es;
-    if (i0 >= a.length) throw new IndexOutOfBoundsException(`${i0} >= ${a.length}`);
+    if (!Number.isInteger(i0) || i0 >= a.length) throw new IndexOutOfBoundsException(`${i0} >= ${a.length}`);
     for (let i = i0; i >= 0; i--) if (equals(o, a[i])) return i;
     return -1;
   }
@@ -129,7 +129,7 @@ export class Vector<E> extends ArrayList<E> {
   /** Grows with null elements or truncates. @throws ArrayIndexOutOfBoundsException if newSize < 0 */
   setSize(newSize: number): void {
     const a = this.es;
-    if (!(newSize >= 0)) aioobe(newSize, a.length);
+    if (!Number.isInteger(newSize) || newSize < 0) aioobe(newSize, a.length);
     this.modCount++;
     this.ensure(newSize);
     if (newSize < a.length) a.length = newSize;
