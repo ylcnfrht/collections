@@ -80,8 +80,11 @@ function checkedColl<C extends Collection<E>, E>(c: C, check: <T>(o: T) => T, id
   return delegate(c, (view) => {
     const o: Methods = identity ? identityEquality(view) : {};
     const has = (n: string) => typeof t[n] === 'function';
-    // the element is the last argument of add(e), add(i, e), set(i, e) and the one-argument inserters
+    // the element is the last argument of add(e), add(i, e), set(i, e) and the one-argument inserters;
+    // a sorted set's addFirst/addLast always throw UnsupportedOperationException, so the reference never checks them
+    const sorted = has('comparator');
     for (const n of ['add', 'addFirst', 'addLast', 'offer', 'offerFirst', 'offerLast', 'push', 'set']) {
+      if (sorted && (n === 'addFirst' || n === 'addLast')) continue;
       if (has(n)) o[n] = (...a: unknown[]) => (check(a[a.length - 1]), t[n](...a));
     }
     // legacy inserters take the element first: addElement(e), insertElementAt(e, i), setElementAt(e, i)
@@ -146,10 +149,15 @@ function checkedMapView<M extends Map<K, V>, K, V>(m: M, ck: <T>(o: T) => T, cv:
   return delegate(m, () => {
     const o: Methods = {};
     const has = (n: string) => typeof t[n] === 'function';
-    // key first, value last: put(k, v), putIfAbsent(k, v), replace(k, v), replace(k, old, v)
+    // key first, value last: put(k, v), putIfAbsent(k, v), replace(k, v), replace(k, old, v);
+    // a sorted map's putFirst/putLast always throw UnsupportedOperationException, unchecked as in the reference
+    const sorted = has('comparator');
     for (const n of ['put', 'putFirst', 'putLast', 'putIfAbsent', 'replace']) {
+      if (sorted && (n === 'putFirst' || n === 'putLast')) continue;
       if (has(n)) o[n] = (...a: unknown[]) => (ck(a[0]), cv(a[a.length - 1]), t[n](...a));
     }
+    // the navigable key sets are checked sets, as the reference's
+    for (const n of ['navigableKeySet', 'descendingKeySet']) if (has(n)) o[n] = () => checkedColl(t[n]() as Collection<K>, ck, false);
     // checks a snapshot of the pairs, then puts exactly those (reading src again could insert unchecked entries;
     // collecting them in a map would merge keys the target keeps apart, e.g. in an identity or comparator map)
     o.putAll = (src: Map<K, V>) => {
