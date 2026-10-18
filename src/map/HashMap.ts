@@ -521,7 +521,11 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
 
   // default methods
 
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     const n = this.getNode(key);
     if (n === undefined) return defaultValue;
     this.afterNodeAccess(n);

@@ -707,7 +707,11 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return false;
   }
 
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     const n = this.getNode(key);
     return n === null ? defaultValue : n.value;
   }

@@ -74,11 +74,16 @@ abstract class OptionalBase<T> {
     else requireNonNull(emptyAction)();
   }
 
-  orElse(other: T): T {
+  orElse(other: T): T;
+  /** A null fallback gives `T | null`. */
+  orElse(other: T | null): T | null;
+  orElse(other: T | null): T | null {
     return this.present ? this.value : other;
   }
 
-  orElseGet(supplier: () => T): T {
+  orElseGet(supplier: () => T): T;
+  orElseGet(supplier: () => T | null): T | null;
+  orElseGet(supplier: () => T | null): T | null {
     return this.present ? this.value : requireNonNull(supplier)();
   }
 

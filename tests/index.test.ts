@@ -103,3 +103,19 @@ describe('set clone() keeps the runtime subclass, as map clone() does', () => {
     if (s instanceof api.TreeSet) expect((c as any).comparator()).toBe((s as any).comparator());
   });
 });
+
+describe('null defaults are typed (compile-time checks; they run too)', () => {
+  it('orElse/orElseGet/getOrDefault accept null and keep assignability to wider types', () => {
+    const a: string | null = api.Optional.ofNullable<string>(null).orElse(null);
+    const b: number | null = api.OptionalInt.empty().orElse(null);
+    const c: string | null = api.Optional.empty<string>().orElseGet(() => null);
+    const m = new api.HashMap<string, number>();
+    const d: number | null = m.getOrDefault('k', null);
+    const e: number = new api.TreeMap<string, number>().getOrDefault('k', 0);
+    // @ts-expect-error a default of the wrong type is still rejected
+    m.getOrDefault('k', 'x');
+    const wide: api.Map<unknown, unknown> = new api.TreeMap<string, number>();
+    const wideOpt: api.Optional<unknown> = api.Optional.of('x');
+    expect([a, b, c, d, e, wide.size(), wideOpt.isPresent()]).toEqual([null, null, null, null, 0, 0, true]);
+  });
+});

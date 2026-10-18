@@ -630,7 +630,9 @@ class ReversedLinkedHashMap<K, V> extends AbstractMap<K, V> implements Sequenced
     return this.base.putFirst(key, value);
   }
   // the base's own versions keep its access-order and null-value semantics
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     return this.base.getOrDefault(key, defaultValue);
   }
   override putIfAbsent(key: K, value: V): V | null {

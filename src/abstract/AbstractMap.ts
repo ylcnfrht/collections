@@ -157,7 +157,11 @@ export abstract class AbstractMap<K, V> implements Map<K, V> {
 
   // Map default methods
 
-  getOrDefault(key: unknown, defaultValue: V): V {
+  getOrDefault(key: unknown, defaultValue: V): V;
+
+  getOrDefault(key: unknown, defaultValue: V | null): V | null;
+
+  getOrDefault(key: unknown, defaultValue: V | null): V | null {
     const e = this.findEntry(key);
     return e === undefined ? defaultValue : e.getValue();
   }

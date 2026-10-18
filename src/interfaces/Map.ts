@@ -41,6 +41,8 @@ export interface Map<K, V> extends Iterable<[K, V]> {
   toString(): string;
 
   getOrDefault(key: unknown, defaultValue: V): V;
+  /** A null default: absent keys give null. */
+  getOrDefault(key: unknown, defaultValue: V | null): V | null;
   forEach(action: (key: K, value: V) => void): void;
   replaceAll(fn: (key: K, value: V) => V): void;
   putIfAbsent(key: K, value: V): V | null;

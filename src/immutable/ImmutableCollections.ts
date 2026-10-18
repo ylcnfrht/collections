@@ -413,7 +413,11 @@ export class ImmutableMap<K, V> extends ImmutableMapBase<K, V> {
     return false;
   }
 
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     return this.containsKey(key) ? (this.get(key) as V) : defaultValue;
   }
 
@@ -711,7 +715,9 @@ class LazyMap<K, V> extends ImmutableMapBase<K, V> {
     const i = this.keyIndex.indexOf(key);
     return i < 0 ? null : this.slots.get(i, key as K);
   }
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     const i = this.keyIndex.indexOf(key);
     return i < 0 ? defaultValue : this.slots.get(i, key as K);
   }

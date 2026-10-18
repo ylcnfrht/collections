@@ -700,7 +700,9 @@ class EmptyMap<K, V> extends AbstractMap<K, V> {
   override hashCode(): number {
     return 0;
   }
-  override getOrDefault(_key: unknown, defaultValue: V): V {
+  override getOrDefault(_key: unknown, defaultValue: V): V;
+  override getOrDefault(_key: unknown, defaultValue: V | null): V | null;
+  override getOrDefault(_key: unknown, defaultValue: V | null): V | null {
     return defaultValue;
   }
   override remove(key: unknown): V | null;
@@ -750,7 +752,9 @@ class SingletonMap<K, V> extends AbstractMap<K, V> {
   entrySet(): Set<MapEntry<K, V>> {
     return (this.ens ??= new SingletonSet<MapEntry<K, V>>(new SimpleImmutableEntry(this.k, this.v)));
   }
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     return equals(key, this.k) ? this.v : defaultValue;
   }
   override forEach(action: (key: K, value: V) => void): void {
@@ -1222,7 +1226,9 @@ class UnmodifiableMap<K, V> extends ImmutableMapBase<K, V> {
   override get(key: unknown): V | null {
     return this.m.get(key);
   }
-  override getOrDefault(key: unknown, defaultValue: V): V {
+  override getOrDefault(key: unknown, defaultValue: V): V;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null;
+  override getOrDefault(key: unknown, defaultValue: V | null): V | null {
     return this.m.getOrDefault(key, defaultValue);
   }
   override forEach(action: (key: K, value: V) => void): void {
