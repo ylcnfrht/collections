@@ -68,7 +68,8 @@ const VIEW_METHODS = ['subList', 'reversed', 'headSet', 'tailSet', 'subSet', 'de
 
 /**
  * Checks every way an element can enter: add/addAll (also positional), addFirst/addLast, offer*,
- * push, set, replaceAll, listIterator add/set, and the same on subList/reversed/sub-set views.
+ * push, set, replaceAll, add/set on iterator() and listIterator(), the legacy Vector inserters, and the same on
+ * subList/reversed/sub-set views.
  */
 function checkedColl<C extends Collection<E>, E>(c: C, check: <T>(o: T) => T, identity: boolean): C {
   requireNonNull(c);
@@ -80,6 +81,10 @@ function checkedColl<C extends Collection<E>, E>(c: C, check: <T>(o: T) => T, id
     for (const n of ['add', 'addFirst', 'addLast', 'offer', 'offerFirst', 'offerLast', 'push', 'set']) {
       if (has(n)) o[n] = (...a: unknown[]) => (check(a[a.length - 1]), t[n](...a));
     }
+    // legacy inserters take the element first: addElement(e), insertElementAt(e, i), setElementAt(e, i)
+    for (const n of ['addElement', 'insertElementAt', 'setElementAt']) {
+      if (has(n)) o[n] = (...a: unknown[]) => (check(a[0]), t[n](...a));
+    }
     if (has('addAll')) {
       o.addAll = (...a: unknown[]) => {
         a[a.length - 1] = checkedCopy(a[a.length - 1] as Collection<E>, check);
@@ -87,7 +92,10 @@ function checkedColl<C extends Collection<E>, E>(c: C, check: <T>(o: T) => T, id
       };
     }
     if (has('replaceAll')) o.replaceAll = (op: (e: E) => E) => (requireNonNull(op), t.replaceAll((e: E) => check(op(e))));
-    if (has('listIterator')) o.listIterator = (...a: unknown[]) => checkedIterator(t.listIterator(...a) as ListIterator<E>, check);
+    // iterator() of a list is a ListIterator too, so it needs the same checks
+    for (const n of ['iterator', 'listIterator']) {
+      if (has(n)) o[n] = (...a: unknown[]) => checkedIterator(t[n](...a) as ListIterator<E>, check);
+    }
     for (const n of VIEW_METHODS) {
       if (has(n)) o[n] = (...a: unknown[]) => checkedColl(t[n](...a) as Collection<E>, check, false);
     }
@@ -96,7 +104,10 @@ function checkedColl<C extends Collection<E>, E>(c: C, check: <T>(o: T) => T, id
 }
 
 function checkedIterator<E>(it: ListIterator<E>, check: <T>(o: T) => T): ListIterator<E> {
-  return delegate(it, () => ({ add: (e: E) => it.add(check(e)), set: (e: E) => it.set(check(e)) }));
+  const o: Methods = {};
+  if (typeof it.add === 'function') o.add = (e: E) => it.add(check(e));
+  if (typeof it.set === 'function') o.set = (e: E) => it.set(check(e));
+  return delegate(it, () => o);
 }
 
 /** View that throws ClassCastException when an element failing type is inserted. equals/hashCode are by identity. */

@@ -3,10 +3,12 @@ import { SimpleEntry } from '../src/abstract/AbstractMap';
 import * as C from '../src/Collections';
 import { Collections } from '../src/Collections';
 import { List as IList, Map as IMap, Set as ISet } from '../src/immutable/ImmutableCollections';
+import { ListIterator } from '../src/interfaces/Iterator';
 import { List } from '../src/interfaces/List';
 import { MapEntry } from '../src/interfaces/Map';
 import { ArrayList } from '../src/list/ArrayList';
 import { LinkedList } from '../src/list/LinkedList';
+import { Vector } from '../src/list/Vector';
 import { HashMap } from '../src/map/HashMap';
 import { LinkedHashMap } from '../src/map/LinkedHashMap';
 import { TreeMap } from '../src/map/TreeMap';
@@ -673,6 +675,12 @@ describe('checked wrappers', () => {
       ['subList.add', () => l.subList(0, 1).add('x')],
       ['subList.subList.set', () => l.subList(0, 3).subList(0, 1).set(0, 'x')],
       ['reversed.add', () => l.reversed().add('x')],
+      ['iterator.add', () => (l.iterator() as ListIterator<any>).add('x')],
+      ['iterator.set', () => {
+        const it = l.iterator() as ListIterator<any>;
+        it.next();
+        it.set('x');
+      }],
     ];
     for (const [, f] of bad) expectThrows(f, CCE);
     expect(base.size()).toBe(9);
@@ -681,6 +689,17 @@ describe('checked wrappers', () => {
     expect(l.get(0)).toBe(6);
     l.removeAt(0);
     expect(base.size()).toBe(8);
+  });
+  it('checkedList over a Vector checks the legacy inserters', () => {
+    const base = new Vector<any>();
+    const l = C.checkedList(base as List<any>, isNum) as unknown as Vector<any>;
+    l.addElement(1);
+    l.insertElementAt(0, 0);
+    l.setElementAt(2, 1);
+    expectThrows(() => l.addElement('x'), CCE);
+    expectThrows(() => l.insertElementAt('x', 0), CCE);
+    expectThrows(() => l.setElementAt('x', 0), CCE);
+    expect(base.toArray()).toEqual([0, 2]);
   });
   it('checkedCollection uses identity equality; checkedSet/Queue/sorted sets', () => {
     const base = ArrayList.of(1);
