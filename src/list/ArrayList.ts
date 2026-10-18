@@ -1,4 +1,4 @@
-import { AbstractList } from '../abstract/AbstractList';
+import { AbstractList, removeRangeCheck } from '../abstract/AbstractList';
 import {
   ConcurrentModificationException,
   IllegalArgumentException,
@@ -222,9 +222,7 @@ export class ArrayList<E> extends AbstractList<E> {
 
   override removeRange(fromIndex: number, toIndex: number): void {
     const n = this.es.length;
-    if (fromIndex < 0 || toIndex > n || fromIndex > toIndex) {
-      throw new IndexOutOfBoundsException(`From Index: ${fromIndex} To Index: ${toIndex}, Size: ${n}`);
-    }
+    removeRangeCheck(fromIndex, toIndex, n);
     if (fromIndex === toIndex) return;
     this.modCount++;
     if (toIndex === n) this.es.length = fromIndex;

@@ -509,14 +509,20 @@ export function listContract(name: string, create: () => List<any>) {
       it('removeRange is bounded by the view', () => {
         const l = of(0, 1, 2, 3);
         const s = l.subList(1, 3) as any;
-        // reversed views inherit AbstractList.removeRange, which has no bound checks (as the reference's)
-        if (typeof s.removeRange !== 'function' || s instanceof ReversedList) return;
+        if (typeof s.removeRange !== 'function') return;
         expectThrows(() => s.removeRange(0, 3), IOOBE);
         expectThrows(() => s.removeRange(-1, 1), IOOBE);
         expectThrows(() => s.removeRange(2, 1), IOOBE);
         expect(l.toArray()).toEqual([0, 1, 2, 3]);
         s.removeRange(0, 1);
         expect([l.toArray(), s.size()]).toEqual([[0, 2, 3], 1]);
+      });
+      it('removeRange with a bad range removes nothing', () => {
+        const l = of(0, 1, 2) as any;
+        if (typeof l.removeRange !== 'function') return;
+        expectThrows(() => l.removeRange(1, 10), IOOBE);
+        expectThrows(() => l.removeRange(2, 1), IOOBE);
+        expect(l.toArray()).toEqual([0, 1, 2]);
       });
     });
 

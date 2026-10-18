@@ -85,8 +85,12 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     this.removeRange(0, this.size());
   }
 
-  /** Removes [fromIndex, toIndex). Public so views can delegate. */
+  /**
+   * Removes [fromIndex, toIndex). Public so views can delegate.
+   * @throws IndexOutOfBoundsException for a bad range, before anything is removed
+   */
   removeRange(fromIndex: number, toIndex: number): void {
+    removeRangeCheck(fromIndex, toIndex, this.size());
     const it = this.listIterator(fromIndex);
     for (let i = 0, n = toIndex - fromIndex; i < n; i++) {
       it.next();
@@ -259,6 +263,12 @@ class RandomAccessSpliterator<E> extends BaseSpliterator<E> {
   }
 }
 
+export function removeRangeCheck(fromIndex: number, toIndex: number, size: number): void {
+  if (fromIndex < 0 || toIndex > size || fromIndex > toIndex) {
+    throw new IndexOutOfBoundsException(`From Index: ${fromIndex} To Index: ${toIndex}, Size: ${size}`);
+  }
+}
+
 export function subListRangeCheck(fromIndex: number, toIndex: number, size: number): void {
   if (fromIndex < 0) throw new IndexOutOfBoundsException(`fromIndex = ${fromIndex}`);
   if (toIndex > size) throw new IndexOutOfBoundsException(`toIndex = ${toIndex}`);
@@ -407,9 +417,7 @@ class SubList<E> extends AbstractList<E> {
   }
 
   override removeRange(fromIndex: number, toIndex: number): void {
-    if (fromIndex < 0 || toIndex > this._size || fromIndex > toIndex) {
-      throw new IndexOutOfBoundsException(`From Index: ${fromIndex} To Index: ${toIndex}, Size: ${this._size}`);
-    }
+    removeRangeCheck(fromIndex, toIndex, this._size);
     this.checkForComodification();
     this.root.removeRange(this.offset + fromIndex, this.offset + toIndex);
     this.updateSizeAndModCount(fromIndex - toIndex);
