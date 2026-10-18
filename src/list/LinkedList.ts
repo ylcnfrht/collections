@@ -7,7 +7,6 @@ import { List } from '../interfaces/List';
 import { Deque } from '../interfaces/Queue';
 import { BaseSpliterator, Spliterator } from '../stream/Spliterator';
 import { ArraySpliterator, BATCH_UNIT, IteratorSpliterator, MAX_BATCH } from '../stream/Spliterators';
-import { Comparator, stableSort } from '../util/Comparator';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { isList } from '../util/guards';
 import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull, toString } from '../util/Objects';
@@ -325,12 +324,6 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
       x.item = operator(x.item);
       if (this.modCount !== mc) throw new ConcurrentModificationException();
     }
-  }
-
-  override sort(c: Comparator<E> | null = null): void {
-    const a = stableSort(this.toArray(), c);
-    let i = 0;
-    for (let x = this.first; x !== null; x = x.next) x.item = a[i++];
   }
 
   override iterator(): Iterator<E> {
@@ -868,12 +861,6 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
       x.item = operator(x.item);
       if (base.modCount !== mc) throw new ConcurrentModificationException();
     }
-  }
-
-  override sort(c: Comparator<E> | null = null): void {
-    const a = stableSort(this.toArray(), c);
-    let i = 0;
-    for (let x = this.base.last; x !== null; x = x.prev) x.item = a[i++];
   }
 
   override iterator(): Iterator<E> {

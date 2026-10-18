@@ -732,6 +732,22 @@ describe('LinkedList · implementation', () => {
       n.sort();
       expect(n.toArray()).toEqual([1, 2, 3]);
     });
+    it('sort with a comparator that adds to the list loses nothing (sorted prefix, then the addition)', () => {
+      const l = LinkedList.of(3, 1, 2);
+      let added = false;
+      l.sort((a, b) => {
+        if (!added) l.add(99), (added = true);
+        return a - b;
+      });
+      expect(checkLinks(l)).toEqual([1, 2, 3, 99]);
+      const r = LinkedList.of(3, 1, 2);
+      let radded = false;
+      r.reversed().sort((a, b) => {
+        if (!radded) r.addFirst(99), (radded = true);
+        return a - b;
+      });
+      expect(r.toArray()).toEqual([99, 3, 2, 1]);
+    });
     it('removeAll / retainAll', () => {
       const l = LinkedList.of(1, 2, 3, 2);
       l.removeAll(SimpleList.of(2));
