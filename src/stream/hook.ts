@@ -21,11 +21,6 @@ export function registerStreamFactories(f: StreamFactories): void {
 }
 
 export function streamFactories(): StreamFactories {
-  if (factories === null) {
-    // only reachable when a deep module is imported without the package entry point
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require('./StreamSupport');
-    if (factories === null) throw new Error('stream engine not loaded');
-  }
+  if (factories === null) throw new Error('stream engine not loaded');
   return factories;
 }
