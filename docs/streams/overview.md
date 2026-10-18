@@ -56,7 +56,7 @@ cover everything else:
 | `Stream.generate(supplier)` | `supplier()` called for each element — infinite |
 | `Stream.concat(a, b)` | all of `a`, then all of `b` (lazy) |
 | `Stream.builder()` | add elements one by one, then `build()` |
-| `Stream.from(iterable)` | any JS iterable (JS extra) |
+| `Stream.from(iterable)` | any JS iterable (JS extra); a generator stopped early (`findFirst`, `limit`, a throw, `break`, `close()`) is closed, so its `finally` runs |
 | `Stream.ofArray(array)` | the array itself, read when the terminal runs — no copy (JS extra) |
 | `IntStream.range(a, b)` / `rangeClosed(a, b)` | `a … b-1` / `a … b` (also `LongStream`) |
 | `IntStream.of`, `DoubleStream.generate`, … | the same factories for [number streams](number-streams.md) |

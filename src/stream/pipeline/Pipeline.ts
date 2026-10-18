@@ -197,9 +197,9 @@ export abstract class AbstractPipeline<T = any> {
   /** close(); installed on the prototype below where the runtime has Symbol.dispose. */
   declare [Symbol.dispose]: () => void;
 
-  /** Consumes the stream like iterator(). */
+  /** Consumes the stream like iterator(); leaving a for..of early closes the stream. */
   [Symbol.iterator](): IterableIterator<T> {
-    return new JsIterator(this.spliterator());
+    return new JsIterator(this.spliterator(), () => this.close());
   }
 
   isParallel(): boolean {

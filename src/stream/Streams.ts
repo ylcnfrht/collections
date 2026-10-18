@@ -158,7 +158,9 @@ export const Stream = {
     requireNonNull(iterable);
     if (Array.isArray(iterable)) return ofArray(RefPipeline, iterable);
     const c = iterable as { spliterator?: () => Spliterator<T> };
-    return from(RefPipeline, typeof c.spliterator === 'function' ? c.spliterator() : new IterableSpliterator(iterable));
+    if (typeof c.spliterator === 'function') return from(RefPipeline, c.spliterator());
+    const sp = new IterableSpliterator(iterable);
+    return from(RefPipeline, sp).onClose(() => sp.close());
   },
   /** JS extra: a stream over the array itself (no copy). */
   ofArray<T>(array: ArrayLike<T>): Stream<T> {

@@ -209,6 +209,48 @@ describe('Stream · factories', () => {
   it('from(array) streams the array', () => expect(Stream.from([1, 2]).toArray()).toEqual([1, 2]));
   it('from(JS Set) streams in insertion order', () => expect(Stream.from(new Set(['x', 'y'])).toArray()).toEqual(['x', 'y']));
   it('from(string) streams code points', () => expect(Stream.from('ab').toArray()).toEqual(['a', 'b']));
+  describe('from(generator) closes the generator when the stream stops early', () => {
+    let finished = 0;
+    function* gen() {
+      try {
+        for (let i = 1; ; i++) yield i;
+      } finally {
+        finished++;
+      }
+    }
+    beforeEach(() => (finished = 0));
+    it('short-circuiting terminal', () => {
+      expect(Stream.from(gen()).filter((x) => x > 2).findFirst().get()).toBe(3);
+      expect(finished).toBe(1);
+    });
+    it('limit', () => {
+      expect(Stream.from(gen()).limit(2).toList().toArray()).toEqual([1, 2]);
+      expect(finished).toBe(1);
+    });
+    it('a throwing stage', () => {
+      expect(() => Stream.from(gen()).forEach(() => {
+        throw new Error('boom');
+      })).toThrow('boom');
+      expect(finished).toBe(1);
+    });
+    it('break out of for..of', () => {
+      for (const x of Stream.from(gen())) if (x === 2) break;
+      expect(finished).toBe(1);
+    });
+    it('close() after a partial iterator()', () => {
+      const s = Stream.from(gen());
+      expect(s.iterator().next()).toBe(1);
+      s.close();
+      expect(finished).toBe(1);
+    });
+    it('an exhausted generator is not closed again', () => {
+      let returned = 0;
+      const it = [1, 2][Symbol.iterator]();
+      const src = { [Symbol.iterator]: () => ({ next: () => it.next(), return: () => (returned++, { value: undefined, done: true as const }) }) };
+      expect(Stream.from(src).toList().toArray()).toEqual([1, 2]);
+      expect(returned).toBe(0);
+    });
+  });
   it('from(collection) uses its spliterator', () => {
     const s = Stream.from(arrayList(1, 2, 3));
     expect(s.spliterator().getExactSizeIfKnown()).toBe(3);

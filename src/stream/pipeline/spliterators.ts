@@ -266,12 +266,22 @@ export class IterableSpliterator<T> extends EngineSpliterator<T> {
   }
   drainTo(sink: Sink<T>, shortCircuit: boolean): void {
     const it = this.iter();
-    for (;;) {
-      if (shortCircuit && sink.cancelled) return;
-      const r = it.next();
-      if (r.done) return;
-      sink.accept(r.value);
+    let done = false;
+    try {
+      for (;;) {
+        if (shortCircuit && sink.cancelled) return;
+        const r = it.next();
+        if (r.done) return void (done = true);
+        sink.accept(r.value);
+      }
+    } finally {
+      // stopped early (short circuit or a throw): let a generator run its finally blocks, as for..of does
+      if (!done) it.return?.();
     }
+  }
+  /** Closes the source iterator (iterator.return()), for a stream closed before it was exhausted. */
+  close(): void {
+    this.it?.return?.();
   }
   estimateSize(): number {
     return Infinity;
@@ -368,7 +378,15 @@ export class JsIterator<T> implements IterableIterator<T> {
   private readonly take = (t: T) => {
     this.value = t;
   };
-  constructor(private readonly sp: Spliterator<T>) {}
+  constructor(
+    private readonly sp: Spliterator<T>,
+    private readonly onReturn?: () => void
+  ) {}
+  /** for..of calls this when it stops early (break, throw). */
+  return(): IteratorResult<T> {
+    this.onReturn?.();
+    return { value: undefined, done: true };
+  }
   next(): IteratorResult<T> {
     if (this.sp.tryAdvance(this.take)) {
       const v = this.value as T;
