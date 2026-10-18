@@ -26,7 +26,7 @@ import { List } from './interfaces/List';
 import { Map, MapEntry, NavigableMap, SequencedMap, SortedMap } from './interfaces/Map';
 import { NavigableSet, SequencedSet, Set, SortedSet } from './interfaces/Set';
 import { SourceComparator, Spliterator } from './stream/Spliterator';
-import { ArraySpliterator, SingletonSpliterator, Spliterators } from './stream/Spliterators';
+import { SingletonSpliterator, Spliterators } from './stream/Spliterators';
 import { Comparator, naturalCompare, reverseOrder } from './util/Comparator';
 import { toArrayWith, WritableArrayLike } from './util/arrays';
 import { isList, isMap, isRandomAccess, isSet, RANDOM_ACCESS, SET_BRAND } from './util/guards';
@@ -577,10 +577,9 @@ class CopiesList<E> extends AbstractList<E> {
     subListRangeCheck(fromIndex, toIndex, this.n);
     return new CopiesList(toIndex - fromIndex, this.element);
   }
-  /** ORDERED|SIZED|SUBSIZED (SIZED|SUBSIZED when empty), what the reference's range-backed spliterator reports. */
+  /** ORDERED|SIZED|SUBSIZED (SIZED|SUBSIZED when empty), what the reference's range-backed spliterator reports; reads by index, no array. */
   override spliterator(): Spliterator<E> {
-    if (this.n === 0) return Spliterators.emptySpliterator();
-    return new ArraySpliterator(this.toArray(), 0, this.n, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
+    return this.n === 0 ? Spliterators.emptySpliterator() : super.spliterator();
   }
   override reversed(): List<E> {
     return ReverseOrderListView.of(this, true);

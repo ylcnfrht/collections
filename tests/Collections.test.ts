@@ -437,6 +437,11 @@ describe('nCopies', () => {
     expectThrows(() => IList.copyOf(l), NPE);
   });
   it('can seed a mutable list', () => expect(new ArrayList(nCopies(4, 0)).size()).toBe(4));
+  it('streams a huge count without materializing it', () => {
+    const l = nCopies(2 ** 31 - 1, 'x');
+    expect(l.stream().limit(3).toList().toArray()).toEqual(['x', 'x', 'x']);
+    expect(l.spliterator().estimateSize()).toBe(2 ** 31 - 1);
+  });
 });
 
 describe('empty and singleton collections', () => {
