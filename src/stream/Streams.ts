@@ -6,7 +6,7 @@ import { requireNonNull } from '../util/Objects';
 import { DoublePipeline, IntPipeline, LongPipeline, makeStream, RefPipeline, runAll } from './pipeline/Pipeline';
 import {
   ARRAY_FLAGS,
-  ArraySpliterator,
+  EngineArraySpliterator,
   ConcatSpliterator,
   GenerateSpliterator,
   Iterate3Spliterator,
@@ -44,11 +44,11 @@ function from(ctor: Ctor, sp: Spliterator<any>): any {
 }
 
 function ofArray(ctor: Ctor, a: ArrayLike<any>): any {
-  return from(ctor, new ArraySpliterator(requireNonNull(a), 0, a.length, ARRAY_FLAGS));
+  return from(ctor, new EngineArraySpliterator(requireNonNull(a), 0, a.length, ARRAY_FLAGS));
 }
 
 function empty(ctor: Ctor): any {
-  return from(ctor, new ArraySpliterator(NONE, 0, 0, EMPTY_FLAGS));
+  return from(ctor, new EngineArraySpliterator(NONE, 0, 0, EMPTY_FLAGS));
 }
 
 function iterate(ctor: Ctor, seed: any, a: any, b: any, n: number): any {
@@ -88,7 +88,7 @@ class Builder<T, S> {
     if (b === null) throw new IllegalStateException();
     this.buf = null;
     // as the reference: 0-1 elements stream like of(..); more come from a buffer that is not IMMUTABLE
-    return b.length < 2 ? ofArray(this.ctor, b) : from(this.ctor, new ArraySpliterator(b, 0, b.length, ARRAY_FLAGS & ~Spliterator.IMMUTABLE));
+    return b.length < 2 ? ofArray(this.ctor, b) : from(this.ctor, new EngineArraySpliterator(b, 0, b.length, ARRAY_FLAGS & ~Spliterator.IMMUTABLE));
   }
 }
 

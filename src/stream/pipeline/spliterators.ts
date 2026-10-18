@@ -23,7 +23,7 @@ export function drain<T>(sp: Spliterator<T>, sink: Sink<T>, shortCircuit: boolea
 }
 
 /** Over a[lo, hi). Doesn't copy: the array is the source. */
-export class ArraySpliterator<T> extends EngineSpliterator<T> {
+export class EngineArraySpliterator<T> extends EngineSpliterator<T> {
   constructor(readonly a: ArrayLike<T>, private lo: number, private readonly hi: number, private readonly flags: number) {
     super();
   }
@@ -54,7 +54,7 @@ export class ArraySpliterator<T> extends EngineSpliterator<T> {
   override trySplit(): Spliterator<T> | null {
     const lo = this.lo;
     const mid = (lo + this.hi) >>> 1;
-    return lo >= mid ? null : new ArraySpliterator(this.a, lo, (this.lo = mid), this.flags);
+    return lo >= mid ? null : new EngineArraySpliterator(this.a, lo, (this.lo = mid), this.flags);
   }
   estimateSize(): number {
     return this.hi - this.lo;

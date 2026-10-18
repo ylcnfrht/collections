@@ -46,7 +46,7 @@ import {
   TakeWhileSink,
 } from './Sink';
 import { SpliteratorIterator } from '../Spliterators';
-import { ArraySpliterator, DelegatingSpliterator, drain, JsIterator, NumberIterator } from './spliterators';
+import { EngineArraySpliterator, DelegatingSpliterator, drain, JsIterator, NumberIterator } from './spliterators';
 
 const LINKED = 'stream has already been operated upon or closed';
 const { DISTINCT, SORTED, ORDERED, SIZED, SUBSIZED } = Spliterator;
@@ -832,7 +832,7 @@ if (dispose !== undefined) {
   });
 }
 
-// JIT shaping: show the bulk-loop call sites in ArraySpliterator.drainTo several sink classes up front.
+// JIT shaping: show the bulk-loop call sites in EngineArraySpliterator.drainTo several sink classes up front.
 // The sites then stay megamorphic, so each sink's acceptArray loop is compiled as its own unit rather
 // than inlined into a caller whose inlining budget is already spent (measured up to 2x on hot loops).
 {
@@ -849,7 +849,7 @@ if (dispose !== undefined) {
     new PeekSink(new CountSink(), noop),
   ];
   for (const sink of sinks) {
-    new ArraySpliterator([0], 0, 1, 0).drainTo(sink, false);
-    new ArraySpliterator([0], 0, 1, 0).drainTo(sink, true);
+    new EngineArraySpliterator([0], 0, 1, 0).drainTo(sink, false);
+    new EngineArraySpliterator([0], 0, 1, 0).drainTo(sink, true);
   }
 }
