@@ -134,7 +134,8 @@ export class HashSet<E> extends AbstractSet<E> {
     return false;
   }
 
-  private unlink(h: number, b: E[], i: number): void {
+  /** @internal */
+  unlink(h: number, b: E[], i: number): void {
     b.splice(i, 1);
     if (b.length === 0) this.buckets.delete(h);
     this.valueCount--;
@@ -148,20 +149,13 @@ export class HashSet<E> extends AbstractSet<E> {
     this.modCount++;
   }
 
-  /** @internal removes exactly this element instance (iterator.remove) */
+  /** @internal removes an index or plain element (iterator.remove) */
   removeExact(e: E): void {
-    if (isIndexKey(e) && this.ints[e] === 1) {
-      this.removeIndex(e);
-      return;
-    }
-    if (isPlainKey(e)) {
+    if (isIndexKey(e) && this.ints[e] === 1) this.removeIndex(e);
+    else {
       this.fast.delete(e);
       this.modCount++;
-      return;
     }
-    const h = hashCode(e);
-    const b = this.buckets.get(h)!;
-    this.unlink(h, b, b.indexOf(e));
   }
 
   override clear(): void {
@@ -269,8 +263,9 @@ class HashSetIterator<E> implements Iterator<E> {
   private ints: number[] | null;
   private ii = 0;
   private fastIt: IterableIterator<unknown> | null;
-  private bucketIt: IterableIterator<E[]> | null = null;
+  private bucketIt: IterableIterator<[number, E[]]> | null = null;
   private arr: E[] | null = null;
+  private h = 0;
   private ai = 0;
   private remaining: number;
   private canRemove = false;
@@ -305,14 +300,14 @@ class HashSetIterator<E> implements Iterator<E> {
       const r = this.fastIt.next();
       if (!r.done) return (this.last = r.value as E);
       this.fastIt = null;
-      this.bucketIt = this.set.buckets.values();
+      this.bucketIt = this.set.buckets.entries();
     }
     for (;;) {
       const arr = this.arr;
       if (arr !== null && this.ai < arr.length) return (this.last = arr[this.ai++]);
       const r = this.bucketIt!.next();
       if (r.done) throw new ConcurrentModificationException();
-      this.arr = r.value;
+      [this.h, this.arr] = r.value;
       this.ai = 0;
     }
   }
@@ -321,10 +316,9 @@ class HashSetIterator<E> implements Iterator<E> {
     if (!this.canRemove) throw new IllegalStateException();
     if (this.set.modCount !== this.expected) throw new ConcurrentModificationException();
     this.canRemove = false;
-    const e = this.last as E;
-    // removal splices the bucket array we are walking: step back over the hole
-    if (this.arr !== null && !isPlainKey(e)) this.ai--;
-    this.set.removeExact(e);
+    // a bucket element is unlinked by position, not rehashed: it may have mutated since insertion
+    if (this.arr !== null) this.set.unlink(this.h, this.arr, --this.ai);
+    else this.set.removeExact(this.last as E);
     this.expected = this.set.modCount;
   }
 

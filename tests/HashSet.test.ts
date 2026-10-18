@@ -372,3 +372,36 @@ describe('HashSet SE 27 additions', () => {
     expect(s.containsAll(SimpleList.of(...out))).toBe(true);
   });
 });
+
+describe('an element whose hash changed after insertion', () => {
+  it('iterator.remove of a mutated Date removes it without throwing', () => {
+    const s = new HashSet<Date>();
+    const d = new Date(1);
+    s.add(d);
+    s.add(new Date(5));
+    d.setTime(2);
+    const it = s.iterator();
+    while (it.hasNext()) if (it.next() === d) it.remove();
+    expect(s.toArray().map((x) => x.getTime())).toEqual([5]);
+  });
+  it('iterator.remove removes exactly that element, not a neighbour in the new bucket', () => {
+    class K {
+      constructor(public id: number, public h: number) {}
+      equals(o: unknown): boolean {
+        return o instanceof K && o.id === this.id;
+      }
+      hashCode(): number {
+        return this.h;
+      }
+    }
+    const s = new HashSet<K>();
+    const k = new K(1, 5);
+    s.add(k);
+    s.add(new K(2, 9));
+    s.add(new K(3, 9));
+    k.h = 9;
+    const it = s.iterator();
+    while (it.hasNext()) if (it.next() === k) it.remove();
+    expect(s.toArray().map((x) => x.id).sort()).toEqual([2, 3]);
+  });
+});
