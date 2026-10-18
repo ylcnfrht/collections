@@ -687,13 +687,23 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
   override removeAll(c: Collection<unknown>): boolean {
     this.checkModifiable();
     requireNonNull(c);
-    return removeWhere(this, (e) => c.contains(e));
+    return this.removeMatching((e) => c.contains(e));
   }
 
   override retainAll(c: Collection<unknown>): boolean {
     this.checkModifiable();
     requireNonNull(c);
-    return removeWhere(this, (e) => !c.contains(e));
+    return this.removeMatching((e) => !c.contains(e));
+  }
+
+  /**
+   * One removeIf pass on the base (removing one by one through the view is quadratic on arrays). Up to the first
+   * match nothing is asked of the base, so with no match an unmodifiable base is left alone, as in the reference.
+   */
+  private removeMatching(pred: (e: E) => boolean): boolean {
+    const it = this.iterator();
+    while (it.hasNext()) if (pred(it.next())) return this.base.removeIf(pred);
+    return false;
   }
 
   override removeIf(filter: (e: E) => boolean): boolean {

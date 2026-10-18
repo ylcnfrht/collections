@@ -1,4 +1,5 @@
 import { AbstractList } from '../src/abstract/AbstractList';
+import { Collections } from '../src/Collections';
 import { ArrayList } from '../src/list/ArrayList';
 import { LinkedList } from '../src/list/LinkedList';
 import { isRandomAccess, RANDOM_ACCESS } from '../src/util/guards';
@@ -207,6 +208,16 @@ describe('ArrayList · implementation', () => {
       l.reversed().removeIf((x) => x % 2 === 0);
       expect([add.mock.calls.length, addAll.mock.calls.length, removeIf.mock.calls.length]).toEqual([0, 2, 1]);
       expect(l.toArray()).toEqual([9, 7, 1, 3, 5]);
+    });
+    it('reversed() removeAll/retainAll run one removeIf on the base; no match leaves an unmodifiable base alone', () => {
+      const l = ArrayList.of(1, 2, 3, 4, 5);
+      const removeAt = jest.spyOn(l, 'removeAt');
+      expect(l.reversed().removeAll(SimpleList.of(2, 4))).toBe(true);
+      expect(l.reversed().retainAll(SimpleList.of(1, 3))).toBe(true);
+      expect([removeAt.mock.calls.length, l.toArray()]).toEqual([0, [1, 3]]);
+      const u = Collections.unmodifiableList(ArrayList.of(1, 2));
+      expect([u.reversed().removeAll(SimpleList.of(9)), u.reversed().retainAll(SimpleList.of(1, 2))]).toEqual([false, false]);
+      expectThrows(() => u.reversed().removeAll(SimpleList.of(1)), 'UnsupportedOperationException');
     });
     it('removeAll and retainAll are linear on 100k elements', () => {
       const l = new ArrayList<number>();
