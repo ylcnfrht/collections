@@ -668,7 +668,7 @@ export class ReverseOrderListView<E> extends AbstractList<E> {
     this.checkModifiable();
     const size = this.base.size();
     checkClosedRange(index, size);
-    const adds = c.toArray();
+    const adds = requireNonNull(c).toArray();
     if (adds.length === 0) return false;
     this.base.addAll(size - index, new ArrayView(adds.reverse()));
     return true;

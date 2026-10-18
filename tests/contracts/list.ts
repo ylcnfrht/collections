@@ -746,6 +746,11 @@ export function listContract(name: string, create: () => List<any>) {
         it.set(7);
         expect(l.toArray()).toEqual([1, 7, 9, 3]);
       });
+      it('reversed().addAll(null) throws NullPointerException', () => {
+        const r = of(1, 2).reversed();
+        expectThrows(() => r.addAll(null as any), 'NullPointerException');
+        expectThrows(() => r.addAll(0, null as any), 'NullPointerException');
+      });
       it('reversed() listIterator: add, then forEachRemaining, then remove/set act on the last element', () => {
         const l = of(1, 2, 3);
         const it = l.reversed().listIterator(1);
