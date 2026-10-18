@@ -9,7 +9,7 @@ import { Set } from '../interfaces/Set';
 import { Spliterator } from '../stream/Spliterator';
 import { hashSpliterator } from '../stream/Spliterators';
 import { isEntry, isMap } from '../util/guards';
-import { hashCode, identityHashCode, requireNonNull, toString } from '../util/Objects';
+import { INSPECT, hashCode, identityHashCode, requireNonNull, toString } from '../util/Objects';
 import { jsIterator } from './HashMap';
 
 /** Reference equality: ===, except NaN equals NaN (SameValueZero, the native Map key rule). */
@@ -41,6 +41,9 @@ class IdentityNode<K, V> implements MapEntry<K, V> {
   }
   hashCode(): number {
     return identityHash(this.key, this.value);
+  }
+  [INSPECT](): string {
+    return this.toString();
   }
   toString(): string {
     return `${toString(this.key)}=${toString(this.value)}`;

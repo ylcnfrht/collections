@@ -1,6 +1,6 @@
 import { IllegalArgumentException } from '../exceptions';
 import { formatFixed6 } from './formatDouble';
-import { requireNonNull } from './Objects';
+import { INSPECT, requireNonNull } from './Objects';
 
 const INT_MAX = 2147483647;
 const INT_MIN = -2147483648;
@@ -50,6 +50,9 @@ export class IntSummaryStatistics {
     return this.count > 0 ? this.sum / this.count : 0;
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     return `IntSummaryStatistics{count=${this.count}, sum=${this.sum}, min=${this.min}, average=${formatFixed6(this.getAverage())}, max=${this.max}}`;
   }
@@ -102,6 +105,9 @@ export class LongSummaryStatistics {
     return this.count > 0 ? this.sum / this.count : 0;
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     return `LongSummaryStatistics{count=${this.count}, sum=${this.sum}, min=${this.min}, average=${formatFixed6(this.getAverage())}, max=${this.max}}`;
   }
@@ -184,6 +190,9 @@ export class DoubleSummaryStatistics {
     return this.count > 0 ? this.getSum() / this.count : 0;
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     return `DoubleSummaryStatistics{count=${this.count}, sum=${formatFixed6(this.getSum())}, min=${formatFixed6(this.min)}, average=${formatFixed6(this.getAverage())}, max=${formatFixed6(this.max)}}`;
   }

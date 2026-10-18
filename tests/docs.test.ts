@@ -37,11 +37,9 @@ function blocks(file: string): Block[] {
   return out;
 }
 
-/** What console.log prints in a doc: strings as-is, collections via toString(), JS values via inspect. */
+/** What console.log really prints: strings as-is, everything else through util.inspect (as Node does). */
 function show(v: unknown): string {
-  if (typeof v === 'string') return v;
-  if (v !== null && typeof v === 'object' && !Array.isArray(v) && !ArrayBuffer.isView(v) && v.toString !== Object.prototype.toString) return String(v);
-  return inspect(v, { depth: 4, breakLength: Infinity });
+  return typeof v === 'string' ? v : inspect(v, { breakLength: Infinity });
 }
 
 function expectations(code: string): string[] {

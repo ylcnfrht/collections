@@ -18,7 +18,7 @@ import { Map, MapEntry, NavigableMap, SortedMap } from '../interfaces/Map';
 import { NavigableSet, SequencedSet, SortedSet } from '../interfaces/Set';
 import { Comparator, naturalCompare } from '../util/Comparator';
 import { isEntry, isMap } from '../util/guards';
-import { equals, requireNonNull } from '../util/Objects';
+import { INSPECT, equals, requireNonNull } from '../util/Objects';
 
 /**
  * sequencedKeySet/Values/EntrySet as the reference's SequencedMap defaults: the plain view, except that
@@ -81,6 +81,9 @@ export class TreeNode<K, V> implements MapEntry<K, V> {
   }
   hashCode(): number {
     return entryHash(this);
+  }
+  [INSPECT](): string {
+    return this.toString();
   }
   toString(): string {
     return entryToString(this);

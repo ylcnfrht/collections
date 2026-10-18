@@ -150,7 +150,7 @@ console.log(versions.contains(new Version(1, 2))); // → true
 const pq = new PriorityQueue<Version>();
 pq.add(new Version(2, 0));
 pq.add(new Version(1, 5));
-console.log(pq.poll()); // → 1.5
+console.log(String(pq.poll())); // → 1.5
 ```
 
 ## Comparator helpers

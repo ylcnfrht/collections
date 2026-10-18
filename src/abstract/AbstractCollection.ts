@@ -6,7 +6,7 @@ import { Spliterator } from '../stream/Spliterator';
 import { IteratorSpliterator } from '../stream/Spliterators';
 import type { Stream } from '../stream/Stream';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
-import { equals, identityHashCode, requireNonNull, toString } from '../util/Objects';
+import { INSPECT, equals, identityHashCode, requireNonNull, toString } from '../util/Objects';
 
 /**
  * Skeleton of AbstractCollection: everything is built on iterator() and size().
@@ -130,6 +130,9 @@ export abstract class AbstractCollection<E> implements Collection<E> {
     return identityHashCode(this);
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     const parts: string[] = [];
     const it = this.iterator();

@@ -1,5 +1,8 @@
 import { IndexOutOfBoundsException, NullPointerException } from '../exceptions';
 
+/** Node's util.inspect hook (console.log, REPL): collections, entries and optionals print as their toString(). */
+export const INSPECT: unique symbol = Symbol.for('nodejs.util.inspect.custom') as never;
+
 const identityHashes = new WeakMap<object, number>();
 // shortcut: symbols can't be WeakMap keys on older runtimes, so their hashes are never freed; fine unless millions of symbols are hashed.
 const symbolHashes = new Map<symbol, number>();

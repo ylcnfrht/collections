@@ -30,7 +30,7 @@ import { SingletonSpliterator, Spliterators } from './stream/Spliterators';
 import { Comparator, naturalCompare, reverseOrder } from './util/Comparator';
 import { toArrayWith, WritableArrayLike } from './util/arrays';
 import { isList, isMap, isRandomAccess, isSet, RANDOM_ACCESS, SET_BRAND } from './util/guards';
-import { checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from './util/Objects';
+import { INSPECT, checkIndex, checkPositionIndex, equals, hashCode, requireNonNull } from './util/Objects';
 import {
   checkedCollection,
   checkedList,
@@ -1093,6 +1093,9 @@ class UnmodifiableEntry<K, V> implements MapEntry<K, V> {
   }
   hashCode(): number {
     return entryHash(this);
+  }
+  [INSPECT](): string {
+    return this.toString();
   }
   toString(): string {
     return entryToString(this);

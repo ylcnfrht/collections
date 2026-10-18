@@ -4,7 +4,7 @@ import { Iterator } from '../interfaces/Iterator';
 import { Map, MapEntry } from '../interfaces/Map';
 import { Set } from '../interfaces/Set';
 import { isEntry, isMap } from '../util/guards';
-import { equals, hashCode, requireNonNull, toString } from '../util/Objects';
+import { INSPECT, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 import { AbstractCollection } from './AbstractCollection';
 import { AbstractSet } from './AbstractSet';
 
@@ -140,6 +140,9 @@ export abstract class AbstractMap<K, V> implements Map<K, V> {
     return h;
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     const parts: string[] = [];
     const it = this.entrySet().iterator();
@@ -343,6 +346,9 @@ export class SimpleEntry<K, V> implements MapEntry<K, V> {
   hashCode(): number {
     return entryHash(this);
   }
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     return entryToString(this);
   }
@@ -373,6 +379,9 @@ export class SimpleImmutableEntry<K, V> implements MapEntry<K, V> {
   }
   hashCode(): number {
     return entryHash(this);
+  }
+  [INSPECT](): string {
+    return this.toString();
   }
   toString(): string {
     return entryToString(this);

@@ -1,6 +1,6 @@
 import { NoSuchElementException } from '../exceptions';
 import { formatDouble } from '../util/formatDouble';
-import { equals, hashCode, requireNonNull, toString } from '../util/Objects';
+import { INSPECT, equals, hashCode, requireNonNull, toString } from '../util/Objects';
 import { streamFactories } from './hook';
 import { BaseSpliterator, Spliterator } from './Spliterator';
 import type { DoubleStream, IntStream, LongStream, Stream } from './Stream';
@@ -131,6 +131,9 @@ export class Optional<T> {
     return this.present ? hashCode(this.value) : 0;
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     return this.present ? `Optional[${toString(this.value)}]` : 'Optional.empty';
   }
@@ -198,6 +201,9 @@ abstract class NumberOptional {
     return hashCode(v);
   }
 
+  [INSPECT](): string {
+    return this.toString();
+  }
   toString(): string {
     if (!this.present) return `${this.typeName}.empty`;
     return `${this.typeName}[${this.typeName === 'OptionalDouble' ? formatDouble(this.value) : String(this.value)}]`;

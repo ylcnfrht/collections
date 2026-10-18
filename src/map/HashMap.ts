@@ -15,7 +15,7 @@ import { Spliterator } from '../stream/Spliterator';
 import { hashSpliterator } from '../stream/Spliterators';
 import { toArrayWith, WritableArrayLike } from '../util/arrays';
 import { isEntry } from '../util/guards';
-import { equals, hashCode, requireNonNull } from '../util/Objects';
+import { INSPECT, equals, hashCode, requireNonNull } from '../util/Objects';
 
 /**
  * True when a key's value equality is exactly SameValueZero: every primitive, and every
@@ -81,6 +81,9 @@ export class HashNode<K, V> implements MapEntry<K, V> {
   }
   hashCode(): number {
     return entryHash(this);
+  }
+  [INSPECT](): string {
+    return this.toString();
   }
   toString(): string {
     return entryToString(this);

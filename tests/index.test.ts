@@ -1,6 +1,15 @@
 // Smoke test of the public entry point: everything a user imports resolves and works together.
+import { inspect } from 'util';
 import * as api from '../src';
 import { ArrayList, Collections, Comparator, HashMap, LinkedList, List, Map, Set, TreeMap, TreeSet } from '../src';
+
+describe('util.inspect (console.log) prints toString()', () => {
+  it('collections, maps, entries, optionals and statistics', () => {
+    const m = api.HashMap.of(['a', 1]);
+    const shown = [api.ArrayList.of<unknown>(1, 'x'), m, m.entrySet().iterator().next(), api.Optional.of(2), api.IntStream.of(1, 3).summaryStatistics(), [api.TreeSet.of(2, 1)]];
+    expect(shown.map((v) => inspect(v))).toEqual(['[1, x]', '{a=1}', 'a=1', 'Optional[2]', 'IntSummaryStatistics{count=2, sum=4, min=1, average=2.000000, max=3}', '[ [1, 2] ]']);
+  });
+});
 
 describe('public API', () => {
   it.each([
