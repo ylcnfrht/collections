@@ -257,8 +257,8 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return this.sequencedEntrySet();
   }
 
-  override [Symbol.iterator](): Generator<[K, V]> {
-    return new LinkedJsIterator(this, false, PAIR) as unknown as Generator<[K, V]>;
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
+    return new LinkedJsIterator(this, false, PAIR);
   }
 
   // SequencedMap
@@ -403,8 +403,8 @@ abstract class LinkedView<K, V, T> extends AbstractCollection<T> implements Sequ
   override spliterator(): Spliterator<T> {
     return new IteratorSpliterator(this, null, -1, (this.kind === VALUE ? 0 : Spliterator.DISTINCT) | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
-  override [Symbol.iterator](): Generator<T> {
-    return new LinkedJsIterator<K, V, T>(this.map, this.rev, this.kind) as unknown as Generator<T>;
+  override [Symbol.iterator](): IterableIterator<T> {
+    return new LinkedJsIterator<K, V, T>(this.map, this.rev, this.kind);
   }
   size(): number {
     return this.map.size();
@@ -593,8 +593,8 @@ class ReversedLinkedHashMap<K, V> extends AbstractMap<K, V> implements Sequenced
   sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
     return this.entrySet();
   }
-  override [Symbol.iterator](): Generator<[K, V]> {
-    return new LinkedJsIterator(this.base, true, PAIR) as unknown as Generator<[K, V]>;
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
+    return new LinkedJsIterator(this.base, true, PAIR);
   }
   override forEach(action: (key: K, value: V) => void): void {
     requireNonNull(action);

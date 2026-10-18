@@ -341,8 +341,8 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
   }
 
   // plain iterator object instead of a generator: several times faster in for..of
-  override [Symbol.iterator](): Generator<E> {
-    return new ValueItr(this) as unknown as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return new ValueItr(this);
   }
 
   // SequencedCollection / Deque
@@ -875,7 +875,7 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
     return ReverseOrderListView.of(this.base, true).subList(fromIndex, toIndex);
   }
 
-  override [Symbol.iterator](): Generator<E> {
+  override [Symbol.iterator](): IterableIterator<E> {
     const it = this.base.descendingIterator();
     const js: IterableIterator<E> = {
       next: (): IteratorResult<E> => (it.hasNext() ? { value: it.next(), done: false } : { value: undefined, done: true }),
@@ -883,7 +883,7 @@ class ReverseOrderLinkedListView<E> extends LinkedList<E> {
         return this;
       },
     };
-    return js as unknown as Generator<E>;
+    return js;
   }
 
   // SequencedCollection / Deque, ends swapped

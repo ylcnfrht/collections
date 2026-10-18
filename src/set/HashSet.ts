@@ -183,9 +183,9 @@ export class HashSet<E> extends AbstractSet<E> {
     return hashSpliterator(this, this, true);
   }
 
-  // typed as Generator to match the base signature; a plain iterator object is faster
-  override [Symbol.iterator](): Generator<E> {
-    return jsIterator(new HashSetIterator(this)) as unknown as Generator<E>;
+  // a plain iterator object is faster than a generator
+  override [Symbol.iterator](): IterableIterator<E> {
+    return jsIterator(new HashSetIterator(this));
   }
 
   override forEach(action: (e: E) => void): void {

@@ -237,8 +237,8 @@ export class ImmutableList<E> extends ImmutableListBase<E> {
   }
 
   // the native array iterator is a plain object, not a generator
-  override [Symbol.iterator](): Generator<E> {
-    return this.es[Symbol.iterator]() as unknown as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return this.es[Symbol.iterator]();
   }
 
   // shortcut: subList copies (O(k)) instead of viewing; contents can never change, so it is indistinguishable
@@ -334,8 +334,8 @@ export class ImmutableSet<E> extends ImmutableSetBase<E> {
     return new ArraySpliterator(this.es, 0, this.es.length, Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
-  override [Symbol.iterator](): Generator<E> {
-    return this.es[Symbol.iterator]() as unknown as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return this.es[Symbol.iterator]();
   }
 
   override hashCode(): number {
@@ -436,8 +436,8 @@ export class ImmutableMap<K, V> extends ImmutableMapBase<K, V> {
     return (this.vs ??= new ValuesView(this));
   }
 
-  override [Symbol.iterator](): Generator<[K, V]> {
-    return jsIterator(new ArrayItr(this.entries, 0), (e) => [e.getKey(), e.getValue()] as [K, V]) as unknown as Generator<[K, V]>;
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
+    return jsIterator(new ArrayItr(this.entries, 0), (e) => [e.getKey(), e.getValue()] as [K, V]);
   }
 
   override hashCode(): number {
@@ -458,8 +458,8 @@ class EntrySetView<K, V> extends AbstractSet<MapEntry<K, V>> {
   iterator(): Iterator<MapEntry<K, V>> {
     return new ArrayItr(this.map.entries, 0);
   }
-  override [Symbol.iterator](): Generator<MapEntry<K, V>> {
-    return this.map.entries[Symbol.iterator]() as unknown as Generator<MapEntry<K, V>>;
+  override [Symbol.iterator](): IterableIterator<MapEntry<K, V>> {
+    return this.map.entries[Symbol.iterator]();
   }
   size(): number {
     return this.map.entries.length;
@@ -484,8 +484,8 @@ class KeySetView<K, V> extends AbstractSet<K> {
   iterator(): Iterator<K> {
     return mapIterator(new ArrayItr(this.map.entries, 0), (e) => e.getKey());
   }
-  override [Symbol.iterator](): Generator<K> {
-    return jsIterator(this.iterator()) as unknown as Generator<K>;
+  override [Symbol.iterator](): IterableIterator<K> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.map.entries.length;
@@ -505,8 +505,8 @@ class ValuesView<K, V> extends AbstractCollection<V> {
   iterator(): Iterator<V> {
     return mapIterator(new ArrayItr(this.map.entries, 0), (e) => e.getValue());
   }
-  override [Symbol.iterator](): Generator<V> {
-    return jsIterator(this.iterator()) as unknown as Generator<V>;
+  override [Symbol.iterator](): IterableIterator<V> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.map.entries.length;

@@ -86,8 +86,8 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
     return this.map.sequencedKeySet().spliterator();
   }
 
-  override [Symbol.iterator](): Generator<E> {
-    return this.map.sequencedKeySet()[Symbol.iterator]() as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return this.map.sequencedKeySet()[Symbol.iterator]() as IterableIterator<E>;
   }
 
   override forEach(action: (e: E) => void): void {
@@ -149,8 +149,8 @@ class ReversedLinkedHashSet<E> extends AbstractSet<E> implements SequencedSet<E>
   iterator(): Iterator<E> {
     return this.keys().iterator();
   }
-  override [Symbol.iterator](): Generator<E> {
-    return this.keys()[Symbol.iterator]() as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return this.keys()[Symbol.iterator]() as IterableIterator<E>;
   }
   size(): number {
     return this.base.size();

@@ -200,8 +200,6 @@ export class TreeIter<T> implements Iterator<T> {
   }
 }
 
-// typed as Generator to match the base signature
-const jsIter = <T>(it: Iterator<T>) => jsIterator(it) as unknown as Generator<T>;
 
 /** What the key/value/entry views need from TreeMap and its range views. @internal */
 export interface TreeBacked<K, V> extends NavigableMap<K, V> {
@@ -803,7 +801,7 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return v;
   }
 
-  override [Symbol.iterator](): Generator<[K, V]> {
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
     const m = this;
     const expected = this.modCount;
     let x = this.firstNode();
@@ -825,7 +823,7 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
       [Symbol.iterator]() {
         return this;
       },
-    } as Generator<[K, V]>;
+    };
   }
 
   // ---- views
@@ -1212,8 +1210,8 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
     }
   }
 
-  override [Symbol.iterator](): Generator<[K, V]> {
-    return jsIter(this.iter<[K, V]>(PAIR));
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
+    return jsIterator(this.iter<[K, V]>(PAIR));
   }
 
   entrySet(): SequencedSet<MapEntry<K, V>> {
@@ -1363,8 +1361,8 @@ class EntrySetView<K, V> extends AbstractSet<MapEntry<K, V>> implements Sequence
     const cmp = (a: MapEntry<K, V>, b: MapEntry<K, V>) => m.compare(a.getKey(), b.getKey());
     return new IteratorSpliterator(this, null, -1, TREE_CHARACTERISTICS | Spliterator.SORTED, { modCounter: m, sizedOnlyUnsplit: true, comparator: cmp });
   }
-  override [Symbol.iterator](): Generator<MapEntry<K, V>> {
-    return jsIter(this.iterator());
+  override [Symbol.iterator](): IterableIterator<MapEntry<K, V>> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.m.size();
@@ -1425,8 +1423,8 @@ class ValuesView<V> extends AbstractCollection<V> implements SequencedCollection
     if (!(m instanceof TreeMap)) return super.spliterator();
     return new IteratorSpliterator(this, null, -1, Spliterator.SIZED | Spliterator.ORDERED, { modCounter: m, sizedOnlyUnsplit: true });
   }
-  override [Symbol.iterator](): Generator<V> {
-    return jsIter(this.iterator());
+  override [Symbol.iterator](): IterableIterator<V> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.m.size();
@@ -1496,8 +1494,8 @@ export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E
     const chars = sm.desc ? Spliterator.DISTINCT | Spliterator.ORDERED : Spliterator.DISTINCT | Spliterator.ORDERED | Spliterator.SORTED;
     return new IteratorSpliterator(this, null, -1, chars, { modCounter: sm.m, unknownSize: true, comparator: m.comparator() });
   }
-  override [Symbol.iterator](): Generator<E> {
-    return jsIter(this.m.iter<E>(KEY));
+  override [Symbol.iterator](): IterableIterator<E> {
+    return jsIterator(this.m.iter<E>(KEY));
   }
   descendingIterator(): Iterator<E> {
     return (this.m.descendingMap() as TreeBacked<E, unknown>).iter(KEY);

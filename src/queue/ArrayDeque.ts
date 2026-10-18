@@ -341,9 +341,8 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return new DeqSpliterator(this);
   }
 
-  // typed as Generator to match the base signature; it is a plain iterator object
-  override [Symbol.iterator](): Generator<E> {
-    return new JsIterator(this) as unknown as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return new JsIterator(this);
   }
 
   reversed(): Deque<E> {
@@ -729,7 +728,7 @@ class ReversedDeque<E> extends AbstractCollection<E> implements Deque<E> {
   override spliterator(): Spliterator<E> {
     return new IteratorSpliterator(this, null, -1, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
-  override [Symbol.iterator](): Generator<E> {
+  override [Symbol.iterator](): IterableIterator<E> {
     const it = this.d.descendingIterator();
     const js: IterableIterator<E> = {
       next: (): IteratorResult<E> => (it.hasNext() ? { value: it.next(), done: false } : { value: undefined, done: true }),
@@ -737,7 +736,7 @@ class ReversedDeque<E> extends AbstractCollection<E> implements Deque<E> {
         return this;
       },
     };
-    return js as unknown as Generator<E>;
+    return js;
   }
   reversed(): Deque<E> {
     return this.d;

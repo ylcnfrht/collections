@@ -866,8 +866,8 @@ class UnmodifiableCollection<E> extends ImmutableCollectionBase<E> {
     return readOnly(this.c.iterator());
   }
   // JS iterators have no remove, so the backing one can be handed out
-  override [Symbol.iterator](): Generator<E> {
-    return this.c[Symbol.iterator]() as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return this.c[Symbol.iterator]() as IterableIterator<E>;
   }
   size(): number {
     return this.c.size();
@@ -1051,8 +1051,8 @@ class UnmodifiableList<E> extends ImmutableListBase<E> {
   override listIterator(index?: number): ListIterator<E> {
     return new ReadOnlyItr(this.l.listIterator(index));
   }
-  override [Symbol.iterator](): Generator<E> {
-    return this.l[Symbol.iterator]() as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return this.l[Symbol.iterator]() as IterableIterator<E>;
   }
   override subList(fromIndex: number, toIndex: number): List<E> {
     return new UnmodifiableList(this.l.subList(fromIndex, toIndex));
@@ -1145,8 +1145,8 @@ class UnmodifiableEntrySet<K, V> extends UnmodifiableSet<MapEntry<K, V>> impleme
   override iterator(): Iterator<MapEntry<K, V>> {
     return mapIterator(readOnly(this.c.iterator()), (e) => new UnmodifiableEntry(e) as MapEntry<K, V>);
   }
-  override [Symbol.iterator](): Generator<MapEntry<K, V>> {
-    return jsIterator(this.iterator()) as unknown as Generator<MapEntry<K, V>>;
+  override [Symbol.iterator](): IterableIterator<MapEntry<K, V>> {
+    return jsIterator(this.iterator());
   }
   override toArray(): MapEntry<K, V>[];
   override toArray<A extends WritableArrayLike<MapEntry<K, V>>>(generator: (length: number) => A): A;
@@ -1238,8 +1238,8 @@ class UnmodifiableMap<K, V> extends ImmutableMapBase<K, V> {
     return (this.ens ??= new UnmodifiableEntrySet(this.m.entrySet()));
   }
   // yields fresh [key, value] pairs, so nothing writes back
-  override [Symbol.iterator](): Generator<[K, V]> {
-    return this.m[Symbol.iterator]() as Generator<[K, V]>;
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
+    return this.m[Symbol.iterator]() as IterableIterator<[K, V]>;
   }
   override equals(o: unknown): boolean {
     return o === this || this.m.equals(o);

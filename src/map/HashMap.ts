@@ -49,13 +49,6 @@ export function jsIterator<T, R = T>(it: Iterator<T>, f?: (t: T) => R): Iterable
       const v = it.next();
       return { value: f === undefined ? (v as unknown as R) : f(v), done: false };
     },
-    // callers type these as Generator, so the rest of its protocol is there too
-    return(value?: unknown): IteratorResult<R> {
-      return { done: true, value };
-    },
-    throw(e?: unknown): IteratorResult<R> {
-      throw e;
-    },
     [Symbol.iterator]() {
       return this;
     },
@@ -479,10 +472,10 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return (this.es ??= new EntrySet(this));
   }
 
-  // typed as Generator to match the base signature; a plain iterator object is faster
-  override [Symbol.iterator](): Generator<[K, V]> {
+  // a plain iterator object is faster than a generator
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
     // unless a subclass changed the order, the cursor doubles as the JS iterator (one less hop per step)
-    if (this.newNodeIterator === HashMap.prototype.newNodeIterator) return new HashIterator(this) as unknown as Generator<[K, V]>;
+    if (this.newNodeIterator === HashMap.prototype.newNodeIterator) return new HashIterator(this);
     const it = this.newNodeIterator();
     return {
       next(): IteratorResult<[K, V]> {
@@ -493,7 +486,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
       [Symbol.iterator]() {
         return this;
       },
-    } as unknown as Generator<[K, V]>;
+    };
   }
 
   override hashCode(): number {
@@ -744,8 +737,8 @@ class KeySet<K, V> extends AbstractSet<K> {
   override spliterator(): Spliterator<K> {
     return hashSpliterator(this, this.map, true);
   }
-  override [Symbol.iterator](): Generator<K> {
-    return jsIterator(this.iterator()) as unknown as Generator<K>;
+  override [Symbol.iterator](): IterableIterator<K> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.map.size();
@@ -785,8 +778,8 @@ class Values<K, V> extends AbstractCollection<V> {
   override spliterator(): Spliterator<V> {
     return hashSpliterator(this, this.map, false);
   }
-  override [Symbol.iterator](): Generator<V> {
-    return jsIterator(this.iterator()) as unknown as Generator<V>;
+  override [Symbol.iterator](): IterableIterator<V> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.map.size();
@@ -823,8 +816,8 @@ class EntrySet<K, V> extends AbstractSet<MapEntry<K, V>> {
   override spliterator(): Spliterator<MapEntry<K, V>> {
     return hashSpliterator(this, this.map, true);
   }
-  override [Symbol.iterator](): Generator<MapEntry<K, V>> {
-    return jsIterator(this.iterator()) as unknown as Generator<MapEntry<K, V>>;
+  override [Symbol.iterator](): IterableIterator<MapEntry<K, V>> {
+    return jsIterator(this.iterator());
   }
   size(): number {
     return this.map.size();

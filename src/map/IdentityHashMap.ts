@@ -164,9 +164,9 @@ export class IdentityHashMap<K, V> extends AbstractMap<K, V> {
     return (this.es ??= new EntrySet(this));
   }
 
-  // typed as Generator to match the base signature; a plain iterator object is faster
-  override [Symbol.iterator](): Generator<[K, V]> {
-    return jsIterator(new IdentityIterator(this), (n) => [n.key, n.value] as [K, V]) as unknown as Generator<[K, V]>;
+  // a plain iterator object is faster than a generator
+  override [Symbol.iterator](): IterableIterator<[K, V]> {
+    return jsIterator(new IdentityIterator(this), (n) => [n.key, n.value] as [K, V]);
   }
 
   override forEach(action: (key: K, value: V) => void): void {

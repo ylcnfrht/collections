@@ -370,7 +370,7 @@ export class PriorityQueue<E> extends AbstractQueue<E> {
   }
 
   // plain object iterator: much faster than a generator in for..of
-  override [Symbol.iterator](): Generator<E> {
+  override [Symbol.iterator](): IterableIterator<E> {
     const pq = this;
     const mc = this.modCount;
     let i = 0;
@@ -384,7 +384,7 @@ export class PriorityQueue<E> extends AbstractQueue<E> {
         return it;
       },
     };
-    return it as unknown as Generator<E>;
+    return it;
   }
 }
 

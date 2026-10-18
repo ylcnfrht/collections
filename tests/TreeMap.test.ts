@@ -215,8 +215,6 @@ describe('TreeMap · iterator removal', () => {
     for (const it of its) {
       expect(Object.prototype.toString.call(it)).toBe('[object Object]');
       expect(it[Symbol.iterator]()).toBe(it);
-      expect(it.return!(undefined)).toEqual({ done: true, value: undefined });
-      expect(() => it.throw!(new Error('boom'))).toThrow('boom');
     }
   });
   it('forEach and replaceAll are fail-fast', () => {

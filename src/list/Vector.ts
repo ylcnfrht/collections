@@ -168,7 +168,7 @@ export class Vector<E> extends ArrayList<E> {
           },
         };
       },
-      *[Symbol.iterator](): Generator<E> {
+      *[Symbol.iterator](): IterableIterator<E> {
         while (en.hasMoreElements()) yield en.nextElement();
       },
     };

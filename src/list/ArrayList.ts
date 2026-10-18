@@ -298,9 +298,8 @@ export class ArrayList<E> extends AbstractList<E> {
     return new OwnedArraySpliterator(this, () => this.es, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
-  // typed as Generator only to match the base signature; it is a plain next()-only iterator
-  override [Symbol.iterator](): Generator<E> {
-    return new ArrayListJsItr(this) as unknown as Generator<E>;
+  override [Symbol.iterator](): IterableIterator<E> {
+    return new ArrayListJsItr(this);
   }
 
   override equals(o: unknown): boolean {
