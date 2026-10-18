@@ -1,8 +1,8 @@
 # ts-collections-framework
 
-A production-grade collections framework for TypeScript and JS: the equivalent of **Java's Collections Framework and
-Stream API**. `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`, `Stream`, `Collectors` and the rest,
-with the same interfaces and the same documented behaviour.
+A production-grade collections framework for TypeScript and JS, inspired by **Java's Collections Framework and
+Stream API**: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`, `PriorityQueue`, `Stream`, `Collectors` and the rest,
+following the same interfaces and documented behaviour.
 
 ## Why
 

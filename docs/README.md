@@ -40,8 +40,8 @@ Other platforms solved this long ago. The best-known example is **Java's Collect
 than twenty-five years has given developers one vocabulary for lists, queues, sets, maps and streams, together with
 a precise specification of how each one behaves.
 
-**ts-collections-framework brings that framework to Node.js, JS and TypeScript.** Think of it as its direct
-equivalent: the same interfaces, the same classes and the same documented behaviour, adapted to TypeScript. It is
+**ts-collections-framework is inspired by that framework and brings it to Node.js, JS and TypeScript:** the same
+interfaces, classes and documented behaviour, adapted to TypeScript. It is
 built to production standards: every documented behaviour is tested, it is verified against the JDK
 on over 1.6 million compared operations ([how](./advanced/testing.md)), and it is tuned to match or beat native
 collections and the popular alternatives ([numbers](./advanced/performance.md)).
