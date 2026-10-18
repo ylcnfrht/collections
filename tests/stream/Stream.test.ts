@@ -333,6 +333,11 @@ describe('Stream · factories', () => {
       expect(() => it.next()).toThrow('boom');
       expect(finished).toBe(2);
     });
+    it('pull mode without flatMap registers no close work', () => {
+      const s = Stream.of(1, 2).map((x) => x * 2);
+      const it = s.iterator();
+      expect([it.next(), (s as any).src.handlers]).toEqual([2, null]);
+    });
     it('the stream iterator yields nothing after return()', () => {
       const it = Stream.of(1, 2, 3)[Symbol.iterator]();
       it.next();

@@ -193,11 +193,7 @@ export abstract class AbstractPipeline<T = any> {
   /** Lazy: elements are pulled through the stages only as the spliterator is advanced. */
   spliterator(): Spliterator<T> {
     const sp = this.open(true);
-    if (this.prev === null) return sp;
-    const w = new WrappingSpliterator<T>(this, sp);
-    // a flatMap stage may hold a partly read mapped stream between pulls: close() of this stream closes it
-    (this.src.handlers ??= []).push(() => w.closeInners());
-    return w;
+    return this.prev === null ? sp : new WrappingSpliterator(this, sp);
   }
 
   /** close(); installed on the prototype below where the runtime has Symbol.dispose. */
@@ -542,6 +538,8 @@ class WrappingSpliterator<T> extends BaseSpliterator<T> {
     if (this.sink === null) {
       this.sink = this.p.wrap(new CollectSink(buf, (b: T[], t: T) => b.push(t)), true, buf);
       for (let s: Sink = this.sink; s instanceof ChainedSink; s = s.down) if (s instanceof FlatMapSink) this.flat.push(s);
+      // a flatMap stage may hold a partly read mapped stream between pulls: close() of the stream closes it
+      if (this.flat.length !== 0) (this.p.src.handlers ??= []).push(() => this.closeInners());
       this.sink.begin(this.sp.getExactSizeIfKnown());
     }
     const sink = this.sink;
