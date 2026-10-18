@@ -56,6 +56,11 @@ function interfacesOf(o: any): string[] {
   return out;
 }
 
+/** Name of a library-internal implementation class; object literals and anonymous classes get a readable label. */
+function implLabel(ctor: any): string {
+  return ctor?.name || '(anonymous)';
+}
+
 /** Owner label(s) for a receiver: an exported class name, or the public interfaces a library-internal object implements. */
 const ownerCache = new WeakMap<object, string[]>();
 function ownersOf(self: any): string[] {
@@ -73,7 +78,7 @@ function ownersOf(self: any): string[] {
     owners = c ? [exportedClasses.get(c)!] : [];
   } else {
     owners = interfacesOf(self).map((i) => `${i}`);
-    const implName = `${ctor?.name ?? 'Object'}`;
+    const implName = implLabel(ctor);
     if (!implClasses.has(implName)) implClasses.set(implName, { ifaces: owners, members: new Set() });
   }
   ownerCache.set(proto, owners);
@@ -101,7 +106,7 @@ function wrapFn(holder: any, key: PropertyKey, fixedOwner: string | null): void 
         counts.set(k, (counts.get(k) ?? 0) + 1);
       }
       if (fixedOwner === null && owners.length > 0 && !exportedClasses.has(this?.constructor)) {
-        const impl = implClasses.get(this?.constructor?.name ?? 'Object');
+        const impl = implClasses.get(implLabel(this?.constructor));
         impl?.members.add(String(name));
       }
     }
