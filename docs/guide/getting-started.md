@@ -233,6 +233,9 @@ console.log(byAge.first().name); // → a
   `Stream`).
 - `Symbol.dispose` support on streams (`using s = list.stream()`) is present only where the runtime defines
   `Symbol.dispose`.
+- When your bundler merges the library with your own code it may rename classes whose names clash (`HashMap2`), and a
+  minifier shortens them further. Collections print and compare the same either way; only `constructor.name` and the
+  class names quoted in some error messages (`ClassCastException`) change. Exception `name`s are unaffected.
 
 ## Supported runtimes
 
