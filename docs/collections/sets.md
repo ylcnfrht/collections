@@ -90,7 +90,22 @@ The [data structures primer](../guide/data-structures.md#hashmap-and-hashset) sh
 
 The split is not observable: the set behaves as one hash set.
 
-```ts
+::: code-group
+
+```ts [Basic]
+import { HashSet } from '@nodestd/collections';
+
+const tags = new HashSet<string>();
+console.log(tags.add('ts'));      // → true
+console.log(tags.add('ts'));      // → false
+tags.add('node');
+console.log(tags.contains('ts')); // → true
+console.log(tags.remove('node')); // → true
+console.log(tags.size());         // → 1
+for (const tag of tags) console.log(tag); // → ts
+```
+
+```ts [Intermediate]
 import { HashSet, List } from '@nodestd/collections';
 
 const plain = new HashSet<object>();
@@ -109,25 +124,95 @@ lists.add(List.of(1, 2));
 console.log(lists.contains(List.of(1, 2))); // → true
 ```
 
+:::
+
 ### LinkedHashSet
 
 `LinkedHashSet` is a `HashSet` (it passes `instanceof HashSet`) that remembers insertion order. It is a `SequencedSet`, so it adds the [sequenced operations](#sequenced-operations) and a reversed view.
 
-```ts
+::: code-group
+
+```ts [Basic]
+import { LinkedHashSet } from '@nodestd/collections';
+
+const steps = new LinkedHashSet<string>();
+console.log(steps.add('build')); // → true
+steps.add('test');
+steps.add('deploy');
+console.log(steps.add('build')); // → false
+console.log(steps.contains('test')); // → true
+console.log(steps.remove('test'));   // → true
+console.log(steps.size());           // → 2
+const order: string[] = [];
+for (const step of steps) order.push(step); // insertion order
+console.log(order.join(' '));        // → build deploy
+```
+
+```ts [Intermediate]
 import { LinkedHashSet, ArrayList } from '@nodestd/collections';
 
+// unique page visits in first-seen order
 const visits = ArrayList.of('home', 'docs', 'home', 'blog', 'docs');
-// with new:
-// const visits = new ArrayList<string>();
-// for (const v of ['home', 'docs', 'home', 'blog', 'docs']) visits.add(v);
 console.log(new LinkedHashSet(visits).toString()); // → [home, docs, blog]
+
+// recent searches: newest last, no repeats, at most 3 kept
+const recent = new LinkedHashSet<string>();
+const search = (q: string): void => {
+  recent.addLast(q); // moves a repeated query to the end
+  if (recent.size() > 3) recent.removeFirst();
+};
+for (const q of ['maps', 'sets', 'lists', 'maps', 'queues']) search(q);
+console.log(recent.toString());            // → [lists, maps, queues]
+console.log(recent.reversed().toString()); // → [queues, maps, lists]
 ```
+
+:::
 
 ### TreeSet
 
 `TreeSet` keeps its elements sorted in a red-black tree, a self-balancing binary search tree. `add`, `remove` and `contains` are O(log n), even for already-sorted input, and iteration is always in order. It implements `NavigableSet`, which adds [navigation](#navigation) and [range views](#range-views).
 
 `TreeSet` orders elements by natural ordering or by a comparator; see [ordering](#ordering-in-a-treeset). `null` elements throw `NullPointerException` under natural ordering.
+
+::: code-group
+
+```ts [Basic]
+import { TreeSet } from '@nodestd/collections';
+
+const scores = new TreeSet<number>();
+console.log(scores.add(70)); // → true
+scores.add(95);
+scores.add(82);
+console.log(scores.add(70)); // → false
+console.log(scores.contains(82)); // → true
+console.log(scores.remove(95));   // → true
+console.log(scores.size());       // → 2
+let total = 0;
+for (const s of scores) total += s; // ascending order
+console.log(total);               // → 152
+```
+
+```ts [Intermediate]
+import { TreeSet } from '@nodestd/collections';
+
+// booked meeting starts, in minutes since midnight
+const booked = TreeSet.of(540, 600, 690, 840);
+const hhmm = (m: number): string =>
+  `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+// the meetings just before and after 10:30
+console.log(hhmm(booked.floor(630)!), hhmm(booked.ceiling(630)!)); // → 10:00 11:30
+
+// morning and afternoon, as live range views
+console.log(booked.headSet(720).size()); // → 3
+console.log(booked.tailSet(720).toString()); // → [840]
+
+booked.add(780);
+console.log(booked.tailSet(720).toString()); // → [780, 840]
+console.log(hhmm(booked.first()), hhmm(booked.last())); // → 09:00 14:00
+```
+
+:::
 
 ## Creating a set
 

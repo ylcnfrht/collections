@@ -35,6 +35,52 @@ For a queue or stack without the list API, use [`ArrayDeque`](./queues-and-deque
 
 `ArrayList<E>` stores its elements in a dense native JS array. Indexed reads and writes are O(1), appending is amortized O(1), and memory overhead is low. Inserting or removing at index `i` shifts every later element, so front and middle operations are O(n).
 
+::: code-group
+
+```ts [Basic]
+import { ArrayList } from '@nodestd/collections';
+
+const list = new ArrayList<string>();
+list.add('a');
+list.add('b');
+list.add('c');
+console.log(list.get(1));          // → b
+console.log(list.removeAt(0));     // → a
+const upper: string[] = [];
+for (const s of list) upper.push(s.toUpperCase());
+console.log(upper);                // → [ 'B', 'C' ]
+console.log(list.size(), list.toString()); // → 2 [b, c]
+```
+
+```ts [Intermediate]
+import { ArrayList, Comparator } from '@nodestd/collections';
+
+interface Product { name: string; price: number }
+
+const products = new ArrayList<Product>();
+products.add({ name: 'pen', price: 2 });
+products.add({ name: 'notebook', price: 5 });
+products.add({ name: 'clip', price: 2 });
+products.add({ name: 'stapler', price: 12 });
+products.add({ name: 'tape', price: 3 });
+
+// cheapest first, ties broken by name
+products.sort(Comparator.thenComparingBy(Comparator.comparing((p: Product) => p.price), (p) => p.name));
+
+// pages of two, read through subList views without copying
+const pageSize = 2;
+function page(n: number): string[] {
+  const from = n * pageSize;
+  const to = Math.min(from + pageSize, products.size());
+  return products.subList(from, to).toArray().map((p) => p.name);
+}
+console.log(page(0));   // → [ 'clip', 'pen' ]
+console.log(page(1));   // → [ 'tape', 'notebook' ]
+console.log(page(2));   // → [ 'stapler' ]
+```
+
+:::
+
 `ArrayList` carries the `RandomAccess` marker, which algorithms such as `Collections.binarySearch` use to choose an index-based strategy (see [RandomAccess](../guide/core-concepts.md#randomaccess)).
 
 ```ts
@@ -48,29 +94,55 @@ console.log(isRandomAccess(new LinkedList<number>())); // → false
 
 `LinkedList<E>` is a doubly linked list that implements both `List<E>` and `Deque<E>`, so one object serves as a list, a FIFO queue and a stack. Adding or removing at either end is O(1). Reaching index `i` walks from the nearer end, O(min(i, n − i)).
 
-```ts
+::: code-group
+
+```ts [Basic]
 import { LinkedList } from '@nodestd/collections';
 
-const list = LinkedList.of('b', 'c');
-// with new:
-// const list = new LinkedList<string>();
-// list.add('b');
-// list.add('c');
+const list = new LinkedList<string>();
+list.add('b');
+list.add('c');
 list.addFirst('a');                 // O(1)
 list.addLast('d');                  // O(1)
 console.log(list.toString());       // → [a, b, c, d]
 console.log(list.get(2));           // → c
-
-// Deque methods, on the same object
-list.offerFirst('start');
-console.log(list.pollLast());       // → d
-console.log(list.peekFirst());      // → start
-console.log(list.toString());       // → [start, a, b, c]
-
-// Stack methods (push/pop work on the front)
-list.push('top');
-console.log(list.pop());            // → top
+console.log(list.removeFirst());    // → a
+let joined = '';
+for (const s of list) joined += s;
+console.log(joined, list.size());   // → bcd 3
 ```
+
+```ts [Intermediate]
+import { LinkedList } from '@nodestd/collections';
+
+// undo/redo stacks; push/poll work on the front, the oldest entry sits at the back
+const undo = new LinkedList<string>();
+const redo = new LinkedList<string>();
+let text = '';
+
+function edit(next: string): void {
+  undo.push(text);
+  if (undo.size() > 3) undo.removeLast();   // keep the last 3 states
+  redo.clear();
+  text = next;
+}
+function step(from: LinkedList<string>, to: LinkedList<string>): void {
+  const state = from.poll();
+  if (state === null) return;
+  to.push(text);
+  text = state;
+}
+
+for (const t of ['a', 'ab', 'abc', 'abcd']) edit(t);
+console.log(undo.toString());       // → [abc, ab, a]
+step(undo, redo);                   // undo
+step(undo, redo);                   // undo
+console.log(text);                  // → ab
+step(redo, undo);                   // redo
+console.log(text, redo.toString()); // → abc [abcd]
+```
+
+:::
 
 `LinkedList` is the right choice when you insert or remove at a position you are already at (through a [`ListIterator`](#listiterator)) or at the ends. For a pure queue or stack, `ArrayDeque` is faster and lighter: one array instead of one node object per element. For indexed access, `ArrayList` is faster.
 
@@ -80,9 +152,92 @@ Unlike `ArrayDeque`, `LinkedList` accepts `null` elements. Queue usage is covere
 
 `Vector<E>` is the legacy growable array. It extends `ArrayList` with the old element-style methods, a simulated capacity, and `ArrayIndexOutOfBoundsException` for bad indexes. JS is single-threaded, so `Vector` has no synchronization cost and no synchronization benefit. Its API is described in [Vector and Stack](#vector-and-stack).
 
+::: code-group
+
+```ts [Basic]
+import { Vector } from '@nodestd/collections';
+
+const v = new Vector<number>();
+v.add(10);
+v.add(20);
+v.add(30);
+console.log(v.get(1));                // → 20
+v.removeAt(0);
+const doubled: number[] = [];
+for (const n of v) doubled.push(n * 2);
+console.log(doubled);                 // → [ 40, 60 ]
+console.log(v.size(), v.toString());  // → 2 [20, 30]
+```
+
+```ts [Intermediate]
+import { Collections, TreeSet, Vector, type Enumeration } from '@nodestd/collections';
+
+// a ported function that reads an Enumeration and returns a Vector
+function upperAll(en: Enumeration<string>): Vector<string> {
+  const out = new Vector<string>();
+  while (en.hasMoreElements()) out.addElement(en.nextElement().toUpperCase());
+  return out;
+}
+
+const tags = new Vector<string>();
+tags.addElement('red');
+tags.addElement('green');
+console.log(upperAll(tags.elements()).toString());  // → [RED, GREEN]
+
+// any Collection can supply an Enumeration
+const sorted = TreeSet.of('b', 'a');
+console.log(upperAll(Collections.enumeration(sorted)).toString()); // → [A, B]
+
+// and an Enumeration converts back to an ArrayList
+const list = Collections.list(tags.elements());
+console.log(list.toString());                        // → [red, green]
+```
+
+:::
+
 ### Stack
 
 `Stack<E>` is a last-in-first-out stack built on `Vector`. The top of the stack is the end of the vector, so `push`, `pop` and `peek` are O(1). See [Vector and Stack](#vector-and-stack).
+
+::: code-group
+
+```ts [Basic]
+import { Stack } from '@nodestd/collections';
+
+const s = new Stack<string>();
+s.push('a');
+s.push('b');
+s.push('c');
+console.log(s.peek());              // → c
+console.log(s.pop());               // → c
+const bottomToTop: string[] = [];
+for (const e of s) bottomToTop.push(e);
+console.log(bottomToTop);           // → [ 'a', 'b' ]
+console.log(s.size(), s.empty());   // → 2 false
+```
+
+```ts [Intermediate]
+import { Stack } from '@nodestd/collections';
+
+const openerOf: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+
+function balanced(text: string): boolean {
+  const open = new Stack<string>();
+  for (const ch of text) {
+    if ('([{'.includes(ch)) open.push(ch);
+    else if (ch in openerOf && (open.empty() || open.pop() !== openerOf[ch])) return false;
+  }
+  return open.empty();
+}
+
+console.log(balanced('{[()()]}'));  // → true
+console.log(balanced('([)]'));      // → false
+console.log(balanced('(('));        // → false
+```
+
+:::
+
+New code should use [`ArrayDeque`](./queues-and-deques.md#using-a-deque-as-a-stack) for the same task; its `push`, `pop` and `peek` work the same way.
 
 ## Creating a list
 

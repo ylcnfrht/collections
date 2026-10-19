@@ -122,11 +122,94 @@ The backing array's length is always a power of two, at least 8 and 16 by defaul
 
 `ArrayDeque` does not offer indexed access; use `ArrayList` for that.
 
+::: code-group
+
+```ts [Basic]
+import { ArrayDeque } from '@nodestd/collections';
+
+const queue = new ArrayDeque<string>();
+queue.offer('a');
+queue.add('b');
+queue.offer('c');
+console.log(queue.peek());         // → a
+console.log(queue.poll());         // → a
+console.log(queue.size());         // → 2
+console.log([...queue]);           // → [ 'b', 'c' ]
+```
+
+```ts [Intermediate]
+import { ArrayDeque } from '@nodestd/collections';
+
+// undo history: push each edit, pop to revert the latest one
+class Editor {
+  text = '';
+  private readonly history = new ArrayDeque<string>();
+
+  type(s: string): void {
+    this.history.push(this.text);
+    this.text += s;
+  }
+
+  undo(): void {
+    const previous = this.history.poll();
+    if (previous !== null) this.text = previous;
+  }
+}
+
+const ed = new Editor();
+ed.type('Hello');
+ed.type(', world');
+ed.type('!');
+ed.undo();
+console.log(ed.text);              // → Hello, world
+ed.undo();
+console.log(ed.text);              // → Hello
+```
+
+:::
+
 ### PriorityQueue
 
 `PriorityQueue<E>` is an unbounded queue whose head is always the least element, by natural ordering or by a `Comparator` you supply. It is a binary min-heap stored in an array: the children of index `i` are at `2i + 1` and `2i + 2`. `offer` appends and sifts the element up; `poll` moves the last element to the root and sifts it down. Both are O(log n), and `peek` is O(1).
 
 Ordering rules are described in [priority ordering](#priority-ordering).
+
+::: code-group
+
+```ts [Basic]
+import { PriorityQueue } from '@nodestd/collections';
+
+const pq = new PriorityQueue<number>();
+pq.offer(5);
+pq.offer(1);
+pq.add(3);
+console.log(pq.peek());            // → 1
+console.log(pq.size());            // → 3
+console.log(pq.poll());            // → 1
+console.log(pq.poll());            // → 3
+console.log(pq.poll());            // → 5
+```
+
+```ts [Intermediate]
+import { PriorityQueue, Comparator } from '@nodestd/collections';
+
+// k smallest: a max-heap of size k evicts the largest candidate
+function smallestK(values: number[], k: number): number[] {
+  const heap = new PriorityQueue<number>(Comparator.reverseOrder<number>());
+  for (const v of values) {
+    heap.offer(v);
+    if (heap.size() > k) heap.poll();
+  }
+  const out: number[] = [];
+  let x: number | null;
+  while ((x = heap.poll()) !== null) out.unshift(x);
+  return out;
+}
+
+console.log(smallestK([7, 2, 9, 4, 1, 8, 3], 3)); // → [ 1, 2, 3 ]
+```
+
+:::
 
 ### LinkedList as a queue
 
@@ -137,7 +220,9 @@ Ordering rules are described in [priority ordering](#priority-ordering).
 
 Otherwise `ArrayDeque` is lighter: it allocates no node object per element.
 
-```ts
+::: code-group
+
+```ts [Basic]
 import { LinkedList, Queue } from '@nodestd/collections';
 
 const q: Queue<string> = new LinkedList<string>();
@@ -151,6 +236,27 @@ withNull.add(null);
 console.log(withNull.poll());      // → null
 console.log(withNull.isEmpty());   // → true
 ```
+
+```ts [Intermediate]
+import { LinkedList } from '@nodestd/collections';
+
+// FIFO job queue where a pending job can be cancelled by value
+const jobs = new LinkedList<string>();
+jobs.offer('resize-1');
+jobs.offer('resize-2');
+jobs.offer('upload-1');
+jobs.offer('resize-3');
+
+console.log(jobs.remove('resize-2')); // → true
+console.log(jobs.indexOf('upload-1')); // → 1
+console.log(jobs.toString());      // → [resize-1, upload-1, resize-3]
+
+const done: string[] = [];
+while (!jobs.isEmpty()) done.push(jobs.poll()!);
+console.log(done);                 // → [ 'resize-1', 'upload-1', 'resize-3' ]
+```
+
+:::
 
 ### Collections.asLifoQueue
 

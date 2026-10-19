@@ -69,6 +69,44 @@ console.log(Stream.of(1, 1, 2).collect(Collectors.toUnmodifiableSet()).size()); 
 map factory to choose the map type (for example a `TreeMap` for sorted keys or a `LinkedHashMap` for encounter
 order).
 
+::: code-group
+
+```ts [Basic]
+import { Stream, Collectors } from '@nodestd/collections';
+
+// word -> its length
+const lengths = Stream.of('map', 'filter', 'reduce').collect(Collectors.toMap((w: string) => w, (w: string) => w.length));
+
+console.log(lengths.get('filter')); // → 6
+console.log(lengths.size()); // → 3
+```
+
+```ts [Intermediate]
+import { Stream, Collectors, TreeMap } from '@nodestd/collections';
+
+type Line = { sku: string; qty: number };
+const cart: Line[] = [
+  { sku: 'B-200', qty: 1 },
+  { sku: 'A-100', qty: 2 },
+  { sku: 'B-200', qty: 3 },
+  { sku: 'C-300', qty: 1 },
+];
+
+// merge duplicate SKUs by adding quantities; TreeMap sorts by SKU
+const quantities = Stream.ofArray(cart).collect(
+  Collectors.toMap(
+    (l: Line) => l.sku,
+    (l: Line) => l.qty,
+    (a: number, b: number) => a + b,
+    () => new TreeMap<string, number>(),
+  ),
+);
+
+console.log(quantities); // → {A-100=2, B-200=4, C-300=1}
+```
+
+:::
+
 > [!WARNING]
 > Without a merge function, keys must be unique. A duplicate key throws `IllegalStateException` with the message
 > `Duplicate key K (attempted merging values V1 and V2)`. A `null` value throws `NullPointerException`, because
@@ -125,7 +163,9 @@ try {
 Concatenates `string` elements (a `null` element is written as `"null"`). Optional delimiter, prefix and suffix;
 an empty stream gives `prefix + suffix`.
 
-```ts
+::: code-group
+
+```ts [Basic]
 import { Stream, Collectors } from '@nodestd/collections';
 
 console.log(Stream.of('a', 'b', 'c').collect(Collectors.joining())); // → abc
@@ -134,6 +174,31 @@ console.log(Stream.of('a', 'b').collect(Collectors.joining(', ', '[', ']'))); //
 console.log(Stream.empty<string>().collect(Collectors.joining(', ', '[', ']'))); // → []
 console.log(Stream.of(1, 2, 3).map(String).collect(Collectors.joining('-'))); // → 1-2-3
 ```
+
+```ts [Intermediate]
+import { Stream, Collectors } from '@nodestd/collections';
+
+type User = { name: string; active: boolean };
+const users: User[] = [
+  { name: 'cid', active: true },
+  { name: 'ann', active: true },
+  { name: 'bob', active: false },
+  { name: 'ann', active: true },
+];
+
+// distinct active users, sorted and capitalised, as one display line
+const line = Stream.ofArray(users)
+  .filter((u) => u.active)
+  .map((u) => u.name)
+  .distinct()
+  .sorted()
+  .map((n) => n[0].toUpperCase() + n.slice(1))
+  .collect(Collectors.joining(', ', 'Active: ', '.'));
+
+console.log(line); // → Active: Ann, Cid.
+```
+
+:::
 
 ## Counting, summing, averaging, summarizing
 
@@ -199,6 +264,45 @@ console.log(Stream.ofArray(staff).collect(Collectors.reducing(0, (e: Emp) => e.s
 
 `groupingBy` puts each element into a bucket chosen by a classifier function, then reduces every bucket with a
 downstream collector. The result is a map from each key to its bucket's downstream result.
+
+::: code-group
+
+```ts [Basic]
+import { Stream, Collectors, TreeMap, List } from '@nodestd/collections';
+
+// words grouped by their first letter, keys sorted
+const byLetter = Stream.of('apple', 'avocado', 'banana', 'cherry', 'blueberry')
+  .collect(Collectors.groupingBy((w: string) => w[0], () => new TreeMap<string, List<string>>(), Collectors.toList()));
+
+console.log(byLetter); // → {a=[apple, avocado], b=[banana, blueberry], c=[cherry]}
+```
+
+```ts [Intermediate]
+import { Stream, Collectors, TreeMap } from '@nodestd/collections';
+
+type Order = { customer: string; amount: number };
+const orders: Order[] = [
+  { customer: 'globex', amount: 250 },
+  { customer: 'acme', amount: 120 },
+  { customer: 'initech', amount: 75 },
+  { customer: 'acme', amount: 80 },
+  { customer: 'globex', amount: 50 },
+];
+
+// total revenue per customer, sorted by customer name
+const revenue = Stream.ofArray(orders).collect(
+  Collectors.groupingBy(
+    (o: Order) => o.customer,
+    () => new TreeMap<string, number>(),
+    Collectors.summingInt((o: Order) => o.amount),
+  ),
+);
+
+console.log(revenue); // → {acme=200, globex=300, initech=75}
+console.log(revenue.lastKey()); // → initech
+```
+
+:::
 
 | Form | Map | Downstream |
 |---|---|---|

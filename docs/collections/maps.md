@@ -57,7 +57,22 @@ The more specific interfaces add ordering:
 
 The split is not observable: it is one map with one fail-fast iteration over all three stores.
 
-```ts
+::: code-group
+
+```ts [Basic]
+import { HashMap } from '@nodestd/collections';
+
+const ages = new HashMap<string, number>();
+ages.put('ada', 36);
+ages.put('alan', 41);
+console.log(ages.get('ada'));          // → 36
+console.log(ages.containsKey('alan')); // → true
+console.log(ages.remove('alan'));      // → 41
+console.log(ages.size());              // → 1
+for (const [name, age] of ages) console.log(name, age); // → ada 36
+```
+
+```ts [Intermediate]
 import { HashMap, List } from '@nodestd/collections';
 
 const byId = new HashMap<number, string>();
@@ -65,10 +80,16 @@ for (let id = 0; id < 5; id++) byId.put(id, `user${id}`); // dense table
 byId.put(1_000_000, 'far');                                // native map
 console.log(byId.get(3), byId.get(1_000_000), byId.size()); // → user3 far 6
 
-const routes = new HashMap<List<string>, string>();
-routes.put(List.of('api', 'users'), 'UsersController');     // buckets
-console.log(routes.get(List.of('api', 'users')));            // → UsersController
+// clicks per grid cell: List keys compare by value (buckets)
+const clicks = new HashMap<List<number>, number>();
+const events = [[1, 2], [3, 4], [1, 2], [1, 2]];
+for (const [x, y] of events) clicks.merge(List.of(x, y), 1, (a, b) => a + b);
+console.log(clicks.get(List.of(1, 2)));              // → 3
+console.log(clicks.get(List.of(3, 4)));              // → 1
+console.log(clicks.getOrDefault(List.of(0, 0), 0)); // → 0
 ```
+
+:::
 
 ### LinkedHashMap
 
@@ -77,7 +98,25 @@ console.log(routes.get(List.of('api', 'users')));            // → UsersControl
 - **Insertion order** (the default). Entries iterate in the order their keys were first put. Putting an existing key again changes the value but keeps the position.
 - **Access order** (`new LinkedHashMap(capacity, loadFactor, true)`). Every `get`, `put`, `getOrDefault`, `putIfAbsent`, `replace`, `compute*` or `merge` that hits a key moves it to the tail. The head is then the least recently used entry.
 
-```ts
+::: code-group
+
+```ts [Basic]
+import { LinkedHashMap } from '@nodestd/collections';
+
+const steps = new LinkedHashMap<string, number>();
+steps.put('build', 12);
+steps.put('test', 30);
+steps.put('deploy', 5);
+console.log(steps.get('test'));         // → 30
+console.log(steps.containsKey('lint')); // → false
+steps.remove('test');
+console.log(steps.size());              // → 2
+const order: string[] = [];
+for (const [step, secs] of steps) order.push(`${step}=${secs}`);
+console.log(order.join(', '));          // → build=12, deploy=5
+```
+
+```ts [Intermediate]
 import { LinkedHashMap } from '@nodestd/collections';
 
 const insertion = new LinkedHashMap<string, number>();
@@ -96,6 +135,8 @@ access.get('a'); // a becomes the most recently used
 console.log(access.toString()); // → {b=2, c=3, a=1}
 ```
 
+:::
+
 > [!NOTE]
 > In access order, `get` reorders the map, so it is a structural change for open iterators.
 
@@ -105,16 +146,49 @@ Access order is the basis of [LRU caches](#lru-caches).
 
 `TreeMap` keeps its keys sorted in a red-black tree. `get`, `put`, `remove` and every navigation method are O(log n), and iteration is always in key order. Keys are ordered naturally (numbers, strings, bigints, booleans, `Date`s, objects with `compareTo`) or by a comparator passed to the constructor; see [ordering](../guide/core-concepts.md#ordering-natural-order-and-comparators). As with `TreeSet`, the comparator also decides which keys are equal. `null` keys are rejected under natural ordering.
 
-```ts
+::: code-group
+
+```ts [Basic]
 import { TreeMap, Comparator } from '@nodestd/collections';
 
-const m = new TreeMap<string, number>(Comparator.reverseOrder<string>());
-m.put('b', 2);
-m.put('a', 1);
-m.put('c', 3);
-console.log(m.toString());            // → {c=3, b=2, a=1}
-console.log(m.comparator() !== null); // → true
+const scores = new TreeMap<string, number>();
+scores.put('carol', 72);
+scores.put('ada', 95);
+scores.put('bob', 88);
+console.log(scores.get('bob'));          // → 88
+console.log(scores.containsKey('dave')); // → false
+scores.remove('carol');
+console.log(scores.size());              // → 2
+const rows: string[] = [];
+for (const [name, score] of scores) rows.push(`${name}=${score}`); // key order
+console.log(rows.join(', '));            // → ada=95, bob=88
+
+const desc = new TreeMap<string, number>(Comparator.reverseOrder<string>());
+desc.putAll(scores);
+console.log(desc.toString());            // → {bob=88, ada=95}
 ```
+
+```ts [Intermediate]
+import { TreeMap } from '@nodestd/collections';
+
+// shipping price by minimum parcel weight in kg
+const tiers = new TreeMap<number, number>();
+tiers.put(0, 5);
+tiers.put(2, 9);
+tiers.put(10, 20);
+tiers.put(30, 45);
+
+const priceFor = (kg: number): number => tiers.floorEntry(kg)!.getValue();
+console.log(priceFor(1.5)); // → 5
+console.log(priceFor(10));  // → 20
+console.log(priceFor(29));  // → 20
+
+console.log(tiers.ceilingKey(11));                       // → 30
+console.log(tiers.headMap(10).toString());               // → {0=5, 2=9}
+console.log(tiers.subMap(2, true, 30, false).toString()); // → {2=9, 10=20}
+```
+
+:::
 
 `TreeMap` adds [navigation](#navigation) and [range views](#range-views).
 
@@ -126,7 +200,24 @@ console.log(m.comparator() !== null); // → true
 - attaching metadata to objects that are mutable or whose `equals()` is expensive;
 - keys whose `hashCode()` changes over time.
 
-```ts
+::: code-group
+
+```ts [Basic]
+import { IdentityHashMap } from '@nodestd/collections';
+
+const a = { id: 1 };
+const b = { id: 1 }; // same contents, different object
+const tags = new IdentityHashMap<object, string>();
+tags.put(a, 'first');
+tags.put(b, 'second');
+console.log(tags.get(a));                 // → first
+console.log(tags.containsKey({ id: 1 })); // → false
+console.log(tags.size());                 // → 2
+tags.remove(b);
+for (const [key, tag] of tags) console.log(key, tag); // → { id: 1 } first
+```
+
+```ts [Intermediate]
 import { IdentityHashMap, HashMap, ArrayList, List } from '@nodestd/collections';
 
 const a = ArrayList.of(1, 2);
@@ -150,6 +241,8 @@ console.log(byIdentity.get(ArrayList.of(1, 2))); // → null
 a.add(3); // mutating a key is harmless here
 console.log(byIdentity.get(a)); // → first
 ```
+
+:::
 
 ## Creating a map
 

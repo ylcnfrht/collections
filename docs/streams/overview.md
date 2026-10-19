@@ -9,7 +9,9 @@ single-use rule and closing. The reference pages cover [operations](operations.m
 
 ## A first example
 
-```ts
+::: code-group
+
+```ts [Basic]
 import { List, Collectors } from '@nodestd/collections';
 
 const words = List.of('stream', 'map', 'filter', 'reduce', 'sorted', 'limit');
@@ -22,6 +24,34 @@ const longWordsByLength = words
 
 console.log(longWordsByLength); // → <STREAM, FILTER, REDUCE, SORTED>
 ```
+
+```ts [Intermediate]
+import { List, Collectors } from '@nodestd/collections';
+
+type Order = { product: string; qty: number };
+const orders = List.of<Order>(
+  { product: 'pen', qty: 5 },
+  { product: 'ink', qty: 2 },
+  { product: 'pad', qty: 4 },
+  { product: 'pen', qty: 3 },
+  { product: 'cap', qty: 1 },
+);
+
+// units sold per product, then the three best sellers
+const top3 = orders
+  .stream()
+  .collect(Collectors.groupingBy((o: Order) => o.product, Collectors.summingInt((o: Order) => o.qty)))
+  .entrySet()
+  .stream()
+  .sorted((a, b) => b.getValue() - a.getValue())
+  .limit(3)
+  .map((e) => `${e.getKey()}=${e.getValue()}`)
+  .toList();
+
+console.log(top3); // → [pen=8, pad=4, ink=2]
+```
+
+:::
 
 ## Sources
 
