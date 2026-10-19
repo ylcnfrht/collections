@@ -1,56 +1,19 @@
 <script setup lang="ts">
 import { withBase } from 'vitepress';
+import results from '../../../bench/isolated/results.json';
 
-// Throughput relative to the baseline (1.0×), from the benchmark tables in docs/advanced/performance.md
-// (Node.js 24, Apple M1 Pro). Competitor ratios are derived as ours-vs-baseline / ours-vs-competitor.
-interface Bar { label: string; value: number; ours?: boolean }
-interface Case { title: string; detail: string; bars: Bar[] }
-
+// Read straight from the last isolated run (npm run bench:isolated): every implementation ran alone in
+// its own container, on the same data and the same test loop.
 const OURS = '@nodestd/collections';
-const cases: Case[] = [
-  {
-    title: 'HashMap.get',
-    detail: '100k integer keys',
-    bars: [{ label: OURS, value: 9.6, ours: true }, { label: 'js-sdsl HashMap', value: 5.96 }, { label: 'native Map', value: 1 }],
-  },
-  {
-    title: 'HashSet add + has',
-    detail: '100k integers',
-    bars: [{ label: OURS, value: 6.41, ours: true }, { label: 'native Set', value: 1 }, { label: 'js-sdsl HashSet', value: 0.97 }],
-  },
-  {
-    title: 'LRU cache',
-    detail: 'capacity 1k, 100k get-or-put',
-    bars: [{ label: OURS, value: 4.05, ours: true }, { label: 'mnemonist LRUMap', value: 2.98 }, { label: 'native Map delete + set', value: 1 }],
-  },
-  {
-    title: 'Stream filter → map → sum',
-    detail: '100k numbers',
-    bars: [{ label: OURS, value: 10.2, ours: true }, { label: 'Array filter/map/reduce', value: 1 }],
-  },
-  {
-    title: 'TreeMap floor + ceiling',
-    detail: '100k queries',
-    bars: [{ label: OURS, value: 2.14, ours: true }, { label: 'js-sdsl OrderedMap', value: 1 }],
-  },
-  {
-    title: 'PriorityQueue churn',
-    detail: 'size 1k, 100k offer + poll',
-    bars: [{ label: OURS, value: 1.52, ours: true }, { label: 'js-sdsl PriorityQueue', value: 1.35 }, { label: 'sorted array', value: 1 }],
-  },
-  {
-    title: 'ArrayDeque as a queue',
-    detail: 'size 1k, 100k offer + poll',
-    bars: [{ label: 'mnemonist CircularBuffer', value: 17.7 }, { label: OURS, value: 12.2, ours: true }, { label: 'Array push + shift', value: 1 }],
-  },
-  {
-    title: 'HashMap.put',
-    detail: '100k string keys',
-    bars: [{ label: 'native Map', value: 1 }, { label: OURS, value: 0.83, ours: true }, { label: 'js-sdsl HashMap', value: 0.66 }],
-  },
-];
+const cases = results.report.map((w) => ({
+  title: w.title,
+  detail: w.detail,
+  bars: w.rows.map((r) => ({ label: r.impl, value: r.vsBaseline, ours: r.impl.startsWith(OURS) })),
+}));
+const run = results.meta;
 
-const width = (c: Case, b: Bar) => `${Math.max(2, (b.value / Math.max(...c.bars.map((x) => x.value))) * 100)}%`;
+type Card = (typeof cases)[number];
+const width = (c: Card, v: number) => `${Math.max(2, (v / Math.max(...c.bars.map((x) => x.value))) * 100)}%`;
 const fmt = (v: number) => `${v >= 10 ? v.toFixed(1) : v.toFixed(2)}×`;
 </script>
 
@@ -59,8 +22,9 @@ const fmt = (v: number) => `${v >= 10 ? v.toFixed(1) : v.toFixed(2)}×`;
     <div class="head">
       <h2 id="home-bench-title">Performance</h2>
       <p>
-        Throughput for one workload per card, relative to the baseline shown as 1×. Higher is faster.
-        Node.js 24 on an Apple M1 Pro. The full results also list every case where this library is slower.
+        Throughput for one workload per card, relative to the baseline shown as 1×. Higher is faster. Every
+        implementation ran alone in its own Docker container from one image (Node.js {{ run.node }}, one pinned
+        CPU), on the same data and the same test, and had to return the same checksum; median of {{ run.reps }} runs.
       </p>
     </div>
     <div class="grid">
@@ -71,12 +35,12 @@ const fmt = (v: number) => `${v >= 10 ? v.toFixed(1) : v.toFixed(2)}×`;
         </figcaption>
         <div v-for="b in c.bars" :key="b.label" class="row" :class="{ ours: b.ours }">
           <span class="label">{{ b.label }}</span>
-          <span class="track"><span class="bar" :style="{ width: width(c, b) }" /></span>
+          <span class="track"><span class="bar" :style="{ width: width(c, b.value) }" /></span>
           <span class="value">{{ fmt(b.value) }}</span>
         </div>
       </figure>
     </div>
-    <a class="more" :href="withBase('/advanced/performance#benchmark-results')">All benchmark results and methodology →</a>
+    <a class="more" :href="withBase('/advanced/performance#isolated-comparison')">Full results and methodology →</a>
   </section>
 </template>
 
@@ -132,7 +96,7 @@ figcaption {
 }
 .row {
   display: grid;
-  grid-template-columns: minmax(120px, 190px) 1fr 52px;
+  grid-template-columns: minmax(140px, 250px) 1fr 52px;
   align-items: center;
   gap: 12px;
   padding: 4px 0;

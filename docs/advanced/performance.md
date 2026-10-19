@@ -196,9 +196,95 @@ console.log(n, peeked); // → 3 0
 - Use `Stream.ofArray(array)` (or `IntStream.ofArray`) to stream a JS array without copying it.
 - Give hash keys a cheap `hashCode()`. It runs on every lookup. `Objects.hash(a, b)` is fine, and so is caching the hash in a `readonly` field of an immutable object.
 
+## Isolated comparison
+
+The numbers in this section come from `npm run bench:isolated`, which is built so that no implementation can affect another:
+
+- **One implementation per process.** Every (workload, implementation) pair runs alone in a fresh Docker container. Only that implementation's package is loaded, which matters because collections.js replaces built-ins such as `Array.prototype.find`, `Object.is` and `Array.from` when it loads.
+- **Same environment.** All containers start from one image: Node.js v24.12.0, the same package versions, and the published build (`dist/`) of this library. Each is pinned to one CPU (`--cpuset-cpus 1 --cpus 1 --memory 2g --network none`).
+- **Same data, same test.** Every workload has one seeded dataset and one test loop, written once in `bench/isolated/workloads.ts`. Implementations plug in through a small adapter (`put`, `get`, `offer`, `poll`, ...).
+- **Same answer.** Before timing, every implementation must return the same checksum on that data, for example the same number of LRU cache hits. The run stops if any implementation disagrees.
+- **Order and repeats.** Containers run one at a time, in shuffled order, 3 times each. The tables show the median.
+
+Docker on macOS runs a Linux virtual machine, so the absolute ops/s differ from the in-process tables further down; compare the ratios. Ratios are relative to the baseline named in each heading. Run on 2026-10-19, Apple M1 Pro.
+
+### HashMap.get, 100k integer keys
+
+| Implementation | ops/s | ±% | vs native Map |
+| --- | ---: | ---: | ---: |
+| **@nodestd/collections HashMap** | 1,757 | 0.3 | 3.77× |
+| js-sdsl HashMap | 1,389 | 0.5 | 2.98× |
+| native Map | 466 | 1.6 | 1.00× |
+| collections.js FastMap | 104 | 1.6 | 0.22× |
+
+### HashSet add + has, 100k integers
+
+| Implementation | ops/s | ±% | vs native Set |
+| --- | ---: | ---: | ---: |
+| **@nodestd/collections HashSet** | 445 | 4.9 | 4.47× |
+| js-sdsl HashSet | 101 | 11.8 | 1.01× |
+| native Set | 100 | 11.6 | 1.00× |
+| collections.js FastSet | 36 | 7.7 | 0.36× |
+
+### LRU cache, capacity 1k, 100k get-or-put
+
+| Implementation | ops/s | ±% | vs native Map delete + set |
+| --- | ---: | ---: | ---: |
+| **@nodestd/collections LinkedHashMap.lru** | 277 | 1.3 | 4.81× |
+| mnemonist LRUMap | 178 | 0.9 | 3.10× |
+| native Map delete + set | 57 | 1.2 | 1.00× |
+| collections.js LruMap | 6 | 6.8 | 0.10× |
+
+### Stream filter → map → sum, 100k numbers
+
+| Implementation | ops/s | ±% | vs native Array filter/map/reduce |
+| --- | ---: | ---: | ---: |
+| **@nodestd/collections Stream** | 6,840 | 0.7 | 14.45× |
+| **@nodestd/collections IntStream** | 6,689 | 0.3 | 14.13× |
+| native Array filter/map/reduce | 473 | 6.1 | 1.00× |
+| native Iterator helpers | 370 | 0.8 | 0.78× |
+
+### TreeMap floor + ceiling, 100k keys, 100k queries
+
+| Implementation | ops/s | ±% | vs js-sdsl OrderedMap |
+| --- | ---: | ---: | ---: |
+| **@nodestd/collections TreeMap** | 29 | 7.4 | 2.97× |
+| js-sdsl OrderedMap | 10 | 8.4 | 1.00× |
+| collections.js SortedSet | 4 | 3.3 | 0.45× |
+
+### PriorityQueue churn, size 1k, 100k offer + poll
+
+| Implementation | ops/s | ±% | vs sorted array |
+| --- | ---: | ---: | ---: |
+| js-sdsl PriorityQueue | 309 | 1.4 | 1.13× |
+| **@nodestd/collections PriorityQueue** | 281 | 2.3 | 1.02× |
+| mnemonist Heap | 278 | 1.3 | 1.01× |
+| sorted array | 274 | 2.1 | 1.00× |
+| collections.js Heap | 101 | 0.6 | 0.37× |
+| @datastructures-js/priority-queue | 64 | 2.1 | 0.24× |
+
+### ArrayDeque as a queue, size 1k, 100k offer + poll
+
+| Implementation | ops/s | ±% | vs native Array push + shift |
+| --- | ---: | ---: | ---: |
+| mnemonist CircularBuffer (fixed capacity) | 2,363 | 1.6 | 10.85× |
+| **@nodestd/collections ArrayDeque** | 1,739 | 1.1 | 7.99× |
+| js-sdsl Deque | 1,502 | 0.8 | 6.90× |
+| collections.js Deque | 1,029 | 0.8 | 4.73× |
+| native Array push + shift | 218 | 1.7 | 1.00× |
+
+### HashMap.put, 100k string keys
+
+| Implementation | ops/s | ±% | vs native Map |
+| --- | ---: | ---: | ---: |
+| native Map | 103 | 12.0 | 1.00× |
+| **@nodestd/collections HashMap** | 74 | 17.2 | 0.72× |
+| js-sdsl HashMap | 49 | 12.8 | 0.47× |
+| collections.js FastMap | 16 | 12.3 | 0.16× |
+
 ## Benchmark results
 
-All numbers below come from one run of `npm run bench -- <group>` for each group, on:
+The in-process suite covers many more cases than the [isolated comparison](#isolated-comparison), but loads every library into one process and runs directly on macOS. All numbers below come from one run of `npm run bench -- <group>` for each group, on:
 
 | | |
 | --- | --- |
@@ -350,6 +436,8 @@ npm run bench                  # every bench/*.bench.ts file (several minutes)
 npm run bench -- HashMap       # files whose name contains "HashMap" (HashMap and LinkedHashMap)
 npm run bench -- TreeMap
 npm run bench -- Stream
+npm run bench:isolated         # isolated comparison in Docker (needs a running Docker daemon)
+npm run bench:isolated -- --only lru-cache --reps 5
 ```
 
 The filter is a case-insensitive substring of the file name in `bench/`. The available files are `ArrayList`, `LinkedList`, `HashMap`, `LinkedHashMap`, `TreeMap`, `PriorityQueue`, `ArrayDeque`, `Collections`, `Stream`, `Collectors` and `Gatherers`. Each group prints a table of ops/sec, relative margin of error and the ratio to the fastest case. The run ends with a "Not fastest in" summary of every group where this library's case lost, and by how much.

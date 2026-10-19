@@ -1,0 +1,8 @@
+node_modules
+dist
+docs
+docs-api
+coverage
+.git
+.github
+*.log

@@ -62,6 +62,7 @@
     "test:diff": "ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts --count 20000 --batch 5000",
     "test:diff:proof": "ts-node --transpile-only -P tsconfig.test.json tools/differential/proof.ts --scripts 200000 --batch 5000",
     "bench": "ts-node --transpile-only -P tsconfig.test.json bench/index.ts",
+    "bench:isolated": "ts-node --transpile-only -P tsconfig.test.json bench/isolated/run-all.ts",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "docs:api": "typedoc",
     "docs:dev": "vitepress dev docs",
@@ -71,6 +72,7 @@
   "devDependencies": {
     "@datastructures-js/priority-queue": "6.4.0",
     "@types/jest": "^29.5.14",
+    "collections": "5.1.13",
     "jest": "^29.7.0",
     "js-sdsl": "4.4.2",
     "mermaid": "11.17.2",
