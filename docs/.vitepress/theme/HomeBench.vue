@@ -8,13 +8,24 @@ const OURS = '@nodestd/collections';
 const cases = results.report.map((w) => ({
   title: w.title,
   detail: w.detail,
-  bars: w.rows.map((r) => ({ label: r.impl, value: r.vsBaseline, ours: r.impl.startsWith(OURS) })),
+  baseline: w.baseline,
+  unit: w.unit.label,
+  bars: w.rows.map((r) => ({
+    label: r.impl,
+    value: r.vsBaseline,
+    // operations per second: test runs per second times the operations one run performs
+    rate: r.opsPerSec * w.unit.perRun,
+    ours: r.impl.startsWith(OURS),
+    baseline: r.impl === w.baseline,
+  })),
 }));
 const run = results.meta;
 
 type Card = (typeof cases)[number];
 const width = (c: Card, v: number) => `${Math.max(2, (v / Math.max(...c.bars.map((x) => x.value))) * 100)}%`;
 const fmt = (v: number) => `${v >= 10 ? v.toFixed(1) : v.toFixed(2)}×`;
+const compact = (n: number) =>
+  n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : `${Math.round(n)}`;
 </script>
 
 <template>
@@ -22,7 +33,8 @@ const fmt = (v: number) => `${v >= 10 ? v.toFixed(1) : v.toFixed(2)}×`;
     <div class="head">
       <h2 id="home-bench-title">Performance</h2>
       <p>
-        Throughput for one workload per card, relative to the baseline shown as 1×. Higher is faster. Every
+        Each card runs one test. The first number is how many times faster than the baseline (1×); the second is
+        how many operations per second that is. Higher is faster. Every
         implementation ran alone in its own Docker container from one image (Node.js {{ run.node }}, one pinned
         CPU), on the same data and the same test, and had to return the same checksum; median of {{ run.reps }} runs.
       </p>
@@ -32,11 +44,13 @@ const fmt = (v: number) => `${v >= 10 ? v.toFixed(1) : v.toFixed(2)}×`;
         <figcaption>
           <span class="title">{{ c.title }}</span>
           <span class="detail">{{ c.detail }}</span>
+          <span class="scale">vs {{ c.baseline }} · {{ c.unit }} per second</span>
         </figcaption>
         <div v-for="b in c.bars" :key="b.label" class="row" :class="{ ours: b.ours }">
-          <span class="label">{{ b.label }}</span>
+          <span class="label">{{ b.label }}<span v-if="b.baseline" class="tag">baseline</span></span>
           <span class="track"><span class="bar" :style="{ width: width(c, b.value) }" /></span>
           <span class="value">{{ fmt(b.value) }}</span>
+          <span class="rate" :title="`${Math.round(b.rate).toLocaleString('en-US')} ${c.unit} per second`">{{ compact(b.rate) }}/s</span>
         </div>
       </figure>
     </div>
@@ -94,9 +108,30 @@ figcaption {
   font-size: 13px;
   color: var(--vp-c-text-3);
 }
+.scale {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--vp-c-text-3);
+}
+.tag {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--vp-c-text-3);
+}
+.rate {
+  text-align: right;
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--vp-c-text-3);
+  cursor: help;
+}
 .row {
   display: grid;
-  grid-template-columns: minmax(140px, 250px) 1fr 52px;
+  grid-template-columns: minmax(140px, 240px) 1fr 52px 64px;
   align-items: center;
   gap: 12px;
   padding: 4px 0;
@@ -148,7 +183,7 @@ figcaption {
   text-decoration: underline;
 }
 @media (max-width: 480px) {
-  .row { grid-template-columns: 1fr 52px; gap: 4px 10px; }
+  .row { grid-template-columns: 1fr 52px 60px; gap: 4px 10px; }
   .label { grid-column: 1 / -1; }
 }
 </style>

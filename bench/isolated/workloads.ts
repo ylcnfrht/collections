@@ -11,6 +11,8 @@ export interface Workload {
   detail: string;
   /** implementation every other one is divided by in the report */
   baseline: string;
+  /** operations one run of the test performs, to report operations per second */
+  unit: { perRun: number; label: string };
   data(): any;
   impls: Record<string, () => any>;
   /** untimed: builds the structure a read-only test queries */
@@ -62,6 +64,7 @@ const hashMapGetInt: Workload = {
   title: 'HashMap.get',
   detail: '100k integer keys',
   baseline: 'native Map',
+  unit: { perRun: 100000, label: 'get calls' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: intMap,
   prepare(a, keys: number[]) {
@@ -81,6 +84,7 @@ const hashMapPutString: Workload = {
   title: 'HashMap.put',
   detail: '100k string keys',
   baseline: 'native Map',
+  unit: { perRun: 100000, label: 'put calls' },
   data: () => Array.from({ length: N }, (_, i) => 'key' + i),
   impls: intMap,
   run(a, keys: string[]) {
@@ -95,6 +99,7 @@ const hashSetAddHas: Workload = {
   title: 'HashSet add + has',
   detail: '100k integers',
   baseline: 'native Set',
+  unit: { perRun: 200000, label: 'add/has calls' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: {
     '@nodestd/collections HashSet': () => {
@@ -127,6 +132,7 @@ const lru: Workload = {
   title: 'LRU cache',
   detail: 'capacity 1k, 100k get-or-put',
   baseline: 'native Map delete + set',
+  unit: { perRun: 100000, label: 'get-or-put calls' },
   data() {
     const r = lcg(1);
     const below = (n: number) => Math.floor((r() / 0x80000000) * n);
@@ -177,6 +183,7 @@ const treeFloorCeiling: Workload = {
   title: 'TreeMap floor + ceiling',
   detail: '100k keys, 100k queries',
   baseline: 'js-sdsl OrderedMap',
+  unit: { perRun: 200000, label: 'floor/ceiling calls' },
   data() {
     const r = lcg(12345);
     const keys = Array.from({ length: N }, () => r() % 1_000_000);
@@ -238,6 +245,7 @@ const pqChurn: Workload = {
   title: 'PriorityQueue churn',
   detail: 'size 1k, 100k offer + poll',
   baseline: 'sorted array',
+  unit: { perRun: 200000, label: 'offer/poll calls' },
   data() {
     const r = lcg(2);
     return Array.from({ length: N + PQ_SIZE }, () => r());
@@ -297,6 +305,7 @@ const dequeChurn: Workload = {
   title: 'ArrayDeque as a queue',
   detail: 'size 1k, 100k offer + poll',
   baseline: 'native Array push + shift',
+  unit: { perRun: 200000, label: 'offer/poll calls' },
   data: () => Array.from({ length: N + DQ_SIZE }, (_, i) => i),
   impls: {
     '@nodestd/collections ArrayDeque': () => {
@@ -339,6 +348,7 @@ const streamSum: Workload = {
   title: 'Stream filter → map → sum',
   detail: '100k numbers',
   baseline: 'native Array filter/map/reduce',
+  unit: { perRun: 100000, label: 'elements' },
   data() {
     const r = lcg(12345);
     return Array.from({ length: N }, () => r() % 1000);

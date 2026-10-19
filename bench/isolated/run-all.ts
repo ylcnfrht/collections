@@ -54,7 +54,7 @@ function main() {
     const checks = new Set(rows.map((r) => r.check));
     if (checks.size !== 1) throw new Error(`${w.id}: implementations disagree on the result: ${JSON.stringify(rows.map((r) => [r.impl, r.check]))}`);
     const base = rows.find((r) => r.impl === w.baseline)!.opsPerSec;
-    return { id: w.id, title: w.title, detail: w.detail, baseline: w.baseline, rows: rows.map((r) => ({ ...r, vsBaseline: r.opsPerSec / base })).sort((a, b) => b.opsPerSec - a.opsPerSec) };
+    return { id: w.id, title: w.title, detail: w.detail, baseline: w.baseline, unit: w.unit, rows: rows.map((r) => ({ ...r, vsBaseline: r.opsPerSec / base })).sort((a, b) => b.opsPerSec - a.opsPerSec) };
   });
 
   const meta = { date: new Date().toISOString(), node: results[0]?.node, reps: REPS, docker: '--cpuset-cpus 1 --cpus 1 --memory 2g --network none' };

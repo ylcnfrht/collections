@@ -11,6 +11,10 @@
       "title": "HashMap.get",
       "detail": "100k integer keys",
       "baseline": "native Map",
+      "unit": {
+        "perRun": 100000,
+        "label": "get calls"
+      },
       "rows": [
         {
           "impl": "@nodestd/collections HashMap",
@@ -67,6 +71,10 @@
       "title": "HashSet add + has",
       "detail": "100k integers",
       "baseline": "native Set",
+      "unit": {
+        "perRun": 200000,
+        "label": "add/has calls"
+      },
       "rows": [
         {
           "impl": "@nodestd/collections HashSet",
@@ -123,6 +131,10 @@
       "title": "LRU cache",
       "detail": "capacity 1k, 100k get-or-put",
       "baseline": "native Map delete + set",
+      "unit": {
+        "perRun": 100000,
+        "label": "get-or-put calls"
+      },
       "rows": [
         {
           "impl": "@nodestd/collections LinkedHashMap.lru",
@@ -179,6 +191,10 @@
       "title": "Stream filter → map → sum",
       "detail": "100k numbers",
       "baseline": "native Array filter/map/reduce",
+      "unit": {
+        "perRun": 100000,
+        "label": "elements"
+      },
       "rows": [
         {
           "impl": "@nodestd/collections Stream",
@@ -235,6 +251,10 @@
       "title": "TreeMap floor + ceiling",
       "detail": "100k keys, 100k queries",
       "baseline": "js-sdsl OrderedMap",
+      "unit": {
+        "perRun": 200000,
+        "label": "floor/ceiling calls"
+      },
       "rows": [
         {
           "impl": "@nodestd/collections TreeMap",
@@ -279,6 +299,10 @@
       "title": "PriorityQueue churn",
       "detail": "size 1k, 100k offer + poll",
       "baseline": "sorted array",
+      "unit": {
+        "perRun": 200000,
+        "label": "offer/poll calls"
+      },
       "rows": [
         {
           "impl": "js-sdsl PriorityQueue",
@@ -359,6 +383,10 @@
       "title": "ArrayDeque as a queue",
       "detail": "size 1k, 100k offer + poll",
       "baseline": "native Array push + shift",
+      "unit": {
+        "perRun": 200000,
+        "label": "offer/poll calls"
+      },
       "rows": [
         {
           "impl": "mnemonist CircularBuffer (fixed capacity)",
@@ -427,6 +455,10 @@
       "title": "HashMap.put",
       "detail": "100k string keys",
       "baseline": "native Map",
+      "unit": {
+        "perRun": 100000,
+        "label": "put calls"
+      },
       "rows": [
         {
           "impl": "native Map",
