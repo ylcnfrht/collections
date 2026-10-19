@@ -139,6 +139,11 @@ A JS iterator has to return a `{ value, done }` result for every element and che
 import { ArrayList, HashMap } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3);
+// with new:
+// const list = new ArrayList<number>();
+// list.add(1);
+// list.add(2);
+// list.add(3);
 let sum = 0;
 list.forEach((x) => (sum += x)); // fastest whole-list pass
 for (let i = 0, n = list.size(); i < n; i++) sum += list.get(i); // also fast: indexed get on a random-access list

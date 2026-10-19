@@ -130,6 +130,10 @@ console.log(m.comparator() !== null); // → true
 import { IdentityHashMap, HashMap, ArrayList, List } from '@nodestd/collections';
 
 const a = ArrayList.of(1, 2);
+// with new:
+// const a = new ArrayList<number>();
+// a.add(1);
+// a.add(2);
 const b = ArrayList.of(1, 2); // equal to a, but a different object
 
 const byValue = new HashMap<List<number>, string>();
@@ -315,6 +319,10 @@ console.log(fib2(50)); // → 12586269025
 import { LinkedHashMap } from '@nodestd/collections';
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
+// with new:
+// const m = new LinkedHashMap<string, number>();
+// m.put('a', 1);
+// m.put('b', 2);
 m.putFirst('b', 20);
 m.putLast('c', 3);
 console.log(m.toString());            // → {b=20, a=1, c=3}
@@ -447,6 +455,11 @@ try {
 
 // top scores: sort the entries by value, descending
 const scores = HashMap.of<string, number>(['ann', 12], ['bob', 30], ['cid', 21]);
+// with new:
+// const scores = new HashMap<string, number>();
+// scores.put('ann', 12);
+// scores.put('bob', 30);
+// scores.put('cid', 21);
 const entries = new ArrayList(scores.entrySet());
 entries.sort(Map.Entry.comparingByValue<string, number>(Comparator.reverseOrder<number>()));
 console.log(entries.toString()); // → [bob=30, cid=21, ann=12]

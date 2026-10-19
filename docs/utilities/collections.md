@@ -14,6 +14,9 @@ Every helper throws `NullPointerException` when a collection argument is `null` 
 import { ArrayList, Collections, Comparator } from '@nodestd/collections';
 
 const nums = ArrayList.of(10, 9, 100, 1);
+// with new:
+// const nums = new ArrayList<number>();
+// for (const n of [10, 9, 100, 1]) nums.add(n);
 Collections.sort(nums);
 console.log(nums); // → [1, 9, 10, 100]
 
@@ -180,6 +183,10 @@ console.log(Collections.frequency(ArrayList.of<number | null>(1, 2, 1, null), 1)
 console.log(Collections.frequency(ArrayList.of<number | null>(1, null, null), null)); // → 2
 
 const banned = HashSet.of('root', 'admin');
+// with new:
+// const banned = new HashSet<string>();
+// banned.add('root');
+// banned.add('admin');
 console.log(Collections.disjoint(List.of('alice', 'bob'), banned)); // → true
 console.log(Collections.disjoint(List.of('alice', 'admin'), banned)); // → false
 ```

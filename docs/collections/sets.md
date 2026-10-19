@@ -39,8 +39,23 @@ console.log(points.contains(new Point(1, 2))); // → true
 
 // value equality across implementations, order ignored
 const hashed = HashSet.of(3, 1, 2);
+// with new:
+// const hashed = new HashSet<number>();
+// hashed.add(3);
+// hashed.add(1);
+// hashed.add(2);
 const sorted = TreeSet.of(1, 2, 3);
+// with new:
+// const sorted = new TreeSet<number>();
+// sorted.add(1);
+// sorted.add(2);
+// sorted.add(3);
 const linked = LinkedHashSet.of(2, 3, 1);
+// with new:
+// const linked = new LinkedHashSet<number>();
+// linked.add(2);
+// linked.add(3);
+// linked.add(1);
 console.log(hashed.equals(sorted), sorted.equals(linked)); // → true true
 console.log(hashed.hashCode() === linked.hashCode());      // → true
 // 1 + 2 + 3
@@ -102,6 +117,9 @@ console.log(lists.contains(List.of(1, 2))); // → true
 import { LinkedHashSet, ArrayList } from '@nodestd/collections';
 
 const visits = ArrayList.of('home', 'docs', 'home', 'blog', 'docs');
+// with new:
+// const visits = new ArrayList<string>();
+// for (const v of ['home', 'docs', 'home', 'blog', 'docs']) visits.add(v);
 console.log(new LinkedHashSet(visits).toString()); // → [home, docs, blog]
 ```
 

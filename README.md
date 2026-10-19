@@ -62,6 +62,9 @@ console.log(cache.keySet().toString()); // → [a, c]
 
 // Streams and collectors
 const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
+// with new:
+// const words = new ArrayList<string>();
+// for (const w of ['pear', 'apple', 'fig', 'apple']) words.add(w);
 const byLength = words.stream()
   .distinct()
   .collect(Collectors.groupingBy((w) => w.length, () => new TreeMap<number, List<string>>(), Collectors.toList()));

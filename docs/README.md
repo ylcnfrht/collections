@@ -8,6 +8,9 @@ collectors and gatherers, `Optional`, and the `Collections` utility class. It ha
 import { ArrayList, TreeMap, Collectors, List } from '@nodestd/collections';
 
 const words = ArrayList.of('pear', 'fig', 'apple', 'kiwi');
+// with new:
+// const words = new ArrayList<string>();
+// for (const w of ['pear', 'fig', 'apple', 'kiwi']) words.add(w);
 const byLength = words.stream().collect(
   Collectors.groupingBy((w) => w.length, () => new TreeMap<number, List<string>>(), Collectors.toList()),
 );

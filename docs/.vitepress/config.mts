@@ -22,6 +22,13 @@ export default withMermaid(
         },
       ],
     ],
+    markdown: {
+      // wrap tables so a wide one scrolls inside the column instead of running under the outline
+      config(md) {
+        md.renderer.rules.table_open = () => '<div class="table-wrapper"><table>\n';
+        md.renderer.rules.table_close = () => '</table></div>\n';
+      },
+    },
     // class diagrams list type names only, so drop the empty member boxes
     mermaid: { class: { hideEmptyMembersBox: true } },
     rewrites: { 'README.md': 'introduction.md' },

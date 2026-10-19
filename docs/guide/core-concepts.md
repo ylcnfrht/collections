@@ -143,6 +143,12 @@ interface Person { name: string; age: number | null }
 const people = ArrayList.of<Person>(
   { name: 'Cleo', age: 31 }, { name: 'Ann', age: 31 }, { name: 'Bob', age: 25 }, { name: 'Dan', age: null },
 );
+// with new:
+// const people = new ArrayList<Person>();
+// for (const p of [
+//   { name: 'Cleo', age: 31 }, { name: 'Ann', age: 31 },
+//   { name: 'Bob', age: 25 }, { name: 'Dan', age: null },
+// ]) people.add(p);
 
 const byAgeThenName = Comparator.thenComparing(
   Comparator.comparing((p: Person) => p.age, Comparator.nullsLast(Comparator.naturalOrder<number>())),
@@ -208,6 +214,10 @@ try {
 }
 
 const s = TreeSet.of(10, 20);
+// with new:
+// const s = new TreeSet<number>();
+// s.add(10);
+// s.add(20);
 console.log(s.ceiling(25));           // → null
 ```
 
@@ -414,6 +424,10 @@ console.log(ends(LinkedHashSet.of('x', 'y')));    // → x..y
 console.log(ends(TreeSet.of(9, 4, 7)));           // → 4..9
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
+// with new:
+// const m = new LinkedHashMap<string, number>();
+// m.put('a', 1);
+// m.put('b', 2);
 m.putFirst('z', 0);
 console.log(m.toString());                        // → {z=0, a=1, b=2}
 console.log(m.reversed().toString());             // → {b=2, a=1, z=0}

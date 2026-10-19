@@ -117,28 +117,53 @@
   letter-spacing: -0.015em;
 }
 
-/* Docs: tables fill the column on wide screens and read like reference tables */
-@media (min-width: 768px) {
-  .vp-doc table {
-    display: table;
-    width: 100%;
-  }
+/* Docs: tables fill the column; a wide one scrolls inside its wrapper (see markdown.config) */
+.vp-doc .table-wrapper {
+  margin: 20px 0;
+  overflow-x: auto;
+  /* edge shadows appear only while there is more table to scroll to */
+  background:
+    linear-gradient(to right, var(--vp-c-bg) 30%, transparent) left / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--vp-c-bg) 30%, transparent) right / 40px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.18), transparent) left / 14px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.18), transparent) right / 14px 100% no-repeat scroll;
 }
-.vp-doc table {
-  font-size: 14px;
-  border-radius: 8px;
+.vp-doc .table-wrapper table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.vp-doc .table-wrapper th,
+.vp-doc .table-wrapper td {
+  padding: 8px 10px;
+}
+.vp-doc .table-wrapper td,
+.vp-doc .table-wrapper th {
+  background-clip: padding-box;
+}
+.vp-doc .table-wrapper code {
+  font-size: 12px;
 }
 .vp-doc th {
   font-weight: 600;
-  white-space: nowrap;
   background-color: var(--vp-c-bg-soft);
+}
+
+/* Docs: a wider content column on large screens, so comparison tables fit without scrolling */
+@media (min-width: 1440px) {
+  .VPDoc.has-aside .content-container.content-container {
+    max-width: 768px;
+  }
+}
+@media (min-width: 1680px) {
+  .VPDoc.has-aside .content-container.content-container {
+    max-width: 880px;
+  }
 }
 .vp-doc tr:nth-child(2n) {
   background-color: transparent;
-}
-.vp-doc td code,
-.vp-doc th code {
-  white-space: nowrap;
 }
 
 /* Docs: code blocks */

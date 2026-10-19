@@ -127,6 +127,11 @@ It covers stream basics and laziness (evaluation order, short-circuiting, which 
 import { ArrayList } from '@nodestd/collections';
 
 const l = ArrayList.of(3, 1, 2);
+// with new:
+// const l = new ArrayList<number>();
+// l.add(3);
+// l.add(1);
+// l.add(2);
 l.sort(null);
 console.log(l); // → [1, 2, 3]
 console.log(l.toArray()); // → [ 1, 2, 3 ]

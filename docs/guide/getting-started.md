@@ -92,6 +92,11 @@ console.log(sorted.ceiling(2));     // → 3
 console.log(sorted.headSet(3).toString()); // → [1]
 
 const ordered = LinkedHashSet.of('z', 'a', 'm'); // keeps insertion order
+// with new:
+// const ordered = new LinkedHashSet<string>();
+// ordered.add('z');
+// ordered.add('a');
+// ordered.add('m');
 console.log(ordered.toString());    // → [z, a, m]
 ```
 
@@ -149,6 +154,11 @@ Every collection is a JS iterable. Maps iterate as `[key, value]` pairs.
 import { ArrayList, LinkedHashMap } from '@nodestd/collections';
 
 const list = ArrayList.of(1, 2, 3);
+// with new:
+// const list = new ArrayList<number>();
+// list.add(1);
+// list.add(2);
+// list.add(3);
 
 for (const n of list) {
   // for..of works on every collection
@@ -158,6 +168,10 @@ console.log([...list]);            // → [ 1, 2, 3 ]
 console.log(Array.from(list, (n) => n * 10)); // → [ 10, 20, 30 ]
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
+// with new:
+// const m = new LinkedHashMap<string, number>();
+// m.put('a', 1);
+// m.put('b', 2);
 for (const [k, v] of m) {
   // k: string, v: number
 }

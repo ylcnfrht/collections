@@ -1,43 +1,47 @@
+---
+aside: false
+---
+
 # Choosing a collection
 
 The right class depends on four questions: whether you map keys to values, whether order matters and which order,
 whether duplicates are allowed, and how you access the data (by index, by key, from the ends or by priority). This
-page answers them with a decision flowchart, then compares every concrete class on ordering, `null` handling,
+page answers them with a short decision guide, then compares every concrete class on ordering, `null` handling,
 duplicates and operation cost.
 
-## Decision flowchart
+## Decision guide
 
-```mermaid
-flowchart TD
-    start(["What do you need to store?"]) --> kv{"Key to value pairs?"}
+Start with the shape of the data, then pick the row that matches how you use it. Every class in the right
+column is a default you can change later without touching code written against the interface.
 
-    kv -- yes --> mimm{"Fixed after creation?"}
-    mimm -- yes --> mapof["Map.of / Map.copyOf"]
-    mimm -- no --> mord{"Iteration order?"}
-    mord -- "none needed" --> mident{"Keys compared by identity?"}
-    mident -- yes --> ihm["IdentityHashMap"]
-    mident -- no --> hm["HashMap"]
-    mord -- "insertion or access order / LRU" --> lhm["LinkedHashMap"]
-    mord -- "sorted by key / range queries" --> tm["TreeMap"]
+### Key-value pairs: a `Map`
 
-    kv -- no --> dup{"Duplicates allowed?"}
+| You need | Use |
+|---|---|
+| fast lookup by key, any iteration order | `HashMap` |
+| insertion order, access order or an LRU cache | `LinkedHashMap` |
+| keys in sorted order, `floorKey`/`ceilingKey`, range views | `TreeMap` |
+| keys compared by identity (`===`) instead of `equals()` | `IdentityHashMap` |
+| contents fixed after creation | `Map.of` / `Map.copyOf` |
 
-    dup -- "no (a set)" --> simm{"Fixed after creation?"}
-    simm -- yes --> setof["Set.of / Set.copyOf"]
-    simm -- no --> sord{"Iteration order?"}
-    sord -- "none needed" --> hs["HashSet"]
-    sord -- "insertion order" --> lhs["LinkedHashSet"]
-    sord -- "sorted / range queries" --> ts["TreeSet"]
+### Unique elements: a `Set`
 
-    dup -- yes --> access{"How do you take elements out?"}
-    access -- "smallest or largest first" --> pq["PriorityQueue"]
-    access -- "FIFO queue or LIFO stack" --> ad["ArrayDeque"]
-    access -- "by index / in order" --> limm{"Fixed after creation?"}
-    limm -- yes --> listof["List.of / List.copyOf"]
-    limm -- no --> mid{"Many inserts/removes in the middle while iterating?"}
-    mid -- yes --> ll["LinkedList"]
-    mid -- no --> al["ArrayList"]
-```
+| You need | Use |
+|---|---|
+| fast membership tests, any iteration order | `HashSet` |
+| insertion order | `LinkedHashSet` |
+| sorted order, `floor`/`ceiling`, range views | `TreeSet` |
+| contents fixed after creation | `Set.of` / `Set.copyOf` |
+
+### Sequences, queues and stacks
+
+| You need | Use |
+|---|---|
+| access by index, appending, sorting | `ArrayList` |
+| many inserts or removals in the middle while iterating | `LinkedList` |
+| a FIFO queue or a LIFO stack | `ArrayDeque` |
+| the smallest (or largest) element first | `PriorityQueue` |
+| contents fixed after creation | `List.of` / `List.copyOf` |
 
 `Vector` and `Stack` are legacy classes kept for compatibility. Prefer `ArrayList` and `ArrayDeque`.
 

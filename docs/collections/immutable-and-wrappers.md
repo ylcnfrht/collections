@@ -18,6 +18,10 @@ Both kinds throw `UnsupportedOperationException` from mutators such as `add`, bu
 import { ArrayList, Collections, List } from '@nodestd/collections';
 
 const source = ArrayList.of('a', 'b');
+// with new:
+// const source = new ArrayList<string>();
+// source.add('a');
+// source.add('b');
 const view = Collections.unmodifiableList(source);
 const copy = List.copyOf(source);
 

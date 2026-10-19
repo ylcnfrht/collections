@@ -32,6 +32,11 @@ the [Data structures primer](./data-structures.md).
 import { ArrayList, Collections } from '@nodestd/collections';
 
 const a = ArrayList.of(30, 10, 20);
+// with new:
+// const a = new ArrayList<number>();
+// a.add(30);
+// a.add(10);
+// a.add(20);
 a.add(40);                        // push
 a.addFirst(0);                    // unshift
 console.log(a.size(), a.get(1));  // → 5 30
@@ -98,6 +103,9 @@ A JS `Set` keeps insertion order, like `LinkedHashSet`.
 import { TreeSet } from '@nodestd/collections';
 
 const a = TreeSet.of(1, 2, 3, 4);
+// with new:
+// const a = new TreeSet<number>();
+// for (const x of [1, 2, 3, 4]) a.add(x);
 const b = TreeSet.of(3, 4, 5);
 
 const union = new TreeSet(a); union.addAll(b);
@@ -205,11 +213,17 @@ const typed = list.toArray((n) => new Float64Array(n));
 console.log(typed instanceof Float64Array, typed.length); // → true 2
 
 const m = LinkedHashMap.of<string, number>(...Object.entries({ x: 1, y: 2 }));
+// with new:
+// const m = new LinkedHashMap<string, number>();
+// for (const [k, v] of Object.entries({ x: 1, y: 2 })) m.put(k, v);
 console.log(m.toString());                        // → {x=1, y=2}
 console.log(Object.fromEntries(m));               // → { x: 1, y: 2 }
 console.log(new globalThis.Map(m).get('y'));      // → 2
 
 const fromNative = HashSet.of(...new globalThis.Set(['a', 'a', 'b']));
+// with new:
+// const fromNative = new HashSet<string>();
+// for (const x of new globalThis.Set(['a', 'a', 'b'])) fromNative.add(x);
 console.log(fromNative.size());                   // → 2
 console.log(Stream.from(new globalThis.Set([3, 4])).map((n) => n * 2).toList().toString()); // → [6, 8]
 ```
@@ -249,6 +263,11 @@ Adding or removing elements inside a loop over the same collection throws `Concu
 import { HashMap } from '@nodestd/collections';
 
 const m = HashMap.of<string, number>(['a', 1], ['b', 2], ['c', 3]);
+// with new:
+// const m = new HashMap<string, number>();
+// m.put('a', 1);
+// m.put('b', 2);
+// m.put('c', 3);
 try {
   for (const [k, v] of m) if (v > 1) m.remove(k);
 } catch (e) {

@@ -52,6 +52,10 @@ console.log(isRandomAccess(new LinkedList<number>())); // → false
 import { LinkedList } from '@nodestd/collections';
 
 const list = LinkedList.of('b', 'c');
+// with new:
+// const list = new LinkedList<string>();
+// list.add('b');
+// list.add('c');
 list.addFirst('a');                 // O(1)
 list.addLast('d');                  // O(1)
 console.log(list.toString());       // → [a, b, c, d]
@@ -99,6 +103,11 @@ import { ArrayList, HashSet } from '@nodestd/collections';
 const empty = new ArrayList<string>();
 const sized = new ArrayList<string>(1000);          // capacity hint
 const fromValues = ArrayList.of(3, 1, 2);
+// with new:
+// const fromValues = new ArrayList<number>();
+// fromValues.add(3);
+// fromValues.add(1);
+// fromValues.add(2);
 const copy = new ArrayList(fromValues);             // copy of any Collection
 const fromSet = new ArrayList(new HashSet(ArrayList.of('x')));
 
@@ -478,6 +487,9 @@ console.log(v.elementAt(1));               // → b
 console.log(v.firstElement(), v.lastElement()); // → a c
 
 const w = Vector.of(1, 2, 1, 2);
+// with new:
+// const w = new Vector<number>();
+// for (const n of [1, 2, 1, 2]) w.add(n);
 console.log(w.indexOf(1, 1));              // → 2
 console.log(w.lastIndexOf(2, 2));          // → 1
 

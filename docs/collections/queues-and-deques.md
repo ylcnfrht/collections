@@ -190,6 +190,11 @@ import { ArrayDeque, ArrayList } from '@nodestd/collections';
 const a = new ArrayDeque<number>();            // 16 slots
 const b = new ArrayDeque<number>(1000);        // room for 1000 without growing
 const c = ArrayDeque.of(1, 2, 3);
+// with new:
+// const c = new ArrayDeque<number>();
+// c.add(1);
+// c.add(2);
+// c.add(3);
 const d = new ArrayDeque(ArrayList.of('x', 'y')); // copy of any collection
 const e = c.clone();                           // independent shallow copy
 e.addLast(4);
@@ -275,6 +280,9 @@ A deque iterates from head to tail. Iterators over `ArrayDeque`, `PriorityQueue`
 import { PriorityQueue } from '@nodestd/collections';
 
 const pq = PriorityQueue.of(5, 1, 4, 2, 3);
+// with new:
+// const pq = new PriorityQueue<number>();
+// for (const n of [5, 1, 4, 2, 3]) pq.add(n);
 console.log(pq.toString());        // → [1, 2, 4, 5, 3]
 console.log([...pq]);              // → [ 1, 2, 4, 5, 3 ]
 console.log(pq.peek());            // → 1

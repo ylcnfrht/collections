@@ -75,6 +75,7 @@ plans.headMap(25);           // → {10=basic}`,
     code: `import { ArrayList } from '@nodestd/collections';
 
 const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
+// with new: new ArrayList<string>(), then add() each word
 
 // lazy: each element passes through every stage in turn
 words.stream()

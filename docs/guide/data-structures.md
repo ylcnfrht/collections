@@ -32,6 +32,11 @@ shifts every later element.
 import { ArrayList } from '@nodestd/collections';
 
 const list = ArrayList.of('a', 'b', 'c');
+// with new:
+// const list = new ArrayList<string>();
+// list.add('a');
+// list.add('b');
+// list.add('c');
 list.add(1, 'x');
 console.log(list.toString()); // → [a, x, b, c]
 console.log(list.get(2)); // → b
@@ -67,6 +72,10 @@ Relinking a node is cheap, but reaching index `i` means walking there.
 import { LinkedList } from '@nodestd/collections';
 
 const line = LinkedList.of(2, 3);
+// with new:
+// const line = new LinkedList<number>();
+// line.add(2);
+// line.add(3);
 line.addFirst(1);
 line.addLast(4);
 console.log(line.toString()); // → [1, 2, 3, 4]

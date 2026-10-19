@@ -15,6 +15,11 @@ import { ArrayList, Comparator, TreeSet } from '@nodestd/collections';
 
 const byLength = (a: string, b: string) => a.length - b.length;
 const words = ArrayList.of('banana', 'fig', 'apple');
+// with new:
+// const words = new ArrayList<string>();
+// words.add('banana');
+// words.add('fig');
+// words.add('apple');
 words.sort(byLength);
 console.log(words); // → [fig, apple, banana]
 
