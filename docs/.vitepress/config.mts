@@ -9,10 +9,26 @@ export default withMermaid(
     base: '/collections/',
     cleanUrls: true,
     lastUpdated: true,
+    head: [
+      ['link', { rel: 'icon', type: 'image/svg+xml', href: '/collections/logo.svg' }],
+      ['meta', { name: 'theme-color', content: '#4f46e5' }],
+      ['meta', { property: 'og:type', content: 'website' }],
+      ['meta', { property: 'og:title', content: '@nodestd/collections' }],
+      [
+        'meta',
+        {
+          property: 'og:description',
+          content: 'Lists, queues, sets, maps and lazy streams for TypeScript, inspired by the Java Collections Framework.',
+        },
+      ],
+    ],
+    // class diagrams list type names only, so drop the empty member boxes
+    mermaid: { class: { hideEmptyMembersBox: true } },
     rewrites: { 'README.md': 'introduction.md' },
     // pre-bundle mermaid in dev so its CommonJS dependencies (fastdom, ...) get ESM default exports
     vite: { optimizeDeps: { include: ['mermaid'] } },
     themeConfig: {
+      logo: '/logo.svg',
       nav: [
         { text: 'Introduction', link: '/introduction' },
         { text: 'Guide', link: '/guide/getting-started' },
@@ -23,6 +39,7 @@ export default withMermaid(
         { text: 'Introduction', link: '/introduction' },
         {
           text: 'Guide',
+          collapsed: false,
           items: [
             { text: 'Getting started', link: '/guide/getting-started' },
             { text: 'Data structures primer', link: '/guide/data-structures' },
@@ -33,6 +50,7 @@ export default withMermaid(
         },
         {
           text: 'Collections',
+          collapsed: false,
           items: [
             { text: 'Lists', link: '/collections/lists' },
             { text: 'Queues and deques', link: '/collections/queues-and-deques' },
@@ -43,6 +61,7 @@ export default withMermaid(
         },
         {
           text: 'Streams',
+          collapsed: false,
           items: [
             { text: 'Overview', link: '/streams/overview' },
             { text: 'Operations', link: '/streams/operations' },
@@ -55,6 +74,7 @@ export default withMermaid(
         },
         {
           text: 'Utilities',
+          collapsed: false,
           items: [
             { text: 'Collections', link: '/utilities/collections' },
             { text: 'Comparator and Objects', link: '/utilities/comparator-and-objects' },
@@ -62,6 +82,7 @@ export default withMermaid(
         },
         {
           text: 'Advanced',
+          collapsed: false,
           items: [
             { text: 'Custom collections', link: '/advanced/custom-collections' },
             { text: 'Performance', link: '/advanced/performance' },
@@ -75,7 +96,7 @@ export default withMermaid(
       outline: [2, 3],
       socialLinks: [{ icon: 'github', link: 'https://github.com/nodestd/collections' }],
       editLink: { pattern: 'https://github.com/nodestd/collections/edit/main/docs/:path' },
-      footer: { message: 'Released under the MIT License.' },
+      footer: { message: 'Released under the MIT License.', copyright: 'Copyright © 2026 nodestd' },
     },
   }),
 );
