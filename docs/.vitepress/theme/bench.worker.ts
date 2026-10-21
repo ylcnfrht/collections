@@ -7,6 +7,12 @@ export interface Result { ops: number; ms: number; check: number }
 const WARMUP_MS = 300;
 const TIME_MS = 1000;
 
+/** collections.js reads Node's `global`; this worker runs only that library, so defining it here is contained */
+const withNodeGlobal = <T>(load: () => Promise<T>) => () => {
+  (globalThis as { global?: unknown }).global ??= globalThis;
+  return load();
+};
+
 // static specifiers, so the bundler emits one chunk per package and a worker fetches only its own
 const packages: Record<Parameters<Load>[0], () => Promise<any>> = {
   ours: () => import('../../../src/index'),
@@ -16,12 +22,12 @@ const packages: Record<Parameters<Load>[0], () => Promise<any>> = {
   'mnemonist/heap': async () => ({ default: (await import('mnemonist')).Heap }),
   'mnemonist/circular-buffer': async () => ({ default: (await import('mnemonist')).CircularBuffer }),
   '@datastructures-js/priority-queue': () => import('@datastructures-js/priority-queue'),
-  'collections/fast-map': () => import('collections/fast-map'),
-  'collections/fast-set': () => import('collections/fast-set'),
-  'collections/lru-map': () => import('collections/lru-map'),
-  'collections/sorted-set': () => import('collections/sorted-set'),
-  'collections/heap': () => import('collections/heap'),
-  'collections/deque': () => import('collections/deque'),
+  'collections/fast-map': withNodeGlobal(() => import('collections/fast-map')),
+  'collections/fast-set': withNodeGlobal(() => import('collections/fast-set')),
+  'collections/lru-map': withNodeGlobal(() => import('collections/lru-map')),
+  'collections/sorted-set': withNodeGlobal(() => import('collections/sorted-set')),
+  'collections/heap': withNodeGlobal(() => import('collections/heap')),
+  'collections/deque': withNodeGlobal(() => import('collections/deque')),
 };
 
 // adapters expect what require() returns: a CommonJS class itself, or an object of named exports

@@ -1,36 +1,42 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import results from '../../../bench/isolated/results.json';
-import { workloads as allWorkloads } from '../../../bench/isolated/workloads';
+import { workloads } from '../../../bench/isolated/workloads';
 import type { Result } from './bench.worker';
 
 // Runs the isolated benchmark's workloads in the reader's browser, each implementation in a fresh worker,
 // next to the ratios the isolated Docker run measured.
-const props = withDefaults(defineProps<{ workloads?: string[]; implementations?: 'all' | 'ours-and-native' }>(), {
-  implementations: 'all',
-});
+type W = (typeof workloads)[number];
 const OURS = '@nodestd/collections';
 
-const list = computed(() => allWorkloads.filter((w) => !props.workloads || props.workloads.includes(w.id)));
-const selected = ref(list.value[0].id);
-const workload = computed(() => list.value.find((w) => w.id === selected.value)!);
-const impls = (w: (typeof allWorkloads)[number]) =>
-  Object.keys(w.impls).filter((i) => props.implementations === 'all' || i === w.baseline || (i.startsWith(OURS) && !i.includes('IntStream')));
-
+const selected = ref(workloads[0].id);
+const workload = computed(() => workloads.find((w) => w.id === selected.value)!);
 const runs = ref<Record<string, Record<string, Result>>>({});
-const running = ref<string | null>(null); // "workload|impl" while it runs
 const error = ref('');
 const progress = ref({ value: 0, measuring: false }); // of the implementation that is running
+const job = ref<{ workload: string; impl: string; done: number; total: number } | null>(null);
 
+const implsOf = (w: W) => Object.keys(w.impls);
+const oursOf = (w: W) => implsOf(w).find((i) => i.startsWith(OURS))!;
 const opsPerSec = (r: Result) => r.ops / (r.ms / 1000);
-const current = computed(() => runs.value[selected.value] ?? {});
-const measured = (w: string, impl: string) => results.report.find((x) => x.id === w)?.rows.find((r) => r.impl === impl)?.vsBaseline ?? null;
-const yours = (w: string, impl: string) => {
-  const r = runs.value[w];
-  return r?.[impl] && r[allWorkloads.find((x) => x.id === w)!.baseline] ? opsPerSec(r[impl]) / opsPerSec(r[allWorkloads.find((x) => x.id === w)!.baseline]) : null;
+const measured = (w: W, impl: string) => results.report.find((x) => x.id === w.id)?.rows.find((r) => r.impl === impl)?.vsBaseline ?? null;
+const yours = (w: W, impl: string) => {
+  const r = runs.value[w.id];
+  return r?.[impl] && r[w.baseline] ? opsPerSec(r[impl]) / opsPerSec(r[w.baseline]) : null;
 };
-const maxOps = computed(() => Math.max(1, ...Object.values(current.value).map(opsPerSec)));
-const oursName = computed(() => impls(workload.value).find((i) => i.startsWith(OURS))!);
+const complete = (w: W) => implsOf(w).every((i) => runs.value[w.id]?.[i]);
+
+/** rows of the selected workload: fastest first once measured, else in the isolated run's order */
+const rows = computed(() => {
+  const w = workload.value;
+  const r = runs.value[w.id] ?? {};
+  const isolated = results.report.find((x) => x.id === w.id)?.rows.map((x) => x.impl) ?? [];
+  return [...implsOf(w)].sort((a, b) =>
+    r[a] && r[b] ? opsPerSec(r[b]) - opsPerSec(r[a]) : isolated.indexOf(a) - isolated.indexOf(b),
+  );
+});
+const maxMeasured = computed(() => Math.max(1e-9, ...implsOf(workload.value).map((i) => measured(workload.value, i) ?? 0)));
+const maxOps = computed(() => Math.max(1, ...Object.values(runs.value[selected.value] ?? {}).map(opsPerSec)));
 
 function runOne(w: string, impl: string): Promise<Result> {
   return new Promise((resolve, reject) => {
@@ -53,201 +59,330 @@ function runOne(w: string, impl: string): Promise<Result> {
   });
 }
 
-async function runWorkload(id: string) {
-  const w = allWorkloads.find((x) => x.id === id)!;
-  runs.value = { ...runs.value, [id]: {} };
-  for (const impl of impls(w)) {
-    running.value = `${id}|${impl}`;
-    const r = await runOne(id, impl);
-    runs.value = { ...runs.value, [id]: { ...runs.value[id], [impl]: r } };
-  }
-  const checks = new Set(Object.values(runs.value[id]).map((r) => r.check));
-  if (checks.size > 1) throw new Error(`${w.title}: implementations returned different checksums.`);
-}
-
 async function run(all: boolean) {
   error.value = '';
+  const todo = all ? workloads : [workload.value];
+  const total = todo.reduce((n, w) => n + implsOf(w).length, 0);
+  let done = 0;
   try {
-    for (const w of all ? list.value : [workload.value]) {
+    for (const w of todo) {
       selected.value = w.id;
-      await runWorkload(w.id);
+      runs.value = { ...runs.value, [w.id]: {} };
+      for (const impl of implsOf(w)) {
+        job.value = { workload: w.id, impl, done, total };
+        const r = await runOne(w.id, impl);
+        runs.value = { ...runs.value, [w.id]: { ...runs.value[w.id], [impl]: r } };
+        done++;
+      }
+      if (new Set(Object.values(runs.value[w.id]).map((r) => r.check)).size > 1) {
+        throw new Error(`${w.title}: the implementations returned different results, so the timings are not comparable.`);
+      }
     }
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
-    running.value = null;
+    job.value = null;
   }
 }
 
-const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : `${Math.round(n)}`);
-const ratio = (x: number | null) => (x === null ? '–' : `${x >= 10 ? x.toFixed(1) : x.toFixed(2)}×`);
-const busy = computed(() => running.value !== null);
-const runningImpl = computed(() => running.value?.split('|')[1]);
+const busy = computed(() => job.value !== null);
+const overall = computed(() => (job.value ? (job.value.done + progress.value.value) / job.value.total : 0));
+
+function words(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)} billion`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} million`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)} thousand`;
+  return `${Math.round(n)}`;
+}
+const times = (x: number) => `${x >= 10 ? x.toFixed(1) : x.toFixed(2)}×`;
+/** "4.13× faster" or "1.37× slower", never a fraction */
+const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)} slower`);
 </script>
 
 <template>
-  <div class="try-bench" :class="{ full: implementations === 'all' }">
-    <div class="top">
-      <div class="tabs" role="tablist" aria-label="Workload">
-        <button
-          v-for="w in list"
-          :key="w.id"
-          role="tab"
-          :aria-selected="w.id === selected"
-          :class="{ active: w.id === selected, done: runs[w.id] && Object.keys(runs[w.id]).length === impls(w).length }"
-          :disabled="busy"
-          @click="selected = w.id"
-        >
-          {{ w.title }}<span class="detail"> · {{ w.detail }}</span>
-        </button>
+  <div class="bench">
+    <div class="bar-top">
+      <div class="status">
+        <template v-if="job">
+          <span class="dot" />
+          {{ job.done + 1 }} / {{ job.total }} · {{ workloads.find((w) => w.id === job!.workload)!.title }} ·
+          {{ job.impl }} · {{ progress.measuring ? 'measuring' : 'warming up' }}
+        </template>
+        <template v-else>Runs on your device. Each implementation takes about 1.5 s.</template>
       </div>
       <div class="actions">
-        <button v-if="list.length > 2" class="run alt" :disabled="busy" @click="run(true)">Run all</button>
-        <button class="run" :disabled="busy" @click="run(false)">
-          {{ busy ? 'Running…' : current[oursName] ? 'Run again' : 'Run in my browser' }}
+        <button class="btn" :disabled="busy" @click="run(false)">{{ runs[selected] && complete(workload) ? 'Run again' : 'Run this test' }}</button>
+        <button class="btn primary" :disabled="busy" @click="run(true)">Run all {{ workloads.length }} tests</button>
+      </div>
+    </div>
+    <div class="overall" :class="{ on: busy }"><span :style="{ width: `${overall * 100}%` }" /></div>
+
+    <div class="body">
+      <nav class="list" aria-label="Workloads">
+        <button
+          v-for="w in workloads"
+          :key="w.id"
+          :class="{ active: w.id === selected, running: job?.workload === w.id }"
+          :aria-current="w.id === selected"
+          @click="selected = w.id"
+        >
+          <span class="name">{{ w.title }}</span>
+          <span class="sub">{{ w.detail }}</span>
+          <span
+            class="pill"
+            :class="{
+              measured: complete(w),
+              slower: (complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w)))! < 1,
+            }"
+            :title="complete(w) ? 'your browser' : 'our isolated run'"
+          >
+            {{ times((complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w))) ?? 0) }}
+          </span>
         </button>
-      </div>
-    </div>
+      </nav>
 
-    <div class="scale">vs {{ workload.baseline }} · {{ workload.unit.label }} per second</div>
-    <div v-if="implementations === 'all'" class="row head">
-      <span /><span /><span>your browser</span><span class="num-col">yours</span><span class="num-col">isolated run</span>
-    </div>
-    <div v-for="impl in impls(workload)" :key="impl" class="row" :class="{ ours: impl.startsWith(OURS) }">
-      <span class="label">{{ impl }}<span v-if="impl === workload.baseline" class="tag">baseline</span></span>
-      <span class="track">
-        <span v-if="current[impl]" class="bar" :style="{ width: `${(opsPerSec(current[impl]) / maxOps) * 100}%` }" />
-        <span v-else-if="runningImpl === impl" class="bar progress" :style="{ width: `${progress.value * 100}%` }" />
-      </span>
-      <span class="value">
-        <template v-if="current[impl]">
-          {{ fmt(opsPerSec(current[impl])) }}/s · {{ ((current[impl].ms * 1e6) / current[impl].ops).toFixed(1) }} ns
-          <span class="total">{{ fmt(current[impl].ops) }} calls in {{ (current[impl].ms / 1000).toFixed(2) }} s</span>
-        </template>
-        <template v-else-if="runningImpl === impl">{{ progress.measuring ? 'measuring' : 'warming up' }} {{ Math.round(progress.value * 100) }}%</template>
-        <template v-else>–</template>
-      </span>
-      <template v-if="implementations === 'all'">
-        <span class="num-col">{{ ratio(yours(selected, impl)) }}</span>
-        <span class="num-col muted">{{ ratio(measured(selected, impl)) }}</span>
-      </template>
-    </div>
+      <section class="panel">
+        <p class="headline">
+          <template v-if="complete(workload)">
+            <strong>{{ oursOf(workload) }}</strong> was{{ ' ' }}
+            <strong :class="{ slower: yours(workload, oursOf(workload))! < 1 }">{{ verdict(yours(workload, oursOf(workload))!) }}</strong>{{ ' ' }}
+            than {{ workload.baseline }} in your browser.
+            <span class="muted">Our isolated run measured {{ verdict(measured(workload, oursOf(workload))!) }}.</span>
+          </template>
+          <template v-else>
+            Our isolated run measured <strong>{{ oursOf(workload) }}</strong>{{ ' ' }}
+            <strong :class="{ slower: measured(workload, oursOf(workload))! < 1 }">{{ verdict(measured(workload, oursOf(workload))!) }}</strong>{{ ' ' }}
+            than {{ workload.baseline }}. Run the test to measure it on your device.
+          </template>
+        </p>
+        <p class="unit">{{ workload.unit.label }} per second, higher is faster</p>
 
-    <div class="compare">
-      <div>
-        <span class="key">Your browser</span>
-        <span class="num">{{ ratio(yours(selected, oursName)) }}</span>
-      </div>
-      <div>
-        <span class="key">Our isolated run</span>
-        <span class="num">{{ ratio(measured(selected, oursName)) }}</span>
-      </div>
-      <p>
-        {{ oursName }} relative to {{ workload.baseline }}; above 1× is faster. ns is the time of one call. Each
-        implementation repeats the test for 0.3 s to warm up, then for 1 s to measure, in its own Web Worker, on the
-        same data as the isolated run; so one run takes a few seconds for millions of calls. Browser engines and
-        devices differ, so expect your numbers to vary.
-      </p>
+        <TransitionGroup tag="div" name="rows" class="rows">
+          <div v-for="impl in rows" :key="impl" class="row" :class="{ ours: impl.startsWith(OURS) }">
+            <div class="label">
+              {{ impl }}<span v-if="impl === workload.baseline" class="tag">baseline</span>
+            </div>
+            <div class="track">
+              <span v-if="runs[selected]?.[impl]" class="fill" :style="{ width: `${(opsPerSec(runs[selected][impl]) / maxOps) * 100}%` }" />
+              <span v-else-if="job?.workload === selected && job.impl === impl" class="fill live" :style="{ width: `${progress.value * 100}%` }" />
+              <span v-else-if="!runs[selected]?.[impl] && measured(workload, impl) !== null" class="fill ghost" :style="{ width: `${(measured(workload, impl)! / maxMeasured) * 100}%` }" />
+            </div>
+            <div class="value">
+              <template v-if="runs[selected]?.[impl]">
+                <span class="main">{{ words(opsPerSec(runs[selected][impl])) }} / s</span>
+                <span class="sub">
+                  {{ ((runs[selected][impl].ms * 1e6) / runs[selected][impl].ops).toFixed(1) }} ns per call
+                  <template v-if="impl !== workload.baseline && yours(workload, impl) !== null"> · {{ times(yours(workload, impl)!) }}</template>
+                  <template v-if="measured(workload, impl) !== null && impl !== workload.baseline"> (isolated {{ times(measured(workload, impl)!) }})</template>
+                </span>
+              </template>
+              <span v-else-if="job?.workload === selected && job.impl === impl" class="sub">
+                {{ progress.measuring ? 'measuring' : 'warming up' }} {{ Math.round(progress.value * 100) }}%
+              </span>
+              <span v-else class="sub">isolated run {{ measured(workload, impl) !== null ? times(measured(workload, impl)!) : '–' }}</span>
+            </div>
+          </div>
+        </TransitionGroup>
+
+        <p v-if="error" class="error">{{ error }}</p>
+        <details class="how">
+          <summary>How this is measured</summary>
+          <p>
+            Each implementation runs in its own Web Worker, so only its library is loaded. It repeats the test for
+            0.3 s to warm up and then for 1 s to measure, on the same data as our
+            <a href="https://github.com/nodestd/collections/tree/main/bench/isolated">isolated Docker benchmark</a>,
+            and every implementation has to return the same checksum. One call takes nanoseconds, so a second of
+            measuring is millions of calls. Ratios divide by the baseline row. Browser engines and devices differ,
+            so expect your numbers to vary from ours.
+          </p>
+        </details>
+      </section>
     </div>
-    <p v-if="error" class="error">{{ error }}</p>
   </div>
 </template>
 
 <style scoped>
-.try-bench {
+.bench {
   margin: 20px 0 28px;
-  padding: 18px 20px;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--vp-c-bg-soft);
+  overflow: hidden;
 }
-.top {
+.bar-top {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px 16px;
+  padding: 14px 18px;
 }
-.tabs {
+.status {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: var(--vp-c-bg);
-}
-.tabs button {
-  padding: 5px 10px;
-  border-radius: 6px;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
   color: var(--vp-c-text-2);
 }
-.full .tabs .detail {
-  display: none;
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vp-c-brand-1);
+  animation: pulse 1s ease-in-out infinite alternate;
 }
-.tabs button.active {
-  background: var(--vp-c-default-soft);
-  color: var(--vp-c-text-1);
-  font-weight: 600;
-}
-.tabs button.done::after {
-  content: ' ✓';
-  color: var(--vp-c-brand-1);
-}
-.tabs button:disabled {
-  cursor: default;
+@keyframes pulse {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
 }
 .actions {
   display: flex;
   gap: 8px;
 }
-.run {
+.btn {
   padding: 7px 14px;
+  border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
-  background: var(--vp-button-brand-bg);
-  color: var(--vp-button-brand-text);
+  background: var(--vp-c-bg);
   font-size: 14px;
   font-weight: 600;
+  color: var(--vp-c-text-1);
   white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
 }
-.run.alt {
-  background: var(--vp-button-alt-bg);
-  color: var(--vp-button-alt-text);
+.btn:hover:not(:disabled) {
+  border-color: var(--vp-c-brand-1);
 }
-.run:hover:not(:disabled) {
-  filter: brightness(1.08);
+.btn.primary {
+  border-color: transparent;
+  background: var(--vp-button-brand-bg);
+  color: var(--vp-button-brand-text);
 }
-.run:disabled {
-  opacity: 0.6;
+.btn.primary:hover:not(:disabled) {
+  background: var(--vp-button-brand-hover-bg);
+}
+.btn:disabled {
+  opacity: 0.55;
   cursor: progress;
 }
-.scale {
-  margin-bottom: 6px;
+.overall {
+  height: 2px;
+  background: var(--vp-c-divider);
+}
+.overall span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--vp-c-brand-1);
+  transition: width 0.15s linear;
+}
+.overall:not(.on) span {
+  width: 0 !important;
+}
+.body {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-right: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg);
+}
+.list button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name pill' 'sub pill';
+  align-items: center;
+  gap: 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+  transition: background 0.15s;
+}
+.list button:hover {
+  background: var(--vp-c-default-soft);
+}
+.list button.active {
+  background: var(--vp-c-brand-soft);
+}
+.list .name {
+  grid-area: name;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+.list .sub {
+  grid-area: sub;
+  font-size: 11px;
+  color: var(--vp-c-text-3);
+}
+.list button.running .name::after {
+  content: ' ·';
+  color: var(--vp-c-brand-1);
+  animation: pulse 0.6s ease-in-out infinite alternate;
+}
+.pill {
+  grid-area: pill;
+  padding: 1px 7px;
+  border: 1px dashed var(--vp-c-divider);
+  border-radius: 999px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 11px;
+  color: var(--vp-c-text-3);
+}
+.pill.measured {
+  border-style: solid;
+  border-color: transparent;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+.pill.measured.slower {
+  background: var(--vp-c-warning-soft);
+  color: var(--vp-c-warning-1);
+}
+.panel {
+  min-width: 0;
+  padding: 16px 20px 18px;
+}
+.headline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--vp-c-text-1);
+}
+.headline strong {
+  font-weight: 600;
+}
+.headline strong:nth-of-type(2) {
+  color: var(--vp-c-brand-1);
+}
+.headline strong.slower {
+  color: var(--vp-c-warning-1);
+}
+.muted {
+  color: var(--vp-c-text-2);
+}
+.unit {
+  margin: 4px 0 10px;
   font-size: 12px;
   color: var(--vp-c-text-3);
 }
 .row {
   display: grid;
-  grid-template-columns: minmax(150px, 240px) 1fr minmax(140px, auto);
+  grid-template-columns: minmax(130px, 210px) 1fr 230px;
   align-items: center;
-  gap: 12px;
-  padding: 6px 0;
-  font-size: 13px;
+  gap: 14px;
+  padding: 7px 0;
+  border-top: 1px solid var(--vp-c-divider);
 }
-.full .row {
-  grid-template-columns: minmax(150px, 230px) 1fr minmax(130px, auto) 52px 64px;
-}
-.row.head {
-  padding: 0;
-  font-size: 11px;
-  color: var(--vp-c-text-3);
-}
-.row.head span:nth-child(3) {
-  text-align: right;
+.row:first-child {
+  border-top: none;
 }
 .label {
+  font-size: 13px;
   line-height: 1.4;
   overflow-wrap: anywhere;
   color: var(--vp-c-text-2);
@@ -258,7 +393,7 @@ const runningImpl = computed(() => running.value?.split('|')[1]);
 }
 .tag {
   display: inline-block;
-  margin-left: 8px;
+  margin-left: 6px;
   padding: 0 6px;
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
@@ -268,93 +403,100 @@ const runningImpl = computed(() => running.value?.split('|')[1]);
   color: var(--vp-c-text-3);
 }
 .track {
-  height: 10px;
+  height: 8px;
   border-radius: 6px;
   background: var(--vp-c-default-soft);
   overflow: hidden;
 }
-.bar {
+.fill {
   display: block;
   height: 100%;
   border-radius: 6px;
   background: var(--vp-c-text-3);
   opacity: 0.45;
-  transition: width 0.6s ease;
+  transition: width 0.5s ease;
 }
-.row.ours .bar {
+.row.ours .fill {
   background: var(--vp-home-hero-name-background);
   opacity: 1;
 }
-.bar.progress {
-  opacity: 0.7;
+.fill.ghost {
+  background: transparent;
+  border: 1px dashed var(--vp-c-text-3);
+  opacity: 0.5;
+}
+.fill.live {
   transition: width 0.1s linear;
-  background-image: repeating-linear-gradient(-45deg, transparent 0 6px, rgba(255, 255, 255, 0.25) 6px 12px);
+  opacity: 0.8;
 }
-.row.ours .bar.progress {
-  background: var(--vp-home-hero-name-background);
-}
-.total {
-  display: block;
-  font-size: 11px;
-  color: var(--vp-c-text-3);
-}
-.value,
-.num-col {
+.value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   text-align: right;
-  font-family: var(--vp-font-family-mono);
-  font-size: 12px;
   font-variant-numeric: tabular-nums;
-  color: var(--vp-c-text-2);
 }
-.row.ours .num-col {
+.value .main {
+  font-size: 14px;
   font-weight: 600;
   color: var(--vp-c-text-1);
 }
-.num-col.muted,
-.row.ours .num-col.muted {
-  font-weight: 400;
+.row:not(.ours) .value .main {
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+}
+.value .sub {
+  font-size: 11px;
   color: var(--vp-c-text-3);
 }
-.compare {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 28px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--vp-c-divider);
-}
-.compare div {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.key {
-  font-size: 12px;
-  color: var(--vp-c-text-3);
-}
-.num {
-  font-family: var(--vp-font-family-mono);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--vp-c-text-1);
-}
-.compare p,
-.error {
-  flex-basis: 100%;
-  margin: 4px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--vp-c-text-3);
+.rows-move {
+  transition: transform 0.4s ease;
 }
 .error {
+  margin: 10px 0 0;
+  font-size: 13px;
   color: var(--vp-c-danger-1);
 }
-@media (max-width: 640px) {
-  .row,
-  .full .row { grid-template-columns: 1fr auto auto; gap: 4px 10px; }
-  .label { grid-column: 1 / -1; }
-  .track { grid-column: 1 / -1; }
-  .row.head { display: none; }
+.how {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--vp-c-text-3);
+}
+.how summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.how summary:hover {
+  color: var(--vp-c-text-2);
+}
+.how p {
+  margin: 6px 0 0;
+  line-height: 1.6;
+}
+@media (max-width: 760px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+  .list {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--vp-c-divider);
+  }
+  .list button {
+    flex: 0 0 auto;
+    grid-template-areas: 'name pill';
+  }
+  .list .sub {
+    display: none;
+  }
+  .row {
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+  }
+  .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 </style>

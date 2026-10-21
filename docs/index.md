@@ -53,11 +53,9 @@ features:
 
 ## Run it in your browser
 
-The same test as our [isolated benchmark](./advanced/performance.md#isolated-comparison), on your device: one workload where this library is faster than a native `Map`, and one where it is slower. Each implementation runs in its own Web Worker for about a second.
+Eight workloads from our [isolated benchmark](./advanced/performance.md#isolated-comparison), against native collections, js-sdsl, mnemonist, @datastructures-js and collections.js, measured on your device. Each implementation runs alone in its own Web Worker on the same data, and all must return the same result.
 
-<TryBenchmark :workloads="['hashmap-get-int', 'hashmap-put-string']" implementations="ours-and-native" />
-
-[All eight workloads against js-sdsl, mnemonist, collections.js and native collections →](./advanced/performance.md#run-it-in-your-browser)
+<TryBenchmark />
 
 ## Installation
 
