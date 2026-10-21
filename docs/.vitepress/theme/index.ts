@@ -5,6 +5,7 @@ import HeroCode from './HeroCode.vue';
 import HomeStats from './HomeStats.vue';
 import ClassInfo from './ClassInfo.vue';
 import DocsIndex from './DocsIndex.vue';
+import TryBenchmark from './TryBenchmark.vue';
 import './custom.css';
 
 export default {
@@ -14,5 +15,6 @@ export default {
     app.component('HomeStats', HomeStats);
     app.component('ClassInfo', ClassInfo);
     app.component('DocsIndex', DocsIndex);
+    app.component('TryBenchmark', TryBenchmark);
   },
 } satisfies Theme;

@@ -208,6 +208,13 @@ The numbers in this section come from `npm run bench:isolated`, which is built s
 
 Docker on macOS runs a Linux virtual machine, so the absolute ops/s differ from the in-process tables further down; compare the ratios. Ratios are relative to the baseline named in each heading. Run on 2026-10-19, Apple M1 Pro.
 
+
+### Run it in your browser
+
+The two `HashMap` workloads below, one where this library is faster than a native `Map` and one where it is slower, run on your device when you press the button. The ratio from the isolated run is shown next to yours.
+
+<TryBenchmark />
+
 ### HashMap.get, 100k integer keys
 
 | Implementation | get calls/s | runs/s | ±% | vs native Map |
