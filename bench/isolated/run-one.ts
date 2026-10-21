@@ -1,7 +1,10 @@
 // Runs one implementation of one workload in this process and prints a JSON result line.
 // usage: run-one.ts <workload id> <implementation name>
 import { Bench } from 'tinybench';
-import { workloads } from './workloads';
+import { workloads, type Load } from './workloads';
+
+// the published build of this library, not the sources
+const load: Load = async (pkg) => require(pkg === 'ours' ? '../../dist/index.js' : pkg);
 
 let sink: unknown; // keeps results observable so the JIT can't drop the work
 
@@ -11,7 +14,7 @@ async function main() {
   const factory = w?.impls[name];
   if (!w || !factory) throw new Error(`unknown workload/implementation: ${id} / ${name}`);
   const data = w.data();
-  const impl = factory();
+  const impl = await factory(load);
   const state = w.prepare?.(impl, data);
   const check = w.run(impl, data, state);
 

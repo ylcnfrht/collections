@@ -1,49 +1,35 @@
-// Runs one implementation of one workload in its own worker (its own JS engine instance), the same
-// test as the isolated benchmark: bench/isolated/workloads.ts, hashmap-get-int and hashmap-put-string.
-import { HashMap } from '../../../src/index';
+// Runs one implementation of one workload from bench/isolated/workloads.ts in its own worker (its own JS
+// engine instance), so its library is the only one loaded, as in the isolated Docker run.
+import { workloads, type Load } from '../../../bench/isolated/workloads';
 
-export type Workload = 'hashmap-get-int' | 'hashmap-put-string';
-export type Impl = 'ours' | 'native';
 export interface Result { ops: number; ms: number; check: number }
 
-const N = 100_000;
 const WARMUP_MS = 300;
 const TIME_MS = 1000;
 
-function makeRound(workload: Workload, impl: Impl): () => number {
-  if (workload === 'hashmap-get-int') {
-    const keys = Array.from({ length: N }, (_, i) => i);
-    if (impl === 'ours') {
-      const m = new HashMap<number, number>();
-      for (let i = 0; i < N; i++) m.put(keys[i], i);
-      return () => {
-        let s = 0;
-        for (let i = 0; i < N; i++) s += m.get(keys[i]) ?? 0;
-        return s;
-      };
-    }
-    const m = new Map<number, number>();
-    for (let i = 0; i < N; i++) m.set(keys[i], i);
-    return () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) s += m.get(keys[i]) ?? 0;
-      return s;
-    };
-  }
-  const keys = Array.from({ length: N }, (_, i) => 'key' + i);
-  if (impl === 'ours') {
-    return () => {
-      const m = new HashMap<string, number>();
-      for (let i = 0; i < N; i++) m.put(keys[i], i);
-      return m.size();
-    };
-  }
-  return () => {
-    const m = new Map<string, number>();
-    for (let i = 0; i < N; i++) m.set(keys[i], i);
-    return m.size;
-  };
-}
+// static specifiers, so the bundler emits one chunk per package and a worker fetches only its own
+const packages: Record<Parameters<Load>[0], () => Promise<any>> = {
+  ours: () => import('../../../src/index'),
+  'js-sdsl': () => import('js-sdsl'),
+  // mnemonist exposes its subpaths to require() only; the browser takes the classes from its entry point
+  'mnemonist/lru-map': async () => ({ default: (await import('mnemonist')).LRUMap }),
+  'mnemonist/heap': async () => ({ default: (await import('mnemonist')).Heap }),
+  'mnemonist/circular-buffer': async () => ({ default: (await import('mnemonist')).CircularBuffer }),
+  '@datastructures-js/priority-queue': () => import('@datastructures-js/priority-queue'),
+  'collections/fast-map': () => import('collections/fast-map'),
+  'collections/fast-set': () => import('collections/fast-set'),
+  'collections/lru-map': () => import('collections/lru-map'),
+  'collections/sorted-set': () => import('collections/sorted-set'),
+  'collections/heap': () => import('collections/heap'),
+  'collections/deque': () => import('collections/deque'),
+};
+
+// adapters expect what require() returns: a CommonJS class itself, or an object of named exports
+const load: Load = async (pkg) => {
+  const m = await packages[pkg]();
+  if (typeof m.default === 'function') return m.default;
+  return m.default && typeof m.default === 'object' ? { ...m.default, ...m } : m;
+};
 
 /** Rounds until `ms` have passed; returns rounds, elapsed time and the last round's checksum. */
 function runFor(round: () => number, ms: number) {
@@ -59,10 +45,18 @@ function runFor(round: () => number, ms: number) {
   return { rounds, ms: now - start, check };
 }
 
-self.onmessage = (e: MessageEvent<{ workload: Workload; impl: Impl }>) => {
-  const round = makeRound(e.data.workload, e.data.impl);
-  runFor(round, WARMUP_MS);
-  const r = runFor(round, TIME_MS);
-  const result: Result = { ops: r.rounds * N, ms: r.ms, check: r.check };
-  self.postMessage(result);
+self.onmessage = async (e: MessageEvent<{ workload: string; impl: string }>) => {
+  try {
+    const w = workloads.find((x) => x.id === e.data.workload)!;
+    const data = w.data();
+    const impl = await w.impls[e.data.impl](load);
+    const state = w.prepare?.(impl, data);
+    const round = () => w.run(impl, data, state);
+    runFor(round, WARMUP_MS);
+    const r = runFor(round, TIME_MS);
+    const result: Result = { ops: r.rounds * w.unit.perRun, ms: r.ms, check: r.check };
+    self.postMessage(result);
+  } catch (err) {
+    self.postMessage({ error: (err as Error).message });
+  }
 };

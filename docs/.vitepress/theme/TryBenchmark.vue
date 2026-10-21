@@ -1,69 +1,71 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import results from '../../../bench/isolated/results.json';
-import type { Workload, Impl, Result } from './bench.worker';
+import { workloads as allWorkloads } from '../../../bench/isolated/workloads';
+import type { Result } from './bench.worker';
 
-// The same two workloads as the isolated run, next to what that run measured, so a reader can check
-// the numbers on their own device. Each implementation runs in a fresh worker, one after the other.
-const WORKLOADS: { id: Workload; label: string; unit: string }[] = [
-  { id: 'hashmap-get-int', label: 'HashMap.get · integer keys', unit: 'get' },
-  { id: 'hashmap-put-string', label: 'HashMap.put · string keys', unit: 'put' },
-];
-const IMPLS: { id: Impl; label: string; measured: string }[] = [
-  { id: 'ours', label: '@nodestd/collections HashMap', measured: '@nodestd/collections HashMap' },
-  { id: 'native', label: 'native Map', measured: 'native Map' },
-];
+// Runs the isolated benchmark's workloads in the reader's browser, each implementation in a fresh worker,
+// next to the ratios the isolated Docker run measured.
+const props = withDefaults(defineProps<{ workloads?: string[]; implementations?: 'all' | 'ours-and-native' }>(), {
+  implementations: 'all',
+});
+const OURS = '@nodestd/collections';
 
-const workload = ref<Workload>('hashmap-get-int');
-const running = ref<Impl | null>(null);
-const runs = ref<Partial<Record<Workload, Partial<Record<Impl, Result>>>>>({});
+const list = computed(() => allWorkloads.filter((w) => !props.workloads || props.workloads.includes(w.id)));
+const selected = ref(list.value[0].id);
+const workload = computed(() => list.value.find((w) => w.id === selected.value)!);
+const impls = (w: (typeof allWorkloads)[number]) =>
+  Object.keys(w.impls).filter((i) => props.implementations === 'all' || i === w.baseline || (i.startsWith(OURS) && !i.includes('IntStream')));
+
+const runs = ref<Record<string, Record<string, Result>>>({});
+const running = ref<string | null>(null); // "workload|impl" while it runs
 const error = ref('');
 
-const current = computed(() => runs.value[workload.value] ?? {});
-const unit = computed(() => WORKLOADS.find((w) => w.id === workload.value)!.unit);
 const opsPerSec = (r: Result) => r.ops / (r.ms / 1000);
+const current = computed(() => runs.value[selected.value] ?? {});
+const measured = (w: string, impl: string) => results.report.find((x) => x.id === w)?.rows.find((r) => r.impl === impl)?.vsBaseline ?? null;
+const yours = (w: string, impl: string) => {
+  const r = runs.value[w];
+  return r?.[impl] && r[allWorkloads.find((x) => x.id === w)!.baseline] ? opsPerSec(r[impl]) / opsPerSec(r[allWorkloads.find((x) => x.id === w)!.baseline]) : null;
+};
+const maxOps = computed(() => Math.max(1, ...Object.values(current.value).map(opsPerSec)));
+const oursName = computed(() => impls(workload.value).find((i) => i.startsWith(OURS))!);
 
-/** this library vs native Map in the isolated run, for the selected workload */
-const measuredRatio = computed(() => {
-  const w = results.report.find((x) => x.id === workload.value);
-  const ours = w?.rows.find((r) => r.impl === IMPLS[0].measured);
-  const native = w?.rows.find((r) => r.impl === IMPLS[1].measured);
-  return ours && native ? ours.opsPerSec / native.opsPerSec : null;
-});
-const yourRatio = computed(() => {
-  const o = current.value.ours;
-  const n = current.value.native;
-  return o && n ? opsPerSec(o) / opsPerSec(n) : null;
-});
-const maxOps = computed(() => Math.max(1, ...Object.values(current.value).map((r) => opsPerSec(r!))));
-
-function runOne(w: Workload, impl: Impl): Promise<Result> {
+function runOne(w: string, impl: string): Promise<Result> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./bench.worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e: MessageEvent<Result>) => {
+    worker.onmessage = (e: MessageEvent<Result & { error?: string }>) => {
       worker.terminate();
-      resolve(e.data);
+      if (e.data.error) reject(new Error(`${impl}: ${e.data.error}`));
+      else resolve(e.data);
     };
     worker.onerror = (e) => {
       worker.terminate();
-      reject(new Error(e.message || 'worker failed'));
+      reject(new Error(`${impl}: ${e.message || 'worker failed'}`));
     };
     worker.postMessage({ workload: w, impl });
   });
 }
 
-async function run() {
+async function runWorkload(id: string) {
+  const w = allWorkloads.find((x) => x.id === id)!;
+  runs.value = { ...runs.value, [id]: {} };
+  for (const impl of impls(w)) {
+    running.value = `${id}|${impl}`;
+    const r = await runOne(id, impl);
+    runs.value = { ...runs.value, [id]: { ...runs.value[id], [impl]: r } };
+  }
+  const checks = new Set(Object.values(runs.value[id]).map((r) => r.check));
+  if (checks.size > 1) throw new Error(`${w.title}: implementations returned different checksums.`);
+}
+
+async function run(all: boolean) {
   error.value = '';
-  const w = workload.value;
-  runs.value = { ...runs.value, [w]: {} };
   try {
-    for (const impl of IMPLS) {
-      running.value = impl.id;
-      const r = await runOne(w, impl.id);
-      runs.value = { ...runs.value, [w]: { ...runs.value[w], [impl.id]: r } };
+    for (const w of all ? list.value : [workload.value]) {
+      selected.value = w.id;
+      await runWorkload(w.id);
     }
-    const { ours, native } = runs.value[w]!;
-    if (ours!.check !== native!.check) error.value = `The two implementations returned different checksums (${ours!.check} vs ${native!.check}).`;
   } catch (e) {
     error.value = (e as Error).message;
   } finally {
@@ -71,60 +73,70 @@ async function run() {
   }
 }
 
-const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1e3)}k`);
-const ratio = (x: number | null) => (x === null ? '–' : `${x.toFixed(2)}×`);
+const fmt = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : `${Math.round(n)}`);
+const ratio = (x: number | null) => (x === null ? '–' : `${x >= 10 ? x.toFixed(1) : x.toFixed(2)}×`);
+const busy = computed(() => running.value !== null);
+const runningImpl = computed(() => running.value?.split('|')[1]);
 </script>
 
 <template>
-  <div class="try-bench">
+  <div class="try-bench" :class="{ full: implementations === 'all' }">
     <div class="top">
       <div class="tabs" role="tablist" aria-label="Workload">
         <button
-          v-for="w in WORKLOADS"
+          v-for="w in list"
           :key="w.id"
           role="tab"
-          :aria-selected="w.id === workload"
-          :class="{ active: w.id === workload }"
-          :disabled="running !== null"
-          @click="workload = w.id"
+          :aria-selected="w.id === selected"
+          :class="{ active: w.id === selected, done: runs[w.id] && Object.keys(runs[w.id]).length === impls(w).length }"
+          :disabled="busy"
+          @click="selected = w.id"
         >
-          {{ w.label }}
+          {{ w.title }}<span class="detail"> · {{ w.detail }}</span>
         </button>
       </div>
-      <button class="run" :disabled="running !== null" @click="run">
-        {{ running ? 'Running…' : current.ours ? 'Run again' : 'Run in my browser' }}
-      </button>
+      <div class="actions">
+        <button v-if="list.length > 2" class="run alt" :disabled="busy" @click="run(true)">Run all</button>
+        <button class="run" :disabled="busy" @click="run(false)">
+          {{ busy ? 'Running…' : current[oursName] ? 'Run again' : 'Run in my browser' }}
+        </button>
+      </div>
     </div>
 
-    <div v-for="impl in IMPLS" :key="impl.id" class="row" :class="{ ours: impl.id === 'ours' }">
-      <span class="label">{{ impl.label }}</span>
+    <div class="scale">vs {{ workload.baseline }} · {{ workload.unit.label }} per second</div>
+    <div v-if="implementations === 'all'" class="row head">
+      <span /><span /><span>your browser</span><span class="num-col">yours</span><span class="num-col">isolated run</span>
+    </div>
+    <div v-for="impl in impls(workload)" :key="impl" class="row" :class="{ ours: impl.startsWith(OURS) }">
+      <span class="label">{{ impl }}<span v-if="impl === workload.baseline" class="tag">baseline</span></span>
       <span class="track">
-        <span v-if="current[impl.id]" class="bar" :style="{ width: `${(opsPerSec(current[impl.id]!) / maxOps) * 100}%` }" />
-        <span v-else-if="running === impl.id" class="bar pending" />
+        <span v-if="current[impl]" class="bar" :style="{ width: `${(opsPerSec(current[impl]) / maxOps) * 100}%` }" />
+        <span v-else-if="runningImpl === impl" class="bar pending" />
       </span>
       <span class="value">
-        <template v-if="current[impl.id]">
-          {{ fmt(opsPerSec(current[impl.id]!)) }} {{ unit }}/s ·
-          {{ ((current[impl.id]!.ms * 1e6) / current[impl.id]!.ops).toFixed(1) }} ns
-        </template>
-        <template v-else-if="running === impl.id">running…</template>
+        <template v-if="current[impl]">{{ fmt(opsPerSec(current[impl])) }}/s · {{ ((current[impl].ms * 1e6) / current[impl].ops).toFixed(1) }} ns</template>
+        <template v-else-if="runningImpl === impl">running…</template>
         <template v-else>–</template>
       </span>
+      <template v-if="implementations === 'all'">
+        <span class="num-col">{{ ratio(yours(selected, impl)) }}</span>
+        <span class="num-col muted">{{ ratio(measured(selected, impl)) }}</span>
+      </template>
     </div>
 
     <div class="compare">
       <div>
         <span class="key">Your browser</span>
-        <span class="num">{{ ratio(yourRatio) }}</span>
+        <span class="num">{{ ratio(yours(selected, oursName)) }}</span>
       </div>
       <div>
         <span class="key">Our isolated run</span>
-        <span class="num">{{ ratio(measuredRatio) }}</span>
+        <span class="num">{{ ratio(measured(selected, oursName)) }}</span>
       </div>
       <p>
-        Throughput of this library divided by native <code>Map</code>; above 1× is faster. Each implementation runs
-        for about a second in its own Web Worker, after a short warm-up, on the same 100,000 keys as the isolated run.
-        Browser engines and devices differ, so expect your numbers to vary.
+        {{ oursName }} relative to {{ workload.baseline }}; above 1× is faster. Each implementation runs for about a
+        second in its own Web Worker after a short warm-up, on the same data and the same test as the isolated
+        run. Browser engines and devices differ, so expect your numbers to vary.
       </p>
     </div>
     <p v-if="error" class="error">{{ error }}</p>
@@ -142,10 +154,10 @@ const ratio = (x: number | null) => (x === null ? '–' : `${x.toFixed(2)}×`);
 .top {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .tabs {
   display: flex;
@@ -162,13 +174,24 @@ const ratio = (x: number | null) => (x === null ? '–' : `${x.toFixed(2)}×`);
   font-size: 13px;
   color: var(--vp-c-text-2);
 }
+.full .tabs .detail {
+  display: none;
+}
 .tabs button.active {
   background: var(--vp-c-default-soft);
   color: var(--vp-c-text-1);
   font-weight: 600;
 }
+.tabs button.done::after {
+  content: ' ✓';
+  color: var(--vp-c-brand-1);
+}
 .tabs button:disabled {
   cursor: default;
+}
+.actions {
+  display: flex;
+  gap: 8px;
 }
 .run {
   padding: 7px 14px;
@@ -177,28 +200,62 @@ const ratio = (x: number | null) => (x === null ? '–' : `${x.toFixed(2)}×`);
   color: var(--vp-button-brand-text);
   font-size: 14px;
   font-weight: 600;
+  white-space: nowrap;
+}
+.run.alt {
+  background: var(--vp-button-alt-bg);
+  color: var(--vp-button-alt-text);
 }
 .run:hover:not(:disabled) {
-  background: var(--vp-button-brand-hover-bg);
+  filter: brightness(1.08);
 }
 .run:disabled {
   opacity: 0.6;
   cursor: progress;
 }
+.scale {
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--vp-c-text-3);
+}
 .row {
   display: grid;
-  grid-template-columns: minmax(150px, 230px) 1fr minmax(150px, auto);
+  grid-template-columns: minmax(150px, 240px) 1fr minmax(140px, auto);
   align-items: center;
   gap: 12px;
   padding: 6px 0;
   font-size: 13px;
 }
+.full .row {
+  grid-template-columns: minmax(150px, 230px) 1fr minmax(130px, auto) 52px 64px;
+}
+.row.head {
+  padding: 0;
+  font-size: 11px;
+  color: var(--vp-c-text-3);
+}
+.row.head span:nth-child(3) {
+  text-align: right;
+}
 .label {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
   color: var(--vp-c-text-2);
 }
 .row.ours .label {
   font-weight: 600;
   color: var(--vp-c-text-1);
+}
+.tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  white-space: nowrap;
+  color: var(--vp-c-text-3);
 }
 .track {
   height: 10px;
@@ -226,12 +283,22 @@ const ratio = (x: number | null) => (x === null ? '–' : `${x.toFixed(2)}×`);
   from { transform: translateX(-30%); }
   to { transform: translateX(260%); }
 }
-.value {
+.value,
+.num-col {
   text-align: right;
   font-family: var(--vp-font-family-mono);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: var(--vp-c-text-2);
+}
+.row.ours .num-col {
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+.num-col.muted,
+.row.ours .num-col.muted {
+  font-weight: 400;
+  color: var(--vp-c-text-3);
 }
 .compare {
   display: flex;
@@ -269,7 +336,10 @@ const ratio = (x: number | null) => (x === null ? '–' : `${x.toFixed(2)}×`);
   color: var(--vp-c-danger-1);
 }
 @media (max-width: 640px) {
-  .row { grid-template-columns: 1fr; gap: 4px; }
-  .value { text-align: left; }
+  .row,
+  .full .row { grid-template-columns: 1fr auto auto; gap: 4px 10px; }
+  .label { grid-column: 1 / -1; }
+  .track { grid-column: 1 / -1; }
+  .row.head { display: none; }
 }
 </style>

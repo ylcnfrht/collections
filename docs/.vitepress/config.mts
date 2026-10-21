@@ -33,7 +33,25 @@ export default withMermaid(
     mermaid: { class: { hideEmptyMembersBox: true } },
     rewrites: { 'README.md': 'introduction.md' },
     // pre-bundle mermaid in dev so its CommonJS dependencies (fastdom, ...) get ESM default exports
-    vite: { optimizeDeps: { include: ['mermaid'] } },
+    vite: {
+      optimizeDeps: {
+        include: [
+          'mermaid',
+          // CommonJS packages the in-browser benchmark loads in its worker
+          'js-sdsl',
+          'mnemonist',
+          '@datastructures-js/priority-queue',
+          'collections/fast-map',
+          'collections/fast-set',
+          'collections/lru-map',
+          'collections/sorted-set',
+          'collections/heap',
+          'collections/deque',
+        ],
+      },
+      // ES module workers can load each benchmarked package as its own chunk
+      worker: { format: 'es' },
+    },
     themeConfig: {
       logo: '/logo.svg',
       nav: [

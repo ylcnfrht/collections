@@ -211,7 +211,7 @@ Docker on macOS runs a Linux virtual machine, so the absolute ops/s differ from 
 
 ### Run it in your browser
 
-The two `HashMap` workloads below, one where this library is faster than a native `Map` and one where it is slower, run on your device when you press the button. The ratio from the isolated run is shown next to yours.
+Every workload of the isolated comparison runs on your device when you press a button: the same data, the same test and the same implementations, each in its own Web Worker. Next to each of your ratios is the one the isolated run measured. Run all takes about a minute.
 
 <TryBenchmark />
 
