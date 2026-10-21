@@ -20,6 +20,7 @@ const impls = (w: (typeof allWorkloads)[number]) =>
 const runs = ref<Record<string, Record<string, Result>>>({});
 const running = ref<string | null>(null); // "workload|impl" while it runs
 const error = ref('');
+const progress = ref({ value: 0, measuring: false }); // of the implementation that is running
 
 const opsPerSec = (r: Result) => r.ops / (r.ms / 1000);
 const current = computed(() => runs.value[selected.value] ?? {});
@@ -34,7 +35,12 @@ const oursName = computed(() => impls(workload.value).find((i) => i.startsWith(O
 function runOne(w: string, impl: string): Promise<Result> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./bench.worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e: MessageEvent<Result & { error?: string }>) => {
+    progress.value = { value: 0, measuring: false };
+    worker.onmessage = (e: MessageEvent<Result & { error?: string; progress?: number; measuring?: boolean }>) => {
+      if (e.data.progress !== undefined) {
+        progress.value = { value: e.data.progress, measuring: !!e.data.measuring };
+        return;
+      }
       worker.terminate();
       if (e.data.error) reject(new Error(`${impl}: ${e.data.error}`));
       else resolve(e.data);
@@ -111,11 +117,14 @@ const runningImpl = computed(() => running.value?.split('|')[1]);
       <span class="label">{{ impl }}<span v-if="impl === workload.baseline" class="tag">baseline</span></span>
       <span class="track">
         <span v-if="current[impl]" class="bar" :style="{ width: `${(opsPerSec(current[impl]) / maxOps) * 100}%` }" />
-        <span v-else-if="runningImpl === impl" class="bar pending" />
+        <span v-else-if="runningImpl === impl" class="bar progress" :style="{ width: `${progress.value * 100}%` }" />
       </span>
       <span class="value">
-        <template v-if="current[impl]">{{ fmt(opsPerSec(current[impl])) }}/s · {{ ((current[impl].ms * 1e6) / current[impl].ops).toFixed(1) }} ns</template>
-        <template v-else-if="runningImpl === impl">running…</template>
+        <template v-if="current[impl]">
+          {{ fmt(opsPerSec(current[impl])) }}/s · {{ ((current[impl].ms * 1e6) / current[impl].ops).toFixed(1) }} ns
+          <span class="total">{{ fmt(current[impl].ops) }} calls in {{ (current[impl].ms / 1000).toFixed(2) }} s</span>
+        </template>
+        <template v-else-if="runningImpl === impl">{{ progress.measuring ? 'measuring' : 'warming up' }} {{ Math.round(progress.value * 100) }}%</template>
         <template v-else>–</template>
       </span>
       <template v-if="implementations === 'all'">
@@ -134,9 +143,10 @@ const runningImpl = computed(() => running.value?.split('|')[1]);
         <span class="num">{{ ratio(measured(selected, oursName)) }}</span>
       </div>
       <p>
-        {{ oursName }} relative to {{ workload.baseline }}; above 1× is faster. Each implementation runs for about a
-        second in its own Web Worker after a short warm-up, on the same data and the same test as the isolated
-        run. Browser engines and devices differ, so expect your numbers to vary.
+        {{ oursName }} relative to {{ workload.baseline }}; above 1× is faster. ns is the time of one call. Each
+        implementation repeats the test for 0.3 s to warm up, then for 1 s to measure, in its own Web Worker, on the
+        same data as the isolated run; so one run takes a few seconds for millions of calls. Browser engines and
+        devices differ, so expect your numbers to vary.
       </p>
     </div>
     <p v-if="error" class="error">{{ error }}</p>
@@ -275,13 +285,18 @@ const runningImpl = computed(() => running.value?.split('|')[1]);
   background: var(--vp-home-hero-name-background);
   opacity: 1;
 }
-.bar.pending {
-  width: 30%;
-  animation: slide 1.2s ease-in-out infinite alternate;
+.bar.progress {
+  opacity: 0.7;
+  transition: width 0.1s linear;
+  background-image: repeating-linear-gradient(-45deg, transparent 0 6px, rgba(255, 255, 255, 0.25) 6px 12px);
 }
-@keyframes slide {
-  from { transform: translateX(-30%); }
-  to { transform: translateX(260%); }
+.row.ours .bar.progress {
+  background: var(--vp-home-hero-name-background);
+}
+.total {
+  display: block;
+  font-size: 11px;
+  color: var(--vp-c-text-3);
 }
 .value,
 .num-col {
