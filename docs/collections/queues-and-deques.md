@@ -2,6 +2,9 @@
 
 A `Queue<E>` holds elements waiting to be processed and hands them out from its head. A `Deque<E>` (double-ended queue, pronounced "deck") adds and removes at both ends, so it serves as a FIFO queue and as a LIFO stack. This page covers both interfaces, the implementations `ArrayDeque`, `PriorityQueue` and `LinkedList`, and the `Collections.asLifoQueue` adapter.
 
+> [!NOTE]
+> Concurrent and blocking queues (`ConcurrentLinkedQueue`, `BlockingQueue`, `DelayQueue`, …) are not included. [Not included](../advanced/compatibility.md#not-included) explains why and what to use instead.
+
 ## The Queue interface
 
 `Queue<E>` extends `Collection<E>` with three operations: insert at the tail, remove from the head, and examine the head. Each comes in two forms. One throws when it cannot do its job; the other reports failure through its return value.
@@ -116,6 +119,8 @@ The [data structures primer](../guide/data-structures.md) shows how `ArrayDeque`
 
 ### ArrayDeque
 
+<ClassInfo name="ArrayDeque" />
+
 `ArrayDeque<E>` is a resizable circular array (ring buffer). It is the general-purpose `Queue`, `Deque` and stack: every end operation is O(1), and there is no per-element node allocation.
 
 The backing array's length is always a power of two, at least 8 and 16 by default. Two indexes, `head` and `tail`, wrap around the end of the array, so no element is ever shifted. When the array fills, it doubles, and the shorter of the two wrapped segments is moved into the new half; the copy is amortized O(1) per insert. The deque never shrinks: `clear()` empties it but keeps the capacity.
@@ -169,6 +174,8 @@ console.log(ed.text);              // → Hello
 :::
 
 ### PriorityQueue
+
+<ClassInfo name="PriorityQueue" />
 
 `PriorityQueue<E>` is an unbounded queue whose head is always the least element, by natural ordering or by a `Comparator` you supply. It is a binary min-heap stored in an array: the children of index `i` are at `2i + 1` and `2i + 2`. `offer` appends and sifts the element up; `poll` moves the last element to the root and sifts it down. Both are O(log n), and `peek` is O(1).
 

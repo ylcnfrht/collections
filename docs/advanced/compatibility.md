@@ -147,6 +147,22 @@ console.log(squares.get(3), calls); // → 9 1
 console.log(Comparator.max(Comparator.naturalOrder<string>(), 'pear', 'apple')); // → pear
 ```
 
+## Not included
+
+These parts of the Java Collections Framework have no counterpart in this library, on purpose:
+
+| Not included | Why | Use instead |
+| --- | --- | --- |
+| Concurrent collections: `ConcurrentHashMap`, `ConcurrentSkipListMap`/`Set`, `CopyOnWriteArrayList`/`Set`, `ConcurrentLinkedQueue`/`Deque` | JS runs your code on one thread, and workers do not share these objects (they receive copies), so there is nothing to make thread-safe. | the regular classes |
+| Blocking queues: `BlockingQueue`, `ArrayBlockingQueue`, `LinkedBlockingQueue`, `DelayQueue`, `SynchronousQueue`, … | A single thread cannot block while waiting for another one to add an element. | `ArrayDeque` or `PriorityQueue`, with promises or events for waiting |
+| `WeakHashMap` | A native `WeakMap` cannot be iterated, and `WeakRef` gives no guarantee about when an entry disappears, so a weak map with `size`, iteration and views cannot behave predictably. | a native `WeakMap` when lookups are all you need |
+| `EnumSet`, `EnumMap` | JS has no enum type with a fixed, ordered set of constants. | `TreeSet`/`TreeMap` (ordered) or `HashSet`/`HashMap` over the enum's values |
+| `Hashtable`, `Dictionary`, `Properties` | Legacy types the JDK itself superseded with `HashMap`. | `HashMap` |
+| `BitSet` | Not a collection: it implements none of the collection interfaces. | a typed array such as `Uint32Array` |
+| Serialization (`Serializable`) | JS has no built-in binary object serialization. | `toArray()` for collections or `[...map]` for maps (an array of `[key, value]` pairs), then `JSON.stringify` |
+
+`Collections.synchronizedList` and the other `synchronized*` wrappers do exist, so code ported from the JDK keeps compiling; they add no locking. See [Wrappers](../collections/immutable-and-wrappers.md#wrappers).
+
 ## How compatibility is verified
 
 Every interface and class was audited member by member against the Java API documentation: names, argument handling, return values and thrown exceptions. The test suite then checks that behaviour in four layers: contract suites, a black-box conformance suite written from the documentation, model-based random tests, and differential testing against a real JDK. In the latest proof run, 1,692,438 operations were compared and no divergence was classified as a library bug. Every divergence is either an intentional difference listed on this page or a reference quirk.

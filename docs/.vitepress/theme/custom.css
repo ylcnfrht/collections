@@ -191,3 +191,25 @@
   font-size: 13px;
   letter-spacing: 0.02em;
 }
+
+/* Content kept for readers on GitHub; the site renders a generated equivalent (e.g. DocsIndex) */
+.vp-doc .github-only {
+  display: none;
+}
+
+/* Docs: a short rule above each section heading instead of a full-width border */
+.vp-doc h2 {
+  border-top: none;
+}
+.vp-doc h2::before {
+  content: '';
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin-bottom: 20px;
+  border-radius: 2px;
+  background: var(--vp-c-divider);
+}
+.VPHome .vp-doc h2::before {
+  display: none;
+}

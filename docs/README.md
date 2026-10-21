@@ -54,7 +54,11 @@ in [Performance](./advanced/performance.md).
 
 ## Contents
 
-### Guide
+<DocsIndex />
+
+<div class="github-only">
+
+**Guide**
 
 | Page | Contents |
 |---|---|
@@ -64,7 +68,7 @@ in [Performance](./advanced/performance.md).
 | [Choosing a collection](./guide/choosing-a-collection.md) | Decision flowchart and comparison tables with complexities |
 | [Coming from JS](./guide/coming-from-js.md) | `Array`/`Map`/`Set` equivalents, array methods vs streams, interop, pitfalls |
 
-### Collections
+**Collections**
 
 | Page | Contents |
 |---|---|
@@ -74,7 +78,7 @@ in [Performance](./advanced/performance.md).
 | [Maps](./collections/maps.md) | `Map`, `SequencedMap`, `SortedMap`, `NavigableMap`, `HashMap`, `LinkedHashMap` (LRU), `TreeMap`, `IdentityHashMap`, entries |
 | [Immutable collections and wrappers](./collections/immutable-and-wrappers.md) | `List.of`/`Set.of`/`Map.of`, `copyOf`, `ofLazy`, empty and singleton collections, unmodifiable, synchronized and checked wrappers |
 
-### Streams
+**Streams**
 
 | Page | Contents |
 |---|---|
@@ -86,14 +90,14 @@ in [Performance](./advanced/performance.md).
 | [Optional](./streams/optional.md) | `Optional`, `OptionalInt`, `OptionalLong`, `OptionalDouble` |
 | [Spliterators](./streams/spliterators.md) | `Spliterator`, `Spliterators`, `StreamSupport` |
 
-### Utilities
+**Utilities**
 
 | Page | Contents |
 |---|---|
 | [Collections](./utilities/collections.md) | The `Collections` utility class: sorting, searching, shuffling, wrappers, factories |
 | [Comparator and Objects](./utilities/comparator-and-objects.md) | Comparator helpers, natural ordering, `Objects.equals`, `Objects.hash`, `Objects.requireNonNull` |
 
-### Advanced
+**Advanced**
 
 | Page | Contents |
 |---|---|
@@ -102,6 +106,8 @@ in [Performance](./advanced/performance.md).
 | [Testing](./advanced/testing.md) | How the library is tested and verified against the JDK |
 | [Compatibility](./advanced/compatibility.md) | TypeScript adaptations, stream differences, how compatibility is verified |
 | [Compatibility report](./COMPATIBILITY.md) | Generated report of the run against the JDK |
+
+</div>
 
 ## The interface hierarchy
 

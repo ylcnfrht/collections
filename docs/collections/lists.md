@@ -2,6 +2,9 @@
 
 A `List<E>` is an ordered collection with positional access. This page covers the `List` interface, its four implementations (`ArrayList`, `LinkedList`, and the legacy `Vector` and `Stack`), and the operations, views and iterators they share.
 
+> [!NOTE]
+> Concurrent lists such as `CopyOnWriteArrayList` are not included. [Not included](../advanced/compatibility.md#not-included) explains why and what to use instead.
+
 ## The List interface
 
 Every element of a list has an index from `0` to `size() - 1`, and duplicates are allowed. Two lists are equal when they hold equal elements in the same order, whatever their class. Membership and searching use value equality (`equals()`/`hashCode()`), described in [core concepts](../guide/core-concepts.md#value-equality).
@@ -32,6 +35,8 @@ classDiagram
 For a queue or stack without the list API, use [`ArrayDeque`](./queues-and-deques.md#arraydeque). For fixed contents, use `List.of(...)` ([immutable collections](./immutable-and-wrappers.md)). The [data structures primer](../guide/data-structures.md) shows how each class lays out its data.
 
 ### ArrayList
+
+<ClassInfo name="ArrayList" />
 
 `ArrayList<E>` stores its elements in a dense native JS array. Indexed reads and writes are O(1), appending is amortized O(1), and memory overhead is low. Inserting or removing at index `i` shifts every later element, so front and middle operations are O(n).
 
@@ -92,6 +97,8 @@ console.log(isRandomAccess(new LinkedList<number>())); // → false
 
 ### LinkedList
 
+<ClassInfo name="LinkedList" />
+
 `LinkedList<E>` is a doubly linked list that implements both `List<E>` and `Deque<E>`, so one object serves as a list, a FIFO queue and a stack. Adding or removing at either end is O(1). Reaching index `i` walks from the nearer end, O(min(i, n − i)).
 
 ::: code-group
@@ -150,6 +157,8 @@ Unlike `ArrayDeque`, `LinkedList` accepts `null` elements. Queue usage is covere
 
 ### Vector
 
+<ClassInfo name="Vector" />
+
 `Vector<E>` is the legacy growable array. It extends `ArrayList` with the old element-style methods, a simulated capacity, and `ArrayIndexOutOfBoundsException` for bad indexes. JS is single-threaded, so `Vector` has no synchronization cost and no synchronization benefit. Its API is described in [Vector and Stack](#vector-and-stack).
 
 ::: code-group
@@ -196,6 +205,8 @@ console.log(list.toString());                        // → [red, green]
 :::
 
 ### Stack
+
+<ClassInfo name="Stack" />
 
 `Stack<E>` is a last-in-first-out stack built on `Vector`. The top of the stack is the end of the vector, so `push`, `pop` and `peek` are O(1). See [Vector and Stack](#vector-and-stack).
 

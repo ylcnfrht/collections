@@ -2,6 +2,9 @@
 
 A map associates keys with values, at most one value per key. This page covers the `Map` interface and its sequenced and sorted variants, the implementations `HashMap`, `LinkedHashMap`, `TreeMap` and `IdentityHashMap`, entries, views, and the compute and merge methods.
 
+> [!NOTE]
+> `WeakHashMap`, `EnumMap`, `Hashtable` and concurrent maps (`ConcurrentHashMap`, `ConcurrentSkipListMap`) are not included. [Not included](../advanced/compatibility.md#not-included) explains why and what to use instead.
+
 ## The Map interface
 
 The maps in this package look up keys with `equals()`/`hashCode()`, or with a comparator for `TreeMap`, instead of by reference. [Value equality](../guide/core-concepts.md#value-equality) explains how these methods work for primitives, plain objects and your own classes. Every map follows these rules:
@@ -49,6 +52,8 @@ The more specific interfaces add ordering:
 
 ### HashMap
 
+<ClassInfo name="HashMap" />
+
 `HashMap` is the default map. Like `HashSet`, it stores each key where its kind of equality is cheapest to evaluate:
 
 - **Dense integer-key table.** Keys such as `0, 1, 2, …` (ids, indexes, counters) are stored directly at that index of an array, without hashing. A key is accepted into the table only while the table stays at least about a quarter full. A distant integer such as `1_000_000` goes to the native map instead, so the array never becomes large and sparse.
@@ -92,6 +97,8 @@ console.log(clicks.getOrDefault(List.of(0, 0), 0)); // → 0
 :::
 
 ### LinkedHashMap
+
+<ClassInfo name="LinkedHashMap" />
 
 `LinkedHashMap` is a `HashMap` that also links its entries in a doubly linked list. This gives it a predictable iteration order and the [sequenced operations](#sequenced-operations). Two orders are available:
 
@@ -144,6 +151,8 @@ Access order is the basis of [LRU caches](#lru-caches).
 
 ### TreeMap
 
+<ClassInfo name="TreeMap" />
+
 `TreeMap` keeps its keys sorted in a red-black tree. `get`, `put`, `remove` and every navigation method are O(log n), and iteration is always in key order. Keys are ordered naturally (numbers, strings, bigints, booleans, `Date`s, objects with `compareTo`) or by a comparator passed to the constructor; see [ordering](../guide/core-concepts.md#ordering-natural-order-and-comparators). As with `TreeSet`, the comparator also decides which keys are equal. `null` keys are rejected under natural ordering.
 
 ::: code-group
@@ -193,6 +202,8 @@ console.log(tiers.subMap(2, true, 30, false).toString()); // → {2=9, 10=20}
 `TreeMap` adds [navigation](#navigation) and [range views](#range-views).
 
 ### IdentityHashMap
+
+<ClassInfo name="IdentityHashMap" />
 
 `IdentityHashMap` compares keys and values by reference (`===`, with `NaN` equal to itself) and ignores `equals()`/`hashCode()`. This is the native `Map` rule, behind this package's `Map` interface. Use it when the object itself matters, not its value:
 

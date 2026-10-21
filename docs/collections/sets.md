@@ -2,6 +2,9 @@
 
 A set is a collection without duplicates. This page covers the `Set` interface and its sorted and sequenced variants, the implementations `HashSet`, `LinkedHashSet` and `TreeSet`, and their operations, views and costs.
 
+> [!NOTE]
+> `EnumSet` and concurrent sets (`ConcurrentSkipListSet`, `CopyOnWriteArraySet`) are not included. [Not included](../advanced/compatibility.md#not-included) explains why and what to use instead.
+
 ## The Set interface
 
 Unlike the native JS `Set`, which compares elements with SameValueZero, the sets in this package decide whether an element is a duplicate with `equals()`/`hashCode()`, or with a comparator for `TreeSet`. Two distinct `Point(1, 2)` objects therefore count as one element. [Value equality](../guide/core-concepts.md#value-equality) explains how `equals()` and `hashCode()` work for primitives, plain objects and your own classes.
@@ -82,6 +85,8 @@ The [data structures primer](../guide/data-structures.md#hashmap-and-hashset) sh
 
 ### HashSet
 
+<ClassInfo name="HashSet" />
+
 `HashSet` is the default choice. `null` and `undefined` are allowed as elements. To keep primitive-heavy sets at native speed, it routes each element to one of three internal stores, by the kind of equality the element needs:
 
 - **Dense flag array.** Non-negative integers go into an array indexed by the value, as long as the array stays reasonably full. An integer that would make it sparse goes to the native `Set` instead.
@@ -128,6 +133,8 @@ console.log(lists.contains(List.of(1, 2))); // → true
 
 ### LinkedHashSet
 
+<ClassInfo name="LinkedHashSet" />
+
 `LinkedHashSet` is a `HashSet` (it passes `instanceof HashSet`) that remembers insertion order. It is a `SequencedSet`, so it adds the [sequenced operations](#sequenced-operations) and a reversed view.
 
 ::: code-group
@@ -169,6 +176,8 @@ console.log(recent.reversed().toString()); // → [queues, maps, lists]
 :::
 
 ### TreeSet
+
+<ClassInfo name="TreeSet" />
 
 `TreeSet` keeps its elements sorted in a red-black tree, a self-balancing binary search tree. `add`, `remove` and `contains` are O(log n), even for already-sorted input, and iteration is always in order. It implements `NavigableSet`, which adds [navigation](#navigation) and [range views](#range-views).
 
