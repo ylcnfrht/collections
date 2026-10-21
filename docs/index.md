@@ -51,8 +51,6 @@ features:
 
 <HomeStats />
 
-<HomeBench />
-
 ## Installation
 
 ::: code-group
