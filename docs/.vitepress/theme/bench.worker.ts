@@ -21,6 +21,7 @@ const packages: Record<Parameters<Load>[0], () => Promise<any>> = {
   'mnemonist/lru-map': async () => ({ default: (await import('mnemonist')).LRUMap }),
   'mnemonist/heap': async () => ({ default: (await import('mnemonist')).Heap }),
   'mnemonist/circular-buffer': async () => ({ default: (await import('mnemonist')).CircularBuffer }),
+  'mnemonist/stack': async () => ({ default: (await import('mnemonist')).Stack }),
   '@datastructures-js/priority-queue': () => import('@datastructures-js/priority-queue'),
   'collections/fast-map': withNodeGlobal(() => import('collections/fast-map')),
   'collections/fast-set': withNodeGlobal(() => import('collections/fast-set')),
@@ -28,6 +29,8 @@ const packages: Record<Parameters<Load>[0], () => Promise<any>> = {
   'collections/sorted-set': withNodeGlobal(() => import('collections/sorted-set')),
   'collections/heap': withNodeGlobal(() => import('collections/heap')),
   'collections/deque': withNodeGlobal(() => import('collections/deque')),
+  'collections/list': withNodeGlobal(() => import('collections/list')),
+  'collections/sorted-map': withNodeGlobal(() => import('collections/sorted-map')),
 };
 
 // adapters expect what require() returns: a CommonJS class itself, or an object of named exports

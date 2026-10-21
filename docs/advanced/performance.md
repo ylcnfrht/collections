@@ -206,104 +206,195 @@ The numbers in this section come from `npm run bench:isolated`, which is built s
 - **Same answer.** Before timing, every implementation must return the same checksum on that data, for example the same number of LRU cache hits. The run stops if any implementation disagrees.
 - **Order and repeats.** Containers run one at a time, in shuffled order, 3 times each. The tables show the median.
 
-Docker on macOS runs a Linux virtual machine, so the absolute ops/s differ from the in-process tables further down; compare the ratios. Ratios are relative to the baseline named in each heading. Run on 2026-10-19, Apple M1 Pro.
+Docker on macOS runs a Linux virtual machine, so the absolute ops/s differ from the in-process tables further down; compare the ratios. Ratios are relative to the baseline named in each heading. Run on 2026-10-21, Apple M1 Pro.
 
 
 ### Run it in your browser
 
-Every workload of the isolated comparison runs on your device when you press a button: the same data, the same test and the same implementations, each in its own Web Worker. Next to each of your ratios is the one the isolated run measured. Run all takes about a minute.
+Every workload of the isolated comparison runs on your device when you press a button: the same data, the same test and the same implementations, each in its own Web Worker. Next to each of your ratios is the one the isolated run measured. Run all takes about two minutes.
 
 <TryBenchmark />
 
-### HashMap.get, 100k integer keys
+### ArrayList add + get, 100k appends, 100k indexed reads
 
-| Implementation | get calls/s | runs/s | ±% | vs native Map |
+| Implementation | add/get calls/s | runs/s | ±% | vs native Array |
 | --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections HashMap** | 175,652,226 | 1,757 | 0.3 | 3.77× |
-| js-sdsl HashMap | 138,864,134 | 1,389 | 0.5 | 2.98× |
-| native Map | 46,639,001 | 466 | 1.6 | 1.00× |
-| collections.js FastMap | 10,418,386 | 104 | 1.6 | 0.22× |
+| native Array | 121,058,001 | 605 | 8.9 | 1.00× |
+| **@nodestd/collections ArrayList** | 107,011,347 | 535 | 8.5 | 0.88× |
+| js-sdsl Vector | 90,588,372 | 453 | 8.1 | 0.75× |
 
-One run performs 100,000 get calls.
+One run performs 200,000 add/get calls.
 
-### HashSet add + has, 100k integers
+### ArrayList sort, 100k random numbers, comparator
 
-| Implementation | add/has calls/s | runs/s | ±% | vs native Set |
+| Implementation | elements/s | runs/s | ±% | vs native Array |
 | --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections HashSet** | 89,038,316 | 445 | 4.9 | 4.47× |
-| js-sdsl HashSet | 20,214,084 | 101 | 11.8 | 1.01× |
-| native Set | 19,922,256 | 100 | 11.6 | 1.00× |
-| collections.js FastSet | 7,140,697 | 36 | 7.7 | 0.36× |
-
-One run performs 200,000 add/has calls.
-
-### LRU cache, capacity 1k, 100k get-or-put
-
-| Implementation | get-or-put calls/s | runs/s | ±% | vs native Map delete + set |
-| --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections LinkedHashMap.lru** | 27,661,397 | 277 | 1.3 | 4.81× |
-| mnemonist LRUMap | 17,834,930 | 178 | 0.9 | 3.10× |
-| native Map delete + set | 5,747,850 | 57 | 1.2 | 1.00× |
-| collections.js LruMap | 582,247 | 6 | 6.8 | 0.10× |
-
-One run performs 100,000 get-or-put calls.
-
-### Stream filter → map → sum, 100k numbers
-
-| Implementation | elements/s | runs/s | ±% | vs native Array filter/map/reduce |
-| --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections Stream** | 684,049,458 | 6,840 | 0.7 | 14.45× |
-| **@nodestd/collections IntStream** | 668,942,095 | 6,689 | 0.3 | 14.13× |
-| native Array filter/map/reduce | 47,349,537 | 473 | 6.1 | 1.00× |
-| native Iterator helpers | 36,982,278 | 370 | 0.8 | 0.78× |
+| js-sdsl Vector | 4,761,193 | 48 | 2.1 | 1.11× |
+| **@nodestd/collections ArrayList** | 4,591,039 | 46 | 3.0 | 1.07× |
+| native Array | 4,308,037 | 43 | 5.7 | 1.00× |
 
 One run performs 100,000 elements.
-
-### TreeMap floor + ceiling, 100k keys, 100k queries
-
-| Implementation | floor/ceiling calls/s | runs/s | ±% | vs js-sdsl OrderedMap |
-| --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections TreeMap** | 5,797,479 | 29 | 7.4 | 2.97× |
-| js-sdsl OrderedMap | 1,952,011 | 10 | 8.4 | 1.00× |
-| collections.js SortedSet | 876,026 | 4 | 3.3 | 0.45× |
-
-One run performs 200,000 floor/ceiling calls.
-
-### PriorityQueue churn, size 1k, 100k offer + poll
-
-| Implementation | offer/poll calls/s | runs/s | ±% | vs sorted array |
-| --- | ---: | ---: | ---: | ---: |
-| js-sdsl PriorityQueue | 61,714,270 | 309 | 1.4 | 1.13× |
-| **@nodestd/collections PriorityQueue** | 56,151,943 | 281 | 2.3 | 1.02× |
-| mnemonist Heap | 55,550,609 | 278 | 1.3 | 1.01× |
-| sorted array | 54,804,272 | 274 | 2.1 | 1.00× |
-| collections.js Heap | 20,296,323 | 101 | 0.6 | 0.37× |
-| @datastructures-js/priority-queue | 12,886,854 | 64 | 2.1 | 0.24× |
-
-One run performs 200,000 offer/poll calls.
 
 ### ArrayDeque as a queue, size 1k, 100k offer + poll
 
 | Implementation | offer/poll calls/s | runs/s | ±% | vs native Array push + shift |
 | --- | ---: | ---: | ---: | ---: |
-| mnemonist CircularBuffer (fixed capacity) | 472,579,302 | 2,363 | 1.6 | 10.85× |
-| **@nodestd/collections ArrayDeque** | 347,825,700 | 1,739 | 1.1 | 7.99× |
-| js-sdsl Deque | 300,463,528 | 1,502 | 0.8 | 6.90× |
-| collections.js Deque | 205,859,826 | 1,029 | 0.8 | 4.73× |
-| native Array push + shift | 43,546,849 | 218 | 1.7 | 1.00× |
+| mnemonist CircularBuffer (fixed capacity) | 473,410,176 | 2,367 | 0.6 | 10.68× |
+| **@nodestd/collections ArrayDeque** | 356,157,173 | 1,781 | 1.1 | 8.03× |
+| js-sdsl Deque | 296,660,231 | 1,483 | 1.6 | 6.69× |
+| collections.js Deque | 215,586,726 | 1,078 | 0.4 | 4.86× |
+| native Array push + shift | 44,333,778 | 222 | 0.7 | 1.00× |
 
 One run performs 200,000 offer/poll calls.
+
+### LinkedList as a queue, size 1k, 100k offer + poll
+
+| Implementation | offer/poll calls/s | runs/s | ±% | vs native Array push + shift |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections LinkedList** | 378,341,657 | 1,892 | 2.3 | 9.22× |
+| js-sdsl LinkList | 313,269,686 | 1,566 | 3.1 | 7.64× |
+| collections.js List | 164,580,519 | 823 | 1.2 | 4.01× |
+| native Array push + shift | 41,025,264 | 205 | 2.8 | 1.00× |
+
+One run performs 200,000 offer/poll calls.
+
+### Stack push + pop, 100k pushes, then 100k pops
+
+| Implementation | push/pop calls/s | runs/s | ±% | vs native Array push + pop |
+| --- | ---: | ---: | ---: | ---: |
+| js-sdsl Stack | 116,055,614 | 580 | 7.8 | 1.09× |
+| mnemonist Stack | 115,547,844 | 578 | 7.6 | 1.09× |
+| **@nodestd/collections ArrayDeque** | 115,404,484 | 577 | 7.1 | 1.09× |
+| native Array push + pop | 106,074,953 | 530 | 14.2 | 1.00× |
+| **@nodestd/collections Stack** | 74,907,345 | 375 | 8.9 | 0.71× |
+
+One run performs 200,000 push/pop calls.
+
+### PriorityQueue churn, size 1k, 100k offer + poll
+
+| Implementation | offer/poll calls/s | runs/s | ±% | vs sorted array |
+| --- | ---: | ---: | ---: | ---: |
+| js-sdsl PriorityQueue | 59,880,686 | 299 | 1.5 | 1.07× |
+| **@nodestd/collections PriorityQueue** | 58,911,542 | 295 | 1.6 | 1.05× |
+| mnemonist Heap | 57,245,759 | 286 | 0.4 | 1.02× |
+| sorted array | 56,175,659 | 281 | 0.8 | 1.00× |
+| collections.js Heap | 20,376,169 | 102 | 0.6 | 0.36× |
+| @datastructures-js/priority-queue | 12,798,137 | 64 | 0.8 | 0.23× |
+
+One run performs 200,000 offer/poll calls.
+
+### HashSet add + has, 100k integers
+
+| Implementation | add/has calls/s | runs/s | ±% | vs native Set |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections HashSet** | 87,477,463 | 437 | 7.2 | 4.25× |
+| native Set | 20,561,628 | 103 | 12.2 | 1.00× |
+| js-sdsl HashSet | 19,752,692 | 99 | 13.7 | 0.96× |
+| collections.js FastSet | 7,035,142 | 35 | 8.9 | 0.34× |
+
+One run performs 200,000 add/has calls.
+
+### LinkedHashSet add + has, 100k integers, insertion order
+
+| Implementation | add/has calls/s | runs/s | ±% | vs native Set |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections LinkedHashSet** | 70,101,442 | 351 | 16.5 | 3.20× |
+| native Set | 21,924,666 | 110 | 11.6 | 1.00× |
+
+One run performs 200,000 add/has calls.
+
+### TreeSet add + contains, 100k random keys, 100k queries
+
+| Implementation | add/contains calls/s | runs/s | ±% | vs js-sdsl OrderedSet |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections TreeSet** | 3,584,814 | 18 | 8.8 | 1.14× |
+| js-sdsl OrderedSet | 3,151,988 | 16 | 7.3 | 1.00× |
+| collections.js SortedSet | 515,718 | 3 | 4.2 | 0.16× |
+
+One run performs 200,000 add/contains calls.
+
+### HashMap.get, 100k integer keys
+
+| Implementation | get calls/s | runs/s | ±% | vs native Map |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections HashMap** | 166,859,852 | 1,669 | 0.7 | 3.89× |
+| js-sdsl HashMap | 139,185,365 | 1,392 | 0.5 | 3.24× |
+| native Map | 42,944,204 | 429 | 2.0 | 1.00× |
+| collections.js FastMap | 10,195,256 | 102 | 2.3 | 0.24× |
+
+One run performs 100,000 get calls.
 
 ### HashMap.put, 100k string keys
 
 | Implementation | put calls/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
-| native Map | 10,292,903 | 103 | 12.0 | 1.00× |
-| **@nodestd/collections HashMap** | 7,408,606 | 74 | 17.2 | 0.72× |
-| js-sdsl HashMap | 4,856,849 | 49 | 12.8 | 0.47× |
-| collections.js FastMap | 1,648,801 | 16 | 12.3 | 0.16× |
+| native Map | 8,872,443 | 89 | 10.5 | 1.00× |
+| js-sdsl HashMap | 5,587,511 | 56 | 16.8 | 0.63× |
+| **@nodestd/collections HashMap** | 5,444,352 | 54 | 14.9 | 0.61× |
+| collections.js FastMap | 1,475,886 | 15 | 10.7 | 0.17× |
 
 One run performs 100,000 put calls.
+
+### HashMap with value keys, 10k points with equals()/hashCode()
+
+| Implementation | put/get calls/s | runs/s | ±% | vs native Map with string keys |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections HashMap** | 9,825,309 | 491 | 2.0 | 1.20× |
+| native Map with string keys | 8,160,290 | 408 | 2.6 | 1.00× |
+| collections.js FastMap | 2,252,066 | 113 | 7.7 | 0.28× |
+
+One run performs 20,000 put/get calls.
+
+### LinkedHashMap put + iterate, 100k entries, insertion order
+
+| Implementation | puts and visited entries/s | runs/s | ±% | vs native Map |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections LinkedHashMap** | 57,113,959 | 286 | 14.5 | 3.14× |
+| native Map | 18,177,805 | 91 | 12.4 | 1.00× |
+
+One run performs 200,000 puts and visited entries.
+
+### LRU cache, capacity 1k, 100k get-or-put
+
+| Implementation | get-or-put calls/s | runs/s | ±% | vs native Map delete + set |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections LinkedHashMap.lru** | 24,670,915 | 247 | 4.4 | 4.29× |
+| mnemonist LRUMap | 17,030,996 | 170 | 1.6 | 2.96× |
+| native Map delete + set | 5,747,286 | 57 | 1.3 | 1.00× |
+| collections.js LruMap | 651,135 | 7 | 4.8 | 0.11× |
+
+One run performs 100,000 get-or-put calls.
+
+### TreeMap put, 100k random integer keys
+
+| Implementation | put calls/s | runs/s | ±% | vs js-sdsl OrderedMap |
+| --- | ---: | ---: | ---: | ---: |
+| js-sdsl OrderedMap | 4,490,276 | 45 | 7.1 | 1.00× |
+| **@nodestd/collections TreeMap** | 4,201,360 | 42 | 5.4 | 0.94× |
+| collections.js SortedMap | 255,774 | 3 | 6.0 | 0.06× |
+
+One run performs 100,000 put calls.
+
+### TreeMap floor + ceiling, 100k keys, 100k queries
+
+| Implementation | floor/ceiling calls/s | runs/s | ±% | vs js-sdsl OrderedMap |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections TreeMap** | 5,409,975 | 27 | 6.1 | 2.62× |
+| js-sdsl OrderedMap | 2,065,374 | 10 | 7.3 | 1.00× |
+| collections.js SortedSet | 788,266 | 4 | 5.8 | 0.38× |
+
+One run performs 200,000 floor/ceiling calls.
+
+### Stream filter → map → sum, 100k numbers
+
+| Implementation | elements/s | runs/s | ±% | vs native Array filter/map/reduce |
+| --- | ---: | ---: | ---: | ---: |
+| **@nodestd/collections Stream** | 685,926,258 | 6,859 | 0.3 | 15.29× |
+| **@nodestd/collections IntStream** | 677,719,459 | 6,777 | 0.4 | 15.10× |
+| native Array filter/map/reduce | 44,870,170 | 449 | 5.4 | 1.00× |
+| native Iterator helpers | 36,207,973 | 362 | 1.2 | 0.81× |
+
+One run performs 100,000 elements.
 
 ## Benchmark results
 

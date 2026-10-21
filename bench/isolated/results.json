@@ -1,380 +1,104 @@
 {
   "meta": {
-    "date": "2026-10-19T21:50:58.485Z",
+    "date": "2026-10-21T23:40:30.276Z",
     "node": "v24.12.0",
     "reps": 3,
     "docker": "--cpuset-cpus 1 --cpus 1 --memory 2g --network none"
   },
   "report": [
     {
-      "id": "hashmap-get-int",
-      "title": "HashMap.get",
-      "detail": "100k integer keys",
-      "baseline": "native Map",
-      "unit": {
-        "perRun": 100000,
-        "label": "get calls"
-      },
-      "rows": [
-        {
-          "impl": "@nodestd/collections HashMap",
-          "opsPerSec": 1756.522264069613,
-          "rme": 0.27462854427896116,
-          "runs": [
-            1769,
-            1717,
-            1757
-          ],
-          "check": 4999950000,
-          "vsBaseline": 3.7662090431992197
-        },
-        {
-          "impl": "js-sdsl HashMap",
-          "opsPerSec": 1388.6413449663132,
-          "rme": 0.5337868215298052,
-          "runs": [
-            1389,
-            1393,
-            1358
-          ],
-          "check": 4999950000,
-          "vsBaseline": 2.9774251645723453
-        },
-        {
-          "impl": "native Map",
-          "opsPerSec": 466.3900075439065,
-          "rme": 1.6347296136937286,
-          "runs": [
-            466,
-            467,
-            460
-          ],
-          "check": 4999950000,
-          "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js FastMap",
-          "opsPerSec": 104.18386439122085,
-          "rme": 1.6168130210949805,
-          "runs": [
-            106,
-            97,
-            104
-          ],
-          "check": 4999950000,
-          "vsBaseline": 0.22338356891450523
-        }
-      ]
-    },
-    {
-      "id": "hashset-add-has-int",
-      "title": "HashSet add + has",
-      "detail": "100k integers",
-      "baseline": "native Set",
+      "id": "arraylist-add-get",
+      "title": "ArrayList add + get",
+      "detail": "100k appends, 100k indexed reads",
+      "baseline": "native Array",
       "unit": {
         "perRun": 200000,
-        "label": "add/has calls"
+        "label": "add/get calls"
       },
       "rows": [
         {
-          "impl": "@nodestd/collections HashSet",
-          "opsPerSec": 445.19158228187496,
-          "rme": 4.91464681670108,
+          "impl": "native Array",
+          "opsPerSec": 605.2900033095649,
+          "rme": 8.929188169490098,
           "runs": [
-            428,
-            464,
-            445
+            605,
+            591,
+            646
           ],
-          "check": 100000,
-          "vsBaseline": 4.469288873313274
-        },
-        {
-          "impl": "js-sdsl HashSet",
-          "opsPerSec": 101.07042174634866,
-          "rme": 11.807755566952142,
-          "runs": [
-            101,
-            106,
-            74
-          ],
-          "check": 100000,
-          "vsBaseline": 1.0146483655794554
-        },
-        {
-          "impl": "native Set",
-          "opsPerSec": 99.61127931116152,
-          "rme": 11.566330394085627,
-          "runs": [
-            100,
-            71,
-            110
-          ],
-          "check": 100000,
+          "check": 4999950000,
           "vsBaseline": 1
         },
         {
-          "impl": "collections.js FastSet",
-          "opsPerSec": 35.703486935068,
-          "rme": 7.728009761445325,
+          "impl": "@nodestd/collections ArrayList",
+          "opsPerSec": 535.0567347063911,
+          "rme": 8.46019779577176,
           "runs": [
-            33,
-            36,
-            36
+            535,
+            351,
+            547
           ],
-          "check": 100000,
-          "vsBaseline": 0.3584281537388848
+          "check": 4999950000,
+          "vsBaseline": 0.8839675722064516
+        },
+        {
+          "impl": "js-sdsl Vector",
+          "opsPerSec": 452.9418620028922,
+          "rme": 8.086913082109735,
+          "runs": [
+            453,
+            514,
+            430
+          ],
+          "check": 4999950000,
+          "vsBaseline": 0.7483055387109095
         }
       ]
     },
     {
-      "id": "lru-cache",
-      "title": "LRU cache",
-      "detail": "capacity 1k, 100k get-or-put",
-      "baseline": "native Map delete + set",
-      "unit": {
-        "perRun": 100000,
-        "label": "get-or-put calls"
-      },
-      "rows": [
-        {
-          "impl": "@nodestd/collections LinkedHashMap.lru",
-          "opsPerSec": 276.613969344771,
-          "rme": 1.3134595146490293,
-          "runs": [
-            277,
-            279,
-            264
-          ],
-          "check": 60066,
-          "vsBaseline": 4.8124771784140785
-        },
-        {
-          "impl": "mnemonist LRUMap",
-          "opsPerSec": 178.34930254767895,
-          "rme": 0.9153599889561288,
-          "runs": [
-            180,
-            175,
-            178
-          ],
-          "check": 60066,
-          "vsBaseline": 3.1028872125651294
-        },
-        {
-          "impl": "native Map delete + set",
-          "opsPerSec": 57.47849996785386,
-          "rme": 1.2416602497422256,
-          "runs": [
-            57,
-            54,
-            58
-          ],
-          "check": 60066,
-          "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js LruMap",
-          "opsPerSec": 5.822474121154248,
-          "rme": 6.78559140449391,
-          "runs": [
-            5,
-            6,
-            6
-          ],
-          "check": 60066,
-          "vsBaseline": 0.10129829630923906
-        }
-      ]
-    },
-    {
-      "id": "stream-filter-map-sum",
-      "title": "Stream filter → map → sum",
-      "detail": "100k numbers",
-      "baseline": "native Array filter/map/reduce",
+      "id": "arraylist-sort",
+      "title": "ArrayList sort",
+      "detail": "100k random numbers, comparator",
+      "baseline": "native Array",
       "unit": {
         "perRun": 100000,
         "label": "elements"
       },
       "rows": [
         {
-          "impl": "@nodestd/collections Stream",
-          "opsPerSec": 6840.49458060395,
-          "rme": 0.7004746482384255,
+          "impl": "js-sdsl Vector",
+          "opsPerSec": 47.61193465750168,
+          "rme": 2.129097171317214,
           "runs": [
-            6891,
-            6634,
-            6840
+            48,
+            43,
+            48
           ],
-          "check": 74831160,
-          "vsBaseline": 14.446803562139994
+          "check": 3223867160,
+          "vsBaseline": 1.1051885561788248
         },
         {
-          "impl": "@nodestd/collections IntStream",
-          "opsPerSec": 6689.4209484342955,
-          "rme": 0.33128550464967005,
+          "impl": "@nodestd/collections ArrayList",
+          "opsPerSec": 45.91038968342809,
+          "rme": 2.956549179870523,
           "runs": [
-            6736,
-            6689,
-            6648
+            47,
+            46,
+            43
           ],
-          "check": 74831160,
-          "vsBaseline": 14.127743140169555
+          "check": 3223867160,
+          "vsBaseline": 1.0656915677305006
         },
         {
-          "impl": "native Array filter/map/reduce",
-          "opsPerSec": 473.4953687977379,
-          "rme": 6.080249680241469,
+          "impl": "native Array",
+          "opsPerSec": 43.080372477000054,
+          "rme": 5.748301440279493,
           "runs": [
-            473,
-            446,
-            488
+            43,
+            30,
+            46
           ],
-          "check": 74831160,
+          "check": 3223867160,
           "vsBaseline": 1
-        },
-        {
-          "impl": "native Iterator helpers",
-          "opsPerSec": 369.82278080808044,
-          "rme": 0.8333902628277342,
-          "runs": [
-            379,
-            351,
-            370
-          ],
-          "check": 74831160,
-          "vsBaseline": 0.7810483590306391
-        }
-      ]
-    },
-    {
-      "id": "treemap-floor-ceiling",
-      "title": "TreeMap floor + ceiling",
-      "detail": "100k keys, 100k queries",
-      "baseline": "js-sdsl OrderedMap",
-      "unit": {
-        "perRun": 200000,
-        "label": "floor/ceiling calls"
-      },
-      "rows": [
-        {
-          "impl": "@nodestd/collections TreeMap",
-          "opsPerSec": 28.987394082680797,
-          "rme": 7.447185737920593,
-          "runs": [
-            29,
-            29,
-            23
-          ],
-          "check": 100062446441,
-          "vsBaseline": 2.970003056111236
-        },
-        {
-          "impl": "js-sdsl OrderedMap",
-          "opsPerSec": 9.760055304668727,
-          "rme": 8.44061712254718,
-          "runs": [
-            7,
-            12,
-            10
-          ],
-          "check": 100062446441,
-          "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js SortedSet",
-          "opsPerSec": 4.380131805174478,
-          "rme": 3.250350797612899,
-          "runs": [
-            4,
-            4,
-            4
-          ],
-          "check": 100062446441,
-          "vsBaseline": 0.4487814534287772
-        }
-      ]
-    },
-    {
-      "id": "priorityqueue-churn",
-      "title": "PriorityQueue churn",
-      "detail": "size 1k, 100k offer + poll",
-      "baseline": "sorted array",
-      "unit": {
-        "perRun": 200000,
-        "label": "offer/poll calls"
-      },
-      "rows": [
-        {
-          "impl": "js-sdsl PriorityQueue",
-          "opsPerSec": 308.5713509868463,
-          "rme": 1.3978439541692442,
-          "runs": [
-            291,
-            309,
-            319
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 1.1260850207825137
-        },
-        {
-          "impl": "@nodestd/collections PriorityQueue",
-          "opsPerSec": 280.75971644527124,
-          "rme": 2.2603791194452305,
-          "runs": [
-            281,
-            286,
-            269
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 1.0245906177519477
-        },
-        {
-          "impl": "mnemonist Heap",
-          "opsPerSec": 277.75304375803523,
-          "rme": 1.3048562694672126,
-          "runs": [
-            266,
-            287,
-            278
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 1.0136182152114517
-        },
-        {
-          "impl": "sorted array",
-          "opsPerSec": 274.02136187942614,
-          "rme": 2.1212452417597136,
-          "runs": [
-            275,
-            272,
-            274
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js Heap",
-          "opsPerSec": 101.48161740728384,
-          "rme": 0.5540307302380056,
-          "runs": [
-            95,
-            102,
-            101
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 0.370341993453552
-        },
-        {
-          "impl": "@datastructures-js/priority-queue",
-          "opsPerSec": 64.43427067147776,
-          "rme": 2.113097271849196,
-          "runs": [
-            65,
-            60,
-            64
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 0.23514323930639353
         }
       ]
     },
@@ -390,63 +114,483 @@
       "rows": [
         {
           "impl": "mnemonist CircularBuffer (fixed capacity)",
-          "opsPerSec": 2362.8965102221655,
-          "rme": 1.575277614799905,
+          "opsPerSec": 2367.0508779794595,
+          "rme": 0.5650230210865627,
           "runs": [
-            2363,
-            2341,
-            2399
+            2439,
+            2346,
+            2367
           ],
           "check": 4999950000,
-          "vsBaseline": 10.85220423931315
+          "vsBaseline": 10.678317998594814
         },
         {
           "impl": "@nodestd/collections ArrayDeque",
-          "opsPerSec": 1739.1284975823423,
-          "rme": 1.0982352727094296,
+          "opsPerSec": 1780.7858657654117,
+          "rme": 1.0896638781824775,
           "runs": [
-            1739,
-            1775,
-            1567
+            1728,
+            1815,
+            1781
           ],
           "check": 4999950000,
-          "vsBaseline": 7.987390718351386
+          "vsBaseline": 8.033539937374787
         },
         {
           "impl": "js-sdsl Deque",
-          "opsPerSec": 1502.317639847763,
-          "rme": 0.7808355941720615,
+          "opsPerSec": 1483.3011567763485,
+          "rme": 1.5795469457739446,
           "runs": [
-            1502,
-            1537,
-            1439
+            1378,
+            1483,
+            1517
           ],
           "check": 4999950000,
-          "vsBaseline": 6.899776519801084
+          "vsBaseline": 6.691517105564655
         },
         {
           "impl": "collections.js Deque",
-          "opsPerSec": 1029.299132334235,
-          "rme": 0.7906644285354298,
+          "opsPerSec": 1077.9336303411583,
+          "rme": 0.4401540152796847,
           "runs": [
-            1025,
-            1084,
-            1029
+            1078,
+            1068,
+            1112
           ],
           "check": 4999950000,
-          "vsBaseline": 4.7273185089213605
+          "vsBaseline": 4.862809749145799
         },
         {
           "impl": "native Array push + shift",
-          "opsPerSec": 217.7342462522357,
-          "rme": 1.6652994383598747,
+          "opsPerSec": 221.66888814239712,
+          "rme": 0.7396569922902342,
           "runs": [
-            218,
-            221,
+            216,
+            222,
+            227
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1
+        }
+      ]
+    },
+    {
+      "id": "linkedlist-queue",
+      "title": "LinkedList as a queue",
+      "detail": "size 1k, 100k offer + poll",
+      "baseline": "native Array push + shift",
+      "unit": {
+        "perRun": 200000,
+        "label": "offer/poll calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections LinkedList",
+          "opsPerSec": 1891.708286097047,
+          "rme": 2.344364324012467,
+          "runs": [
+            1964,
+            1712,
+            1892
+          ],
+          "check": 4999950000,
+          "vsBaseline": 9.222162549165759
+        },
+        {
+          "impl": "js-sdsl LinkList",
+          "opsPerSec": 1566.3484303687044,
+          "rme": 3.145152169915719,
+          "runs": [
+            1566,
+            1611,
+            1413
+          ],
+          "check": 4999950000,
+          "vsBaseline": 7.63601869255109
+        },
+        {
+          "impl": "collections.js List",
+          "opsPerSec": 822.9025930598693,
+          "rme": 1.2479719719260995,
+          "runs": [
+            823,
+            769,
+            834
+          ],
+          "check": 4999950000,
+          "vsBaseline": 4.011686966274036
+        },
+        {
+          "impl": "native Array push + shift",
+          "opsPerSec": 205.1263221627092,
+          "rme": 2.815759719129723,
+          "runs": [
+            199,
+            213,
             205
           ],
           "check": 4999950000,
           "vsBaseline": 1
+        }
+      ]
+    },
+    {
+      "id": "stack-push-pop",
+      "title": "Stack push + pop",
+      "detail": "100k pushes, then 100k pops",
+      "baseline": "native Array push + pop",
+      "unit": {
+        "perRun": 200000,
+        "label": "push/pop calls"
+      },
+      "rows": [
+        {
+          "impl": "js-sdsl Stack",
+          "opsPerSec": 580.2780679005085,
+          "rme": 7.849632238191566,
+          "runs": [
+            559,
+            616,
+            580
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1.0940906397577275
+        },
+        {
+          "impl": "mnemonist Stack",
+          "opsPerSec": 577.7392179825296,
+          "rme": 7.647141241301164,
+          "runs": [
+            615,
+            578,
+            567
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1.089303741743366
+        },
+        {
+          "impl": "@nodestd/collections ArrayDeque",
+          "opsPerSec": 577.0224196875164,
+          "rme": 7.081285618274548,
+          "runs": [
+            582,
+            577,
+            556
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1.0879522477811598
+        },
+        {
+          "impl": "native Array push + pop",
+          "opsPerSec": 530.3747667825801,
+          "rme": 14.151258993014906,
+          "runs": [
+            530,
+            664,
+            272
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "@nodestd/collections Stack",
+          "opsPerSec": 374.5367250699141,
+          "rme": 8.86883600282543,
+          "runs": [
+            264,
+            375,
+            500
+          ],
+          "check": 4999950000,
+          "vsBaseline": 0.7061737256882931
+        }
+      ]
+    },
+    {
+      "id": "priorityqueue-churn",
+      "title": "PriorityQueue churn",
+      "detail": "size 1k, 100k offer + poll",
+      "baseline": "sorted array",
+      "unit": {
+        "perRun": 200000,
+        "label": "offer/poll calls"
+      },
+      "rows": [
+        {
+          "impl": "js-sdsl PriorityQueue",
+          "opsPerSec": 299.4034311311286,
+          "rme": 1.500733226905111,
+          "runs": [
+            323,
+            299,
+            294
+          ],
+          "check": 106266651484159,
+          "vsBaseline": 1.0659543206126967
+        },
+        {
+          "impl": "@nodestd/collections PriorityQueue",
+          "opsPerSec": 294.5577103485848,
+          "rme": 1.551931316505681,
+          "runs": [
+            295,
+            294,
+            301
+          ],
+          "check": 106266651484159,
+          "vsBaseline": 1.0487022905169792
+        },
+        {
+          "impl": "mnemonist Heap",
+          "opsPerSec": 286.22879689533056,
+          "rme": 0.4074459318483418,
+          "runs": [
+            286,
+            287,
+            194
+          ],
+          "check": 106266651484159,
+          "vsBaseline": 1.019049185848258
+        },
+        {
+          "impl": "sorted array",
+          "opsPerSec": 280.8782940708336,
+          "rme": 0.8167479958052867,
+          "runs": [
+            281,
+            281,
+            260
+          ],
+          "check": 106266651484159,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "collections.js Heap",
+          "opsPerSec": 101.88084467839646,
+          "rme": 0.5648093591837102,
+          "runs": [
+            102,
+            102,
+            99
+          ],
+          "check": 106266651484159,
+          "vsBaseline": 0.36272238485150987
+        },
+        {
+          "impl": "@datastructures-js/priority-queue",
+          "opsPerSec": 63.990682762350936,
+          "rme": 0.8370343458156336,
+          "runs": [
+            59,
+            64,
+            64
+          ],
+          "check": 106266651484159,
+          "vsBaseline": 0.22782352397160807
+        }
+      ]
+    },
+    {
+      "id": "hashset-add-has-int",
+      "title": "HashSet add + has",
+      "detail": "100k integers",
+      "baseline": "native Set",
+      "unit": {
+        "perRun": 200000,
+        "label": "add/has calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections HashSet",
+          "opsPerSec": 437.38731740970314,
+          "rme": 7.229515459624768,
+          "runs": [
+            447,
+            437,
+            416
+          ],
+          "check": 100000,
+          "vsBaseline": 4.254403632155828
+        },
+        {
+          "impl": "native Set",
+          "opsPerSec": 102.80813839660682,
+          "rme": 12.210693533760603,
+          "runs": [
+            103,
+            100,
+            108
+          ],
+          "check": 100000,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "js-sdsl HashSet",
+          "opsPerSec": 98.76346047408278,
+          "rme": 13.665636182589786,
+          "runs": [
+            111,
+            99,
+            97
+          ],
+          "check": 100000,
+          "vsBaseline": 0.9606579986214638
+        },
+        {
+          "impl": "collections.js FastSet",
+          "opsPerSec": 35.175709272738494,
+          "rme": 8.86590189366656,
+          "runs": [
+            35,
+            39,
+            28
+          ],
+          "check": 100000,
+          "vsBaseline": 0.3421490732284232
+        }
+      ]
+    },
+    {
+      "id": "linkedhashset-add-has",
+      "title": "LinkedHashSet add + has",
+      "detail": "100k integers, insertion order",
+      "baseline": "native Set",
+      "unit": {
+        "perRun": 200000,
+        "label": "add/has calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections LinkedHashSet",
+          "opsPerSec": 350.50721233641553,
+          "rme": 16.49136587107149,
+          "runs": [
+            351,
+            326,
+            351
+          ],
+          "check": 100000,
+          "vsBaseline": 3.197377881615551
+        },
+        {
+          "impl": "native Set",
+          "opsPerSec": 109.623330527111,
+          "rme": 11.574961571893333,
+          "runs": [
+            115,
+            103,
+            110
+          ],
+          "check": 100000,
+          "vsBaseline": 1
+        }
+      ]
+    },
+    {
+      "id": "treeset-add-contains",
+      "title": "TreeSet add + contains",
+      "detail": "100k random keys, 100k queries",
+      "baseline": "js-sdsl OrderedSet",
+      "unit": {
+        "perRun": 200000,
+        "label": "add/contains calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections TreeSet",
+          "opsPerSec": 17.92406915661959,
+          "rme": 8.801653895813669,
+          "runs": [
+            12,
+            18,
+            19
+          ],
+          "check": 9559,
+          "vsBaseline": 1.1373184070058808
+        },
+        {
+          "impl": "js-sdsl OrderedSet",
+          "opsPerSec": 15.75993938567013,
+          "rme": 7.30194487468775,
+          "runs": [
+            16,
+            16,
+            15
+          ],
+          "check": 9559,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "collections.js SortedSet",
+          "opsPerSec": 2.5785913463190338,
+          "rme": 4.20477516931758,
+          "runs": [
+            2,
+            3,
+            3
+          ],
+          "check": 9559,
+          "vsBaseline": 0.16361683146215916
+        }
+      ]
+    },
+    {
+      "id": "hashmap-get-int",
+      "title": "HashMap.get",
+      "detail": "100k integer keys",
+      "baseline": "native Map",
+      "unit": {
+        "perRun": 100000,
+        "label": "get calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections HashMap",
+          "opsPerSec": 1668.5985213164497,
+          "rme": 0.7298247292625851,
+          "runs": [
+            1669,
+            1704,
+            1653
+          ],
+          "check": 4999950000,
+          "vsBaseline": 3.8855034026201487
+        },
+        {
+          "impl": "js-sdsl HashMap",
+          "opsPerSec": 1391.8536464982944,
+          "rme": 0.47108245604508625,
+          "runs": [
+            1411,
+            1392,
+            1392
+          ],
+          "check": 4999950000,
+          "vsBaseline": 3.2410744767720834
+        },
+        {
+          "impl": "native Map",
+          "opsPerSec": 429.44204351777114,
+          "rme": 2.0346919477624787,
+          "runs": [
+            429,
+            491,
+            400
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "collections.js FastMap",
+          "opsPerSec": 101.9525591272111,
+          "rme": 2.2722541186898697,
+          "runs": [
+            102,
+            98,
+            107
+          ],
+          "check": 4999950000,
+          "vsBaseline": 0.23740702771453748
         }
       ]
     },
@@ -462,51 +606,351 @@
       "rows": [
         {
           "impl": "native Map",
-          "opsPerSec": 102.92902965697964,
-          "rme": 11.98488674597423,
+          "opsPerSec": 88.7244315512605,
+          "rme": 10.528210930406443,
           "runs": [
-            103,
-            83,
-            103
+            91,
+            88,
+            89
           ],
           "check": 100000,
           "vsBaseline": 1
         },
         {
-          "impl": "@nodestd/collections HashMap",
-          "opsPerSec": 74.08606429292605,
-          "rme": 17.23824319112041,
+          "impl": "js-sdsl HashMap",
+          "opsPerSec": 55.87511014055495,
+          "rme": 16.824585929598882,
           "runs": [
-            67,
-            78,
-            74
+            58,
+            56,
+            45
           ],
           "check": 100000,
-          "vsBaseline": 0.7197781280929647
+          "vsBaseline": 0.6297601366797502
         },
         {
-          "impl": "js-sdsl HashMap",
-          "opsPerSec": 48.56848896886435,
-          "rme": 12.791335255851127,
+          "impl": "@nodestd/collections HashMap",
+          "opsPerSec": 54.443524709920986,
+          "rme": 14.902961637503775,
           "runs": [
-            49,
-            47,
-            57
+            57,
+            50,
+            54
           ],
           "check": 100000,
-          "vsBaseline": 0.47186385736583025
+          "vsBaseline": 0.6136249481459486
         },
         {
           "impl": "collections.js FastMap",
-          "opsPerSec": 16.488012093226804,
-          "rme": 12.301795202148618,
+          "opsPerSec": 14.758858626729369,
+          "rme": 10.715170795638562,
           "runs": [
-            16,
-            16,
-            18
+            15,
+            15,
+            17
           ],
           "check": 100000,
-          "vsBaseline": 0.16018816215575532
+          "vsBaseline": 0.16634492178405727
+        }
+      ]
+    },
+    {
+      "id": "hashmap-value-keys",
+      "title": "HashMap with value keys",
+      "detail": "10k points with equals()/hashCode()",
+      "baseline": "native Map with string keys",
+      "unit": {
+        "perRun": 20000,
+        "label": "put/get calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections HashMap",
+          "opsPerSec": 491.2654312888629,
+          "rme": 2.047422561260501,
+          "runs": [
+            491,
+            274,
+            499
+          ],
+          "check": 52533968,
+          "vsBaseline": 1.204039090277803
+        },
+        {
+          "impl": "native Map with string keys",
+          "opsPerSec": 408.01451984047725,
+          "rme": 2.6436818826303887,
+          "runs": [
+            409,
+            386,
+            408
+          ],
+          "check": 52533968,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "collections.js FastMap",
+          "opsPerSec": 112.60328477260336,
+          "rme": 7.696659001425503,
+          "runs": [
+            155,
+            113,
+            104
+          ],
+          "check": 52533968,
+          "vsBaseline": 0.2759786215858892
+        }
+      ]
+    },
+    {
+      "id": "linkedhashmap-put-iterate",
+      "title": "LinkedHashMap put + iterate",
+      "detail": "100k entries, insertion order",
+      "baseline": "native Map",
+      "unit": {
+        "perRun": 200000,
+        "label": "puts and visited entries"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections LinkedHashMap",
+          "opsPerSec": 285.5697955866419,
+          "rme": 14.497590510249964,
+          "runs": [
+            286,
+            294,
+            286
+          ],
+          "check": 5000050000,
+          "vsBaseline": 3.141961314403679
+        },
+        {
+          "impl": "native Map",
+          "opsPerSec": 90.88902345089532,
+          "rme": 12.376155069351755,
+          "runs": [
+            91,
+            106,
+            87
+          ],
+          "check": 5000050000,
+          "vsBaseline": 1
+        }
+      ]
+    },
+    {
+      "id": "lru-cache",
+      "title": "LRU cache",
+      "detail": "capacity 1k, 100k get-or-put",
+      "baseline": "native Map delete + set",
+      "unit": {
+        "perRun": 100000,
+        "label": "get-or-put calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections LinkedHashMap.lru",
+          "opsPerSec": 246.70915280278626,
+          "rme": 4.368841969202624,
+          "runs": [
+            240,
+            247,
+            285
+          ],
+          "check": 60066,
+          "vsBaseline": 4.292619765439641
+        },
+        {
+          "impl": "mnemonist LRUMap",
+          "opsPerSec": 170.30996308820886,
+          "rme": 1.600031765275758,
+          "runs": [
+            173,
+            170,
+            157
+          ],
+          "check": 60066,
+          "vsBaseline": 2.9633108682763245
+        },
+        {
+          "impl": "native Map delete + set",
+          "opsPerSec": 57.47286419101666,
+          "rme": 1.3253750718382618,
+          "runs": [
+            54,
+            58,
+            57
+          ],
+          "check": 60066,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "collections.js LruMap",
+          "opsPerSec": 6.5113489185494515,
+          "rme": 4.808287668062256,
+          "runs": [
+            7,
+            7,
+            3
+          ],
+          "check": 60066,
+          "vsBaseline": 0.113294317417492
+        }
+      ]
+    },
+    {
+      "id": "treemap-put",
+      "title": "TreeMap put",
+      "detail": "100k random integer keys",
+      "baseline": "js-sdsl OrderedMap",
+      "unit": {
+        "perRun": 100000,
+        "label": "put calls"
+      },
+      "rows": [
+        {
+          "impl": "js-sdsl OrderedMap",
+          "opsPerSec": 44.902761511736884,
+          "rme": 7.090704015259974,
+          "runs": [
+            44,
+            45,
+            45
+          ],
+          "check": 95233,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "@nodestd/collections TreeMap",
+          "opsPerSec": 42.01360230504644,
+          "rme": 5.41538475985668,
+          "runs": [
+            45,
+            42,
+            39
+          ],
+          "check": 95233,
+          "vsBaseline": 0.9356574270841836
+        },
+        {
+          "impl": "collections.js SortedMap",
+          "opsPerSec": 2.557744717295713,
+          "rme": 5.97824409868182,
+          "runs": [
+            3,
+            3,
+            2
+          ],
+          "check": 95233,
+          "vsBaseline": 0.05696185782754493
+        }
+      ]
+    },
+    {
+      "id": "treemap-floor-ceiling",
+      "title": "TreeMap floor + ceiling",
+      "detail": "100k keys, 100k queries",
+      "baseline": "js-sdsl OrderedMap",
+      "unit": {
+        "perRun": 200000,
+        "label": "floor/ceiling calls"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections TreeMap",
+          "opsPerSec": 27.049876830558244,
+          "rme": 6.108798916416837,
+          "runs": [
+            27,
+            17,
+            27
+          ],
+          "check": 100062446441,
+          "vsBaseline": 2.6193681754070552
+        },
+        {
+          "impl": "js-sdsl OrderedMap",
+          "opsPerSec": 10.326870840276067,
+          "rme": 7.2672159686494435,
+          "runs": [
+            10,
+            10,
+            13
+          ],
+          "check": 100062446441,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "collections.js SortedSet",
+          "opsPerSec": 3.9413289461011076,
+          "rme": 5.778493700570842,
+          "runs": [
+            4,
+            4,
+            4
+          ],
+          "check": 100062446441,
+          "vsBaseline": 0.38165761991807234
+        }
+      ]
+    },
+    {
+      "id": "stream-filter-map-sum",
+      "title": "Stream filter → map → sum",
+      "detail": "100k numbers",
+      "baseline": "native Array filter/map/reduce",
+      "unit": {
+        "perRun": 100000,
+        "label": "elements"
+      },
+      "rows": [
+        {
+          "impl": "@nodestd/collections Stream",
+          "opsPerSec": 6859.262578435116,
+          "rme": 0.30558205572080116,
+          "runs": [
+            6859,
+            6985,
+            6838
+          ],
+          "check": 74831160,
+          "vsBaseline": 15.286910282858518
+        },
+        {
+          "impl": "@nodestd/collections IntStream",
+          "opsPerSec": 6777.194592810628,
+          "rme": 0.35908031037213356,
+          "runs": [
+            6721,
+            6777,
+            6813
+          ],
+          "check": 74831160,
+          "vsBaseline": 15.104009290369804
+        },
+        {
+          "impl": "native Array filter/map/reduce",
+          "opsPerSec": 448.70169651787177,
+          "rme": 5.377760567358563,
+          "runs": [
+            449,
+            435,
+            491
+          ],
+          "check": 74831160,
+          "vsBaseline": 1
+        },
+        {
+          "impl": "native Iterator helpers",
+          "opsPerSec": 362.0797266268593,
+          "rme": 1.1708604441836914,
+          "runs": [
+            379,
+            361,
+            362
+          ],
+          "check": 74831160,
+          "vsBaseline": 0.8069497606912608
         }
       ]
     }

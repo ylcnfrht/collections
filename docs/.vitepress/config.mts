@@ -47,6 +47,8 @@ export default withMermaid(
           'collections/sorted-set',
           'collections/heap',
           'collections/deque',
+          'collections/list',
+          'collections/sorted-map',
         ],
       },
       // ES module workers can load each benchmarked package as its own chunk

@@ -17,6 +17,7 @@ const progress = ref({ value: 0, measuring: false }); // of the implementation t
 const job = ref<{ workload: string; impl: string; done: number; total: number } | null>(null);
 
 const implsOf = (w: W) => Object.keys(w.impls);
+const groups = [...new Set(workloads.map((w) => w.group))].map((g) => ({ name: g, items: workloads.filter((w) => w.group === g) }));
 const oursOf = (w: W) => implsOf(w).find((i) => i.startsWith(OURS))!;
 const opsPerSec = (r: Result) => r.ops / (r.ms / 1000);
 const measured = (w: W, impl: string) => results.report.find((x) => x.id === w.id)?.rows.find((r) => r.impl === impl)?.vsBaseline ?? null;
@@ -119,8 +120,10 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
 
     <div class="body">
       <nav class="list" aria-label="Workloads">
+        <template v-for="g in groups" :key="g.name">
+        <div class="group">{{ g.name }}</div>
         <button
-          v-for="w in workloads"
+          v-for="w in g.items"
           :key="w.id"
           :class="{ active: w.id === selected, running: job?.workload === w.id }"
           :aria-current="w.id === selected"
@@ -136,9 +139,10 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
             }"
             :title="complete(w) ? 'your browser' : 'our isolated run'"
           >
-            {{ times((complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w))) ?? 0) }}
+            {{ (complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w))) === null ? 'new' : times((complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w)))!) }}
           </span>
         </button>
+        </template>
       </nav>
 
       <section class="panel">
@@ -147,12 +151,15 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
             <strong>{{ oursOf(workload) }}</strong> was{{ ' ' }}
             <strong :class="{ slower: yours(workload, oursOf(workload))! < 1 }">{{ verdict(yours(workload, oursOf(workload))!) }}</strong>{{ ' ' }}
             than {{ workload.baseline }} in your browser.
-            <span class="muted">Our isolated run measured {{ verdict(measured(workload, oursOf(workload))!) }}.</span>
+            <span v-if="measured(workload, oursOf(workload)) !== null" class="muted">Our isolated run measured {{ verdict(measured(workload, oursOf(workload))!) }}.</span>
           </template>
-          <template v-else>
+          <template v-else-if="measured(workload, oursOf(workload)) !== null">
             Our isolated run measured <strong>{{ oursOf(workload) }}</strong>{{ ' ' }}
             <strong :class="{ slower: measured(workload, oursOf(workload))! < 1 }">{{ verdict(measured(workload, oursOf(workload))!) }}</strong>{{ ' ' }}
             than {{ workload.baseline }}. Run the test to measure it on your device.
+          </template>
+          <template v-else>
+            Run the test to compare <strong>{{ oursOf(workload) }}</strong> with {{ workload.baseline }} on your device.
           </template>
         </p>
         <p class="unit">{{ workload.unit.label }} per second, higher is faster</p>
@@ -179,7 +186,8 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
               <span v-else-if="job?.workload === selected && job.impl === impl" class="sub">
                 {{ progress.measuring ? 'measuring' : 'warming up' }} {{ Math.round(progress.value * 100) }}%
               </span>
-              <span v-else class="sub">isolated run {{ measured(workload, impl) !== null ? times(measured(workload, impl)!) : '–' }}</span>
+              <span v-else-if="measured(workload, impl) !== null" class="sub">isolated run {{ times(measured(workload, impl)!) }}</span>
+              <span v-else class="sub">not measured yet</span>
             </div>
           </div>
         </TransitionGroup>
@@ -287,8 +295,21 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
   display: flex;
   flex-direction: column;
   padding: 8px;
+  max-height: 640px;
+  overflow-y: auto;
   border-right: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg);
+}
+.group {
+  padding: 10px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-3);
+}
+.group:first-child {
+  padding-top: 4px;
 }
 .list button {
   display: grid;
@@ -487,7 +508,8 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
     flex: 0 0 auto;
     grid-template-areas: 'name pill';
   }
-  .list .sub {
+  .list .sub,
+  .group {
     display: none;
   }
   .row {
