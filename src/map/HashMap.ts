@@ -254,6 +254,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
 
   /** The node for key, or undefined. Fires no hook. */
   getNode(key: unknown): HashNode<K, V> | undefined {
+    if (typeof key === 'string') return this.fast.get(key);
     if (isIndexKey(key)) {
       const n = this.ints[key];
       return n !== undefined || this.fast.size === 0 ? n : this.fast.get(key);
@@ -376,7 +377,9 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
 
   override get(key: unknown): V | null {
     let n: HashNode<K, V> | undefined;
-    if (isIndexKey(key)) {
+    // strings first: one typeof test instead of isIndexKey + isPlainKey
+    if (typeof key === 'string') n = this.fast.get(key);
+    else if (isIndexKey(key)) {
       n = this.ints[key];
       if (n === undefined && this.fast.size !== 0) n = this.fast.get(key);
     } else n = isPlainKey(key) ? this.fast.get(key) : this.getNode(key);

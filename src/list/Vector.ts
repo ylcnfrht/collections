@@ -61,8 +61,12 @@ export class Vector<E> extends ArrayList<E> {
   override add(index: number, e: E): void;
   override add(a: E | number, b?: E): boolean | void {
     if (arguments.length >= 2) return super.add(a as number, b as E);
-    this.ensure(this.es.length + 1);
-    return super.add(a as E);
+    // ArrayList's append inlined: push() goes through here, and the extra super call showed up in it
+    const es = this.es;
+    if (es.length >= this.cap) this.grow(es.length + 1);
+    es.push(a as E);
+    this.modCount++;
+    return true;
   }
 
   protected override addAtIndex(index: number, e: E): void {

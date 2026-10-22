@@ -1,8 +1,9 @@
 // Isolated benchmark: every (workload, implementation) pair runs alone in a fresh container from the
 // same image, pinned to one CPU, one after another in a shuffled order, REPS times; the median is kept.
-// usage: npm run bench:isolated [-- --reps 3] [--only <workload id>]
+// usage: npm run bench:isolated [-- --reps 3] [--only <workload id>[,<workload id>...]]
+// With --only, the selected workloads replace their entries in results.json and the others are kept.
 import { execFileSync } from 'child_process';
-import { writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { workloads } from './workloads';
 
@@ -13,7 +14,7 @@ const arg = (k: string) => {
   return i < 0 ? undefined : process.argv[i + 1];
 };
 const REPS = Number(arg('--reps') ?? 3);
-const only = arg('--only');
+const only = arg('--only')?.split(',');
 
 interface Result { workload: string; impl: string; check: number; opsPerSec: number; rme: number; node: string }
 
@@ -33,7 +34,7 @@ function main() {
   console.log('building image ...');
   execFileSync('docker', ['build', '-q', '-f', 'bench/isolated/Dockerfile', '-t', IMAGE, '.'], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
 
-  const selected = workloads.filter((w) => !only || w.id === only);
+  const selected = workloads.filter((w) => !only || only.includes(w.id));
   const jobs = shuffle(selected.flatMap((w) => Object.keys(w.impls).flatMap((impl) => Array.from({ length: REPS }, () => ({ w: w.id, impl })))));
   const results: Result[] = [];
   jobs.forEach((j, n) => {
@@ -58,7 +59,13 @@ function main() {
   });
 
   const meta = { date: new Date().toISOString(), node: results[0]?.node, reps: REPS, docker: '--cpuset-cpus 1 --cpus 1 --memory 2g --network none' };
-  writeFileSync(join(__dirname, 'results.json'), JSON.stringify({ meta, report }, null, 2) + '\n');
+  const file = join(__dirname, 'results.json');
+  // keep the other workloads' last results, in the workloads' order; meta.date is per workload then
+  const previous: typeof report = only && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).report : [];
+  const merged = workloads
+    .map((w) => report.find((r) => r.id === w.id) ?? previous.find((r) => r.id === w.id))
+    .filter((r): r is (typeof report)[number] => r !== undefined);
+  writeFileSync(file, JSON.stringify({ meta, report: merged }, null, 2) + '\n');
   for (const w of report) {
     console.log(`\n## ${w.title} (${w.detail}), relative to ${w.baseline}`);
     console.table(w.rows.map((r) => ({ implementation: r.impl, 'ops/sec': Math.round(r.opsPerSec).toLocaleString('en-US'), '±%': r.rme.toFixed(1), 'vs baseline': r.vsBaseline.toFixed(2) + 'x', runs: r.runs.join(' / ') })));

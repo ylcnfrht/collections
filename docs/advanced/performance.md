@@ -219,9 +219,9 @@ Every workload of the isolated comparison runs on your device when you press a b
 
 | Implementation | add/get calls/s | runs/s | ±% | vs native Array |
 | --- | ---: | ---: | ---: | ---: |
-| native Array | 121,058,001 | 605 | 8.9 | 1.00× |
-| **@nodestd/collections ArrayList** | 107,011,347 | 535 | 8.5 | 0.88× |
-| js-sdsl Vector | 90,588,372 | 453 | 8.1 | 0.75× |
+| native Array | 130,200,756 | 651 | 8.4 | 1.00× |
+| **@nodestd/collections ArrayList** | 112,004,838 | 560 | 7.8 | 0.86× |
+| js-sdsl Vector | 104,838,337 | 524 | 7.2 | 0.81× |
 
 One run performs 200,000 add/get calls.
 
@@ -262,11 +262,11 @@ One run performs 200,000 offer/poll calls.
 
 | Implementation | push/pop calls/s | runs/s | ±% | vs native Array push + pop |
 | --- | ---: | ---: | ---: | ---: |
-| js-sdsl Stack | 116,055,614 | 580 | 7.8 | 1.09× |
-| mnemonist Stack | 115,547,844 | 578 | 7.6 | 1.09× |
-| **@nodestd/collections ArrayDeque** | 115,404,484 | 577 | 7.1 | 1.09× |
-| native Array push + pop | 106,074,953 | 530 | 14.2 | 1.00× |
-| **@nodestd/collections Stack** | 74,907,345 | 375 | 8.9 | 0.71× |
+| native Array push + pop | 134,905,094 | 675 | 7.7 | 1.00× |
+| js-sdsl Stack | 121,692,068 | 608 | 7.4 | 0.90× |
+| mnemonist Stack | 117,847,424 | 589 | 7.6 | 0.87× |
+| **@nodestd/collections ArrayDeque** | 113,176,372 | 566 | 7.3 | 0.84× |
+| **@nodestd/collections Stack** | 107,075,519 | 535 | 7.0 | 0.79× |
 
 One run performs 200,000 push/pop calls.
 
@@ -317,10 +317,10 @@ One run performs 200,000 add/contains calls.
 
 | Implementation | get calls/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections HashMap** | 166,859,852 | 1,669 | 0.7 | 3.89× |
-| js-sdsl HashMap | 139,185,365 | 1,392 | 0.5 | 3.24× |
-| native Map | 42,944,204 | 429 | 2.0 | 1.00× |
-| collections.js FastMap | 10,195,256 | 102 | 2.3 | 0.24× |
+| **@nodestd/collections HashMap** | 167,333,439 | 1,673 | 0.6 | 3.48× |
+| js-sdsl HashMap | 143,983,554 | 1,440 | 0.5 | 2.99× |
+| native Map | 48,121,175 | 481 | 1.7 | 1.00× |
+| collections.js FastMap | 11,080,756 | 111 | 0.5 | 0.23× |
 
 One run performs 100,000 get calls.
 
@@ -328,10 +328,10 @@ One run performs 100,000 get calls.
 
 | Implementation | put calls/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
-| native Map | 8,872,443 | 89 | 10.5 | 1.00× |
-| js-sdsl HashMap | 5,587,511 | 56 | 16.8 | 0.63× |
-| **@nodestd/collections HashMap** | 5,444,352 | 54 | 14.9 | 0.61× |
-| collections.js FastMap | 1,475,886 | 15 | 10.7 | 0.17× |
+| native Map | 10,146,634 | 101 | 11.6 | 1.00× |
+| **@nodestd/collections HashMap** | 7,659,198 | 77 | 13.6 | 0.75× |
+| js-sdsl HashMap | 6,171,878 | 62 | 16.8 | 0.61× |
+| collections.js FastMap | 1,691,274 | 17 | 10.7 | 0.17× |
 
 One run performs 100,000 put calls.
 
@@ -339,9 +339,9 @@ One run performs 100,000 put calls.
 
 | Implementation | put/get calls/s | runs/s | ±% | vs native Map with string keys |
 | --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections HashMap** | 9,825,309 | 491 | 2.0 | 1.20× |
-| native Map with string keys | 8,160,290 | 408 | 2.6 | 1.00× |
-| collections.js FastMap | 2,252,066 | 113 | 7.7 | 0.28× |
+| **@nodestd/collections HashMap** | 10,179,703 | 509 | 1.9 | 1.19× |
+| native Map with string keys | 8,570,940 | 429 | 2.4 | 1.00× |
+| collections.js FastMap | 3,662,150 | 183 | 3.0 | 0.43× |
 
 One run performs 20,000 put/get calls.
 
@@ -349,8 +349,8 @@ One run performs 20,000 put/get calls.
 
 | Implementation | puts and visited entries/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections LinkedHashMap** | 57,113,959 | 286 | 14.5 | 3.14× |
-| native Map | 18,177,805 | 91 | 12.4 | 1.00× |
+| **@nodestd/collections LinkedHashMap** | 59,794,647 | 299 | 15.0 | 2.74× |
+| native Map | 21,842,667 | 109 | 10.9 | 1.00× |
 
 One run performs 200,000 puts and visited entries.
 
@@ -358,10 +358,10 @@ One run performs 200,000 puts and visited entries.
 
 | Implementation | get-or-put calls/s | runs/s | ±% | vs native Map delete + set |
 | --- | ---: | ---: | ---: | ---: |
-| **@nodestd/collections LinkedHashMap.lru** | 24,670,915 | 247 | 4.4 | 4.29× |
-| mnemonist LRUMap | 17,030,996 | 170 | 1.6 | 2.96× |
-| native Map delete + set | 5,747,286 | 57 | 1.3 | 1.00× |
-| collections.js LruMap | 651,135 | 7 | 4.8 | 0.11× |
+| **@nodestd/collections LinkedHashMap.lru** | 28,223,450 | 282 | 0.7 | 4.86× |
+| mnemonist LRUMap | 18,171,958 | 182 | 0.6 | 3.13× |
+| native Map delete + set | 5,813,243 | 58 | 0.7 | 1.00× |
+| collections.js LruMap | 715,041 | 7 | 1.9 | 0.12× |
 
 One run performs 100,000 get-or-put calls.
 
