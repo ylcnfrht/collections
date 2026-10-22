@@ -29,6 +29,7 @@ abstract class IntegralSummaryStatistics {
   /** The class name toString() prints (kept as a string so minified bundles print it too). */
   protected abstract readonly kind: string;
 
+  /** Records `value`: increments the count, adds it to the sum and updates min and max. */
   accept(value: number): void {
     this.count++;
     this.sum += value;
@@ -36,6 +37,10 @@ abstract class IntegralSummaryStatistics {
     if (value > this.max) this.max = value;
   }
 
+  /**
+   * Merges the state of `other` into this one, as if every value it recorded had been recorded here.
+   * @throws {@link NullPointerException} if `other` is `null`
+   */
   combine(other: this): void {
     requireNonNull(other);
     this.count += other.count;
@@ -44,25 +49,32 @@ abstract class IntegralSummaryStatistics {
     if (other.max > this.max) this.max = other.max;
   }
 
+  /** Returns the number of recorded values. */
   getCount(): number {
     return this.count;
   }
+  /** Returns the sum of the recorded values (0 when empty). The sum is a JS number, so it is exact up to 2^53. */
   getSum(): number {
     return this.sum;
   }
+  /** Returns the smallest recorded value, or the class's empty minimum when nothing was recorded. */
   getMin(): number {
     return this.min;
   }
+  /** Returns the largest recorded value, or the class's empty maximum when nothing was recorded. */
   getMax(): number {
     return this.max;
   }
+  /** Returns the arithmetic mean of the recorded values, or 0 when nothing was recorded. */
   getAverage(): number {
     return this.count > 0 ? this.sum / this.count : 0;
   }
 
+  /** Node's `util.inspect` hook: `console.log` prints the `toString()` form. */
   [INSPECT](): string {
     return this.toString();
   }
+  /** Returns e.g. `IntSummaryStatistics{count=2, sum=3, min=1, average=1.500000, max=2}`. */
   toString(): string {
     return `${this.kind}{count=${this.count}, sum=${this.sum}, min=${this.min}, average=${formatFixed6(this.getAverage())}, max=${this.max}}`;
   }
@@ -71,8 +83,12 @@ abstract class IntegralSummaryStatistics {
 /** count/sum/min/max/average of int values. Empty: min = 2^31-1, max = -2^31, average = 0. */
 export class IntSummaryStatistics extends IntegralSummaryStatistics {
   protected readonly kind = 'IntSummaryStatistics';
+  /** Creates empty statistics (count 0). */
   constructor();
-  /** @throws IllegalArgumentException if count < 0, or count > 0 and min > max */
+  /**
+   * Creates statistics with the given state. With `count` 0 the other arguments are ignored.
+   * @throws {@link IllegalArgumentException} if `count < 0`, or `count > 0` and `min > max`
+   */
   constructor(count: number, min: number, max: number, sum: number);
   constructor(...args: number[]) {
     super(INT_MAX, INT_MIN, args);
@@ -85,8 +101,12 @@ export class IntSummaryStatistics extends IntegralSummaryStatistics {
  */
 export class LongSummaryStatistics extends IntegralSummaryStatistics {
   protected readonly kind = 'LongSummaryStatistics';
+  /** Creates empty statistics (count 0). */
   constructor();
-  /** @throws IllegalArgumentException if count < 0, or count > 0 and min > max */
+  /**
+   * Creates statistics with the given state. With `count` 0 the other arguments are ignored.
+   * @throws {@link IllegalArgumentException} if `count < 0`, or `count > 0` and `min > max`
+   */
   constructor(count: number, min: number, max: number, sum: number);
   constructor(...args: number[]) {
     super(Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER, args);
@@ -142,8 +162,13 @@ export class DoubleSummaryStatistics {
   private min = Infinity;
   private max = -Infinity;
 
+  /** Creates empty statistics (count 0). */
   constructor();
-  /** @throws IllegalArgumentException if count < 0, count > 0 and min > max, or any argument is NaN while count > 0 */
+  /**
+   * Creates statistics with the given state. With `count` 0 the other arguments are ignored.
+   * @throws {@link IllegalArgumentException} if `count < 0`, or `count > 0` and `min > max`, or `count > 0` and some
+   * but not all of `min`, `max` and `sum` are `NaN`
+   */
   constructor(count: number, min: number, max: number, sum: number);
   constructor(count?: number, min?: number, max?: number, sum?: number) {
     if (arguments.length === 0) return;
@@ -160,6 +185,7 @@ export class DoubleSummaryStatistics {
     }
   }
 
+  /** Records `value`: increments the count, adds it to the compensated sum and updates min and max (a `NaN` makes both `NaN`). */
   accept(value: number): void {
     this.count++;
     this.sum.add(value);
@@ -167,6 +193,10 @@ export class DoubleSummaryStatistics {
     this.max = Math.max(this.max, value);
   }
 
+  /**
+   * Merges the state of `other` into this one, as if every value it recorded had been recorded here.
+   * @throws {@link NullPointerException} if `other` is `null`
+   */
   combine(other: DoubleSummaryStatistics): void {
     requireNonNull(other);
     this.count += other.count;
@@ -175,27 +205,34 @@ export class DoubleSummaryStatistics {
     this.max = Math.max(this.max, other.max);
   }
 
+  /** Returns the number of recorded values. */
   getCount(): number {
     return this.count;
   }
 
+  /** Returns the compensated sum of the recorded values (0 when empty); `NaN` if any value was `NaN`. */
   getSum(): number {
     return this.sum.result();
   }
 
+  /** Returns the smallest recorded value, `Infinity` when empty, or `NaN` if any value was `NaN`. */
   getMin(): number {
     return this.min;
   }
+  /** Returns the largest recorded value, `-Infinity` when empty, or `NaN` if any value was `NaN`. */
   getMax(): number {
     return this.max;
   }
+  /** Returns the mean of the recorded values (compensated sum divided by count), or 0 when nothing was recorded. */
   getAverage(): number {
     return this.count > 0 ? this.getSum() / this.count : 0;
   }
 
+  /** Node's `util.inspect` hook: `console.log` prints the `toString()` form. */
   [INSPECT](): string {
     return this.toString();
   }
+  /** Returns e.g. `DoubleSummaryStatistics{count=2, sum=3.000000, min=1.000000, average=1.500000, max=2.000000}`. */
   toString(): string {
     return `DoubleSummaryStatistics{count=${this.count}, sum=${formatFixed6(this.getSum())}, min=${formatFixed6(this.min)}, average=${formatFixed6(this.getAverage())}, max=${formatFixed6(this.max)}}`;
   }

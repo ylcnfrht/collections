@@ -6,15 +6,32 @@ import { requireNonNull } from '../util/Objects';
 import type { Downstream as DownstreamType, Gatherer as GathererType, Integrator as IntegratorType } from './Gatherer';
 
 // interfaces, not type aliases, so documentation tools list their members
+/**
+ * A custom intermediate operation for `stream.gather(gatherer)`; only `integrator()` is required. The `Gatherer`
+ * value holds the factories `Gatherer.of` / `Gatherer.ofSequential` and the `default*` sentinels; built-ins are in
+ * {@link Gatherers}.
+ */
 export interface Gatherer<T, A, R> extends GathererType<T, A, R> {}
+/**
+ * A gatherer's per-element step `(state, element, downstream) => boolean`: `false` stops the upstream. The
+ * `Integrator` value holds `Integrator.of` and `Integrator.ofGreedy`.
+ */
 export interface Integrator<A, T, R> extends IntegratorType<A, T, R> {}
+/** The next stage as a gatherer sees it: `push(element)` emits, `isRejecting()` reports that it wants no more. */
 export interface Downstream<T> extends DownstreamType<T> {}
 
-/** What the factories here return: a Gatherer with every member defined. */
+/** What the factories here return: a {@link Gatherer} with every member defined. */
 export interface DefinedGatherer<T, A, R> extends GathererType<T, A, R> {
+  /** Returns the state initializer; `Gatherer.defaultInitializer()` for a stateless gatherer. */
   initializer(): () => A;
+  /** Returns the state combiner; `Gatherer.defaultCombiner()` for a sequential-only gatherer. */
   combiner(): (left: A, right: A) => A;
+  /** Returns the finisher; `Gatherer.defaultFinisher()` when there is no finishing action. */
   finisher(): (state: A, downstream: Downstream<R>) => void;
+  /**
+   * Returns a gatherer that feeds this one's output into `that`; the same as `gather(this).gather(that)`.
+   * @throws {@link NullPointerException} if that is null
+   */
   andThen<RR>(that: GathererType<R, any, RR>): DefinedGatherer<T, any, RR>;
 }
 
@@ -176,41 +193,54 @@ function compose<T, A, R, AA, RR>(left: GathererType<T, A, R>, right: GathererTy
   );
 }
 
-/** Integrator factories. */
+/** Factories for {@link Integrator}. */
 export const Integrator = {
-  /** Returns the given function as an Integrator, unchanged (like the reference, no null check). */
+  /**
+   * Returns the given function as an {@link Integrator} that may stop the upstream by returning `false`. The function
+   * is returned unchanged (like the reference, no null check).
+   */
   of<A, T, R>(integrator: (state: A, element: T, downstream: Downstream<R>) => boolean): Integrator<A, T, R> {
     return integrator;
   },
   /**
-   * Returns a greedy Integrator (consumes all input; only the downstream may stop it) wrapping fn.
-   * Like the reference, null is returned as-is.
+   * Returns a greedy {@link Integrator} wrapping `fn`: it consumes all input and only the downstream may stop it
+   * (it returns what `downstream.push` returns, or `true`). Greedy lets the engine skip short-circuit checks, and a
+   * greedy integrator is never mistaken for an initializer by `Gatherer.ofSequential`. Like the reference, `null` is
+   * returned as-is.
    */
   ofGreedy,
 };
 
 /**
- * Gatherer factories and default* sentinels. The stateless overloads use a null state.
+ * Factories for {@link Gatherer} and the `default*` sentinels. The stateless overloads use a `null` state.
  *
  * ofSequential(a, b) is resolved at runtime: a function declaring no parameters (and not marked greedy)
  * is read as an initializer, so that call means ofSequential(initializer, integrator); otherwise it means
  * ofSequential(integrator, finisher). An integrator that declares no parameters must use another overload.
  */
 export const Gatherer = {
-  /** Same instance on every call; marks a gatherer stateless. Calling it returns null. */
+  /** Returns the default initializer: the same instance on every call; it marks a gatherer stateless. Calling it returns `null`. */
   defaultInitializer<A>(): Initializer<A> {
     return DEFAULT_INITIALIZER;
   },
-  /** Same instance on every call; marks a gatherer sequential-only. Calling it throws UnsupportedOperationException. */
+  /**
+   * Returns the default combiner: the same instance on every call; it marks a gatherer sequential-only. Calling it
+   * throws {@link UnsupportedOperationException}.
+   */
   defaultCombiner<A>(): Combiner<A> {
     return DEFAULT_COMBINER;
   },
-  /** Same instance on every call; marks a gatherer as having no finishing action. Calling it does nothing. */
+  /** Returns the default finisher: the same instance on every call; it marks a gatherer as having no finishing action. Calling it does nothing. */
   defaultFinisher<A, R>(): Finisher<A, R> {
     return DEFAULT_FINISHER;
   },
 
-  /** Parallelizable gatherers. @throws NullPointerException if any argument is null */
+  /**
+   * Returns a parallel-capable gatherer: `of(integrator)` and `of(integrator, finisher)` are stateless;
+   * `of(initializer, integrator, combiner, finisher)` has state that `combiner` must merge correctly. Evaluation is
+   * sequential either way, so this only declares that the gatherer is parallel-safe.
+   * @throws {@link NullPointerException} if any argument is null
+   */
   of: function of(...args: any[]): DefinedGatherer<any, any, any> {
     if (args.length <= 1) return make(DEFAULT_INITIALIZER, args[0], STATELESS_COMBINER, DEFAULT_FINISHER);
     if (args.length === 2) return make(DEFAULT_INITIALIZER, args[0], STATELESS_COMBINER, args[1]);
@@ -221,7 +251,12 @@ export const Gatherer = {
     <T, A, R>(initializer: Initializer<A>, integrator: Integrator<A, T, R>, combiner: Combiner<A>, finisher: Finisher<A, R>): DefinedGatherer<T, A, R>;
   },
 
-  /** Sequential-only gatherers (default combiner). @throws NullPointerException if any argument is null */
+  /**
+   * Returns a sequential-only gatherer (default combiner): `(integrator)`, `(initializer, integrator)`,
+   * `(integrator, finisher)` or `(initializer, integrator, finisher)`. The two-argument forms are told apart at run
+   * time by the first function's declared parameter count: with none (and not greedy) it is the initializer.
+   * @throws {@link NullPointerException} if any argument is null
+   */
   ofSequential: function ofSequential(...args: any[]): DefinedGatherer<any, any, any> {
     switch (args.length) {
       case 0:
@@ -265,11 +300,12 @@ function window<E>(es: E[]): List<E> {
   return new ImmutableList(es, false);
 }
 
-/** Built-in gatherers. All are sequential (default combiner). */
+/** Built-in {@link Gatherer}s for `stream.gather`. All are sequential (default combiner). */
 export const Gatherers = {
   /**
-   * Ordered reduction emitting a single value at the end of input.
-   * @throws NullPointerException if initial or folder is null
+   * Returns a gatherer that folds the elements, in order, into one value starting from `initial()` and emits it at
+   * the end of input; an empty stream emits `initial()`.
+   * @throws {@link NullPointerException} if initial or folder is null
    */
   fold<T, R>(initial: () => R, folder: (acc: R, element: T) => R): DefinedGatherer<T, Acc<R>, R> {
     requireNonNull(initial, "'initial' must not be null");
@@ -287,8 +323,9 @@ export const Gatherers = {
   },
 
   /**
-   * Prefix scan: emits scanner(current, element) for every element, starting from initial().
-   * @throws NullPointerException if initial or scanner is null
+   * Returns a gatherer that emits every running accumulation: `scanner(current, element)` for each element, starting
+   * from `initial()` (which itself is not emitted).
+   * @throws {@link NullPointerException} if initial or scanner is null
    */
   scan<T, R>(initial: () => R, scanner: (acc: R, element: T) => R): DefinedGatherer<T, Acc<R>, R> {
     requireNonNull(initial, "'initial' must not be null");
@@ -300,8 +337,9 @@ export const Gatherers = {
   },
 
   /**
-   * Groups elements into unmodifiable lists of windowSize; the last window may be shorter. No window for empty input.
-   * @throws IllegalArgumentException if windowSize is less than 1 (or not an integer)
+   * Returns a gatherer that groups elements into consecutive unmodifiable lists of `windowSize`; the last window may
+   * be shorter. No window for empty input.
+   * @throws {@link IllegalArgumentException} if windowSize is less than 1 (or not an integer)
    */
   windowFixed<T>(windowSize: number): DefinedGatherer<T, Window<T>, List<T>> {
     requireSize(windowSize, 'windowSize');
@@ -324,9 +362,9 @@ export const Gatherers = {
   },
 
   /**
-   * Sliding unmodifiable windows of windowSize, each dropping the oldest element of the previous one. With fewer
-   * elements than windowSize, one window holding all of them; none for empty input.
-   * @throws IllegalArgumentException if windowSize is less than 1 (or not an integer)
+   * Returns a gatherer of sliding unmodifiable windows of `windowSize`, each dropping the oldest element of the
+   * previous one. With fewer elements than `windowSize`, one window holding all of them; none for empty input.
+   * @throws {@link IllegalArgumentException} if windowSize is less than 1 (or not an integer)
    */
   windowSliding<T>(windowSize: number): DefinedGatherer<T, Window<T>, List<T>> {
     requireSize(windowSize, 'windowSize');
@@ -350,12 +388,12 @@ export const Gatherers = {
   },
 
   /**
-   * Maps each element, preserving encounter order. JS is single-threaded, so the mapper runs synchronously, one
+   * Returns a gatherer that maps each element, preserving encounter order. The mapper runs synchronously, one
    * element at a time; maxConcurrency is validated but has no further effect. A mapper exception is rethrown as-is
    * when it is a RuntimeException, otherwise wrapped in a RuntimeException with it as `cause`. The mapper is not
-   * called once the downstream is rejecting.
-   * @throws IllegalArgumentException if maxConcurrency is less than 1 (or not an integer)
-   * @throws NullPointerException if mapper is null
+   * called once the downstream is rejecting. Promises are not awaited.
+   * @throws {@link IllegalArgumentException} if maxConcurrency is less than 1 (or not an integer)
+   * @throws {@link NullPointerException} if mapper is null
    */
   mapConcurrent<T, R>(maxConcurrency: number, mapper: (element: T) => R): DefinedGatherer<T, null, R> {
     requireSize(maxConcurrency, 'maxConcurrency', '0');

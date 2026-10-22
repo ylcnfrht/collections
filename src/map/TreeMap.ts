@@ -217,8 +217,15 @@ export interface TreeBacked<K, V> extends NavigableMap<K, V> {
 }
 
 /**
- * Red-black tree map ordered by a comparator, or by natural ordering (naturalCompare) when it is null.
- * The comparator defines key equality. O(log n) get/put/remove/navigation.
+ * A {@link NavigableMap} stored in a red-black tree, sorted by key. Keys are ordered by the comparator given to the
+ * constructor, or naturally (numbers, strings, bigints, booleans, `Date`s, objects with `compareTo`) when there is
+ * none; the ordering, not `equals()`, decides which keys are equal.
+ *
+ * `get`, `put`, `remove`, `containsKey` and every navigation method run in O(log n); `lastKey` is O(1) (the maximum
+ * is cached) and putting a key above the maximum finds its slot in O(1). Iteration is in key order. Under natural
+ * ordering `null`/`undefined` keys throw {@link NullPointerException} and keys of mixed types throw
+ * {@link ClassCastException}; a comparator may accept them. Values may be `null`. Views and iterators are live and
+ * fail-fast.
  */
 // structurally a TreeBacked too (not listed: that interface is internal and stays out of the published typings)
 export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V> {
@@ -235,9 +242,12 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
   private descView: SubMap<K, V> | undefined;
 
   /**
-   * new TreeMap(), new TreeMap(comparator), or a copy of a map.
-   * A SortedMap source (anything with a comparator() method) keeps its comparator and order;
-   * any other Map source is ordered naturally. (One signature covers both source kinds.)
+   * Creates an empty map, an empty map ordered by a comparator, or a copy of a map. With no argument (or `null`)
+   * keys are ordered naturally. A {@link SortedMap} source (anything with a `comparator()` method) keeps its
+   * comparator and order; any other {@link Map} source is ordered naturally. One signature covers all forms.
+   * @param source - a comparator, a map to copy, or nothing for natural ordering
+   * @throws {@link IllegalArgumentException} if `source` is neither a comparator nor a map
+   * @throws {@link NullPointerException} / {@link ClassCastException} if a copied key cannot be compared
    */
   constructor(source?: Comparator<K> | Map<K, V> | null) {
     super();
@@ -681,10 +691,12 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
 
   // ---- Map
 
+  /** Returns the number of mappings. O(1). */
   override size(): number {
     return this.count;
   }
 
+  /** Returns `true` if this map has no mappings. O(1). */
   override isEmpty(): boolean {
     return this.count === 0;
   }
@@ -693,22 +705,43 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return this.getNode(key) ?? undefined;
   }
 
+  /**
+   * Returns the value mapped to `key`, or `null` if there is none (or the key maps to `null`). O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   * @throws {@link ClassCastException} if `key` cannot be compared with the keys in this map
+   */
   override get(key: unknown): V | null {
     const n = this.getNode(key);
     return n === null ? null : n.value;
   }
 
+  /**
+   * Returns `true` if this map has a mapping for `key`, even if it maps to `null`. O(log n); keys are matched by the
+   * ordering, not `equals()`.
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   * @throws {@link ClassCastException} if `key` cannot be compared with the keys in this map
+   */
   override containsKey(key: unknown): boolean {
     return this.getNode(key) !== null;
   }
 
+  /** Returns `true` if one or more keys map to a value equal to `value`. O(n), scanning values in key order. */
   override containsValue(value: unknown): boolean {
     for (let e = this.firstNode(); e !== null; e = successor(e)) if (equals(value, e.value)) return true;
     return false;
   }
 
+  /**
+   * Returns the value mapped to `key`, or `defaultValue` if there is no mapping. A key mapped to `null` returns `null`.
+   * O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   */
   override getOrDefault(key: unknown, defaultValue: V): V;
 
+  /**
+   * Returns the value mapped to `key`, or `defaultValue` (here possibly `null`) if there is no mapping. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   */
   override getOrDefault(key: unknown, defaultValue: V | null): V | null;
 
   override getOrDefault(key: unknown, defaultValue: V | null): V | null {
@@ -716,15 +749,37 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return n === null ? defaultValue : n.value;
   }
 
+  /**
+   * Maps `key` to `value`, replacing any previous value. O(log n); O(1) to find the slot for a key above the current
+   * maximum. Values may be `null`.
+   * @returns the previous value, or `null` if there was no mapping
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   * @throws {@link ClassCastException} if `key` cannot be compared with the keys in this map
+   */
   override put(key: K, value: V): V | null {
     return this.insert(key, value, false);
   }
 
+  /**
+   * Maps `key` to `value` if it is absent or mapped to `null`. O(log n).
+   * @returns the current value if it was non-null (and nothing changed), otherwise `null`
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   */
   override putIfAbsent(key: K, value: V): V | null {
     return this.insert(key, value, true);
   }
 
+  /**
+   * Removes the mapping for `key`, if present. O(log n).
+   * @returns the removed value, or `null` if there was no mapping
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   */
   override remove(key: unknown): V | null;
+  /**
+   * Removes the mapping for `key` only if it is currently mapped to a value equal to `value`. O(log n).
+   * @returns `true` if the mapping was removed
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering
+   */
   override remove(key: unknown, value: unknown): boolean;
   override remove(key: unknown, value?: unknown): V | null | boolean {
     const n = this.getNode(key);
@@ -739,12 +794,18 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return v;
   }
 
+  /** Removes all mappings. O(1). */
   override clear(): void {
     this.modCount++;
     this.count = 0;
     this.root = this.maxNode = null;
   }
 
+  /**
+   * Calls `action` for each mapping, in ascending key order.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this map
+   */
   override forEach(action: (key: K, value: V) => void): void {
     requireNonNull(action);
     const mc = this.modCount;
@@ -754,6 +815,11 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     }
   }
 
+  /**
+   * Replaces each value with `fn(key, value)`, in ascending key order. This is not a structural change.
+   * @throws {@link NullPointerException} if `fn` is null
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override replaceAll(fn: (key: K, value: V) => V): void {
     requireNonNull(fn);
     const mc = this.modCount;
@@ -763,6 +829,14 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     }
   }
 
+  /**
+   * If `key` is absent or mapped to `null`, stores `fn(key)` unless that is `null`/`undefined` (then nothing is
+   * stored). O(log n) plus the cost of `fn`.
+   * @returns the existing non-null value, the newly stored value, or `null`
+   * @throws {@link NullPointerException} if `fn` is null, or `key` is `null` under natural ordering and must be
+   * compared or stored
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
     requireNonNull(fn);
     // as the reference, an empty map never compares the key before calling fn
@@ -777,6 +851,13 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return v;
   }
 
+  /**
+   * If `key` has a non-null value, replaces it with `fn(key, value)`; a `null`/`undefined` result removes the mapping.
+   * O(log n) plus the cost of `fn`.
+   * @returns the new value, or `null` if the key was absent or has been removed
+   * @throws {@link NullPointerException} if `fn` is null, or `key` is `null` or `undefined` under natural ordering
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override computeIfPresent(key: K, fn: (key: K, value: V) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
@@ -787,6 +868,14 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return this.settle(key, n, v);
   }
 
+  /**
+   * Stores `fn(key, current)`, where `current` is the mapped value or `null`; a `null`/`undefined` result removes the
+   * mapping (or leaves the key absent). O(log n) plus the cost of `fn`.
+   * @returns the new value, or `null` if there is now no mapping
+   * @throws {@link NullPointerException} if `fn` is null, or `key` is `null` under natural ordering and must be
+   * compared or stored
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.root === null ? null : this.getNode(key);
@@ -796,6 +885,14 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return this.settle(key, n, v);
   }
 
+  /**
+   * If `key` is absent or mapped to `null`, maps it to `value`; otherwise stores `fn(oldValue, value)`, and a
+   * `null`/`undefined` result removes the mapping. O(log n) plus the cost of `fn`.
+   * @returns the new value, or `null` if the mapping was removed
+   * @throws {@link NullPointerException} if `value` or `fn` is null, or `key` is `null` or `undefined` under natural
+   * ordering
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override merge(key: K, value: V, fn: (oldValue: V, value: V) => V | null | undefined): V | null {
     requireNonNull(fn);
     requireNonNull(value);
@@ -817,6 +914,7 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return v;
   }
 
+  /** Returns a fail-fast iterator over the mappings as `[key, value]` pairs, in ascending key order. */
   override [Symbol.iterator](): IterableIterator<[K, V]> {
     const m = this;
     const expected = this.modCount;
@@ -844,59 +942,130 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
 
   // ---- views
 
+  /**
+   * Returns a live view of the mappings in ascending key order. Entries from its iterator write through with
+   * `setValue`; removing from it removes the mapping, and it does not support `add` (`UnsupportedOperationException`).
+   */
   entrySet(): SequencedSet<MapEntry<K, V>> {
     return (this.esView ??= new EntrySetView(this));
   }
 
+  /**
+   * Returns a live, ascending view of the keys; same as `navigableKeySet()`. Removing from it removes the mapping; it
+   * does not support `add` (`UnsupportedOperationException`).
+   */
   override keySet(): NavigableSet<K> {
     return this.navigableKeySet();
   }
 
+  /**
+   * Returns a live view of the values in ascending key order. Removing from it removes the mapping; it does not support
+   * `add` (`UnsupportedOperationException`).
+   */
   override values(): SequencedCollection<V> {
     return (this.vView ??= new ValuesView(this));
   }
 
+  /**
+   * Returns a live, ascending view of the keys. Removing from it removes the mapping; `add` throws
+   * {@link UnsupportedOperationException}.
+   */
   navigableKeySet(): NavigableSet<K> {
     return (this.ksView ??= new NavigableKeySet<K>(this, NO_ADD));
   }
 
+  /**
+   * Returns a live, descending view of the keys. Removing from it removes the mapping; `add` throws
+   * {@link UnsupportedOperationException}.
+   */
   descendingKeySet(): NavigableSet<K> {
     return this.descendingMap().navigableKeySet();
   }
 
+  /**
+   * Returns a live view of this map in descending key order: changes through either side are visible in the other.
+   * Created once and cached.
+   */
   descendingMap(): NavigableMap<K, V> {
     return (this.descView ??= new SubMap<K, V>(this, true, undefined, true, true, undefined, true, true));
   }
 
+  /** Returns a live descending view; same as `descendingMap()`. */
   reversed(): NavigableMap<K, V> {
     return this.descendingMap();
   }
 
+  /**
+   * Returns a live, sequenced view of the keys in ascending order: the `navigableKeySet()` view, except that `add` and
+   * `addAll` throw {@link UnsupportedOperationException}.
+   */
   sequencedKeySet(): NavigableSet<K> {
     return seqView(this.navigableKeySet(), () => this.reversed().sequencedKeySet() as NavigableSet<K>);
   }
 
+  /**
+   * Returns a live, sequenced view of the values in key order: the `values()` view, except that `add` and `addAll`
+   * throw {@link UnsupportedOperationException}.
+   */
   sequencedValues(): SequencedCollection<V> {
     return seqView(this.values(), () => this.reversed().sequencedValues());
   }
 
+  /**
+   * Returns a live, sequenced view of the mappings in key order: the `entrySet()` view, except that `add` and `addAll`
+   * throw {@link UnsupportedOperationException}.
+   */
   sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
     return seqView(this.entrySet(), () => this.reversed().sequencedEntrySet());
   }
 
+  /**
+   * Returns a live view of the mappings whose keys are strictly less than `toKey`; same as `headMap(toKey, false)`.
+   * O(1) to create, O(log n) per operation; putting a key outside the range through the view throws
+   * {@link IllegalArgumentException}.
+   * @throws {@link NullPointerException} if `toKey` is `null` or `undefined` under natural ordering
+   */
   headMap(toKey: K): SortedMap<K, V>;
+  /**
+   * Returns a live view of the mappings whose keys are less than (or, if `inclusive`, equal to) `toKey`. O(1) to
+   * create.
+   * @throws {@link NullPointerException} if `toKey` is `null` or `undefined` under natural ordering
+   */
   headMap(toKey: K, inclusive: boolean): NavigableMap<K, V>;
   headMap(toKey: K, inclusive = false): NavigableMap<K, V> {
     return new SubMap(this, true, undefined, true, false, toKey, inclusive, false);
   }
 
+  /**
+   * Returns a live view of the mappings whose keys are greater than or equal to `fromKey`; same as `tailMap(fromKey,
+   * true)`. O(1) to create, O(log n) per operation; putting a key outside the range through the view throws
+   * {@link IllegalArgumentException}.
+   * @throws {@link NullPointerException} if `fromKey` is `null` or `undefined` under natural ordering
+   */
   tailMap(fromKey: K): SortedMap<K, V>;
+  /**
+   * Returns a live view of the mappings whose keys are greater than (or, if `inclusive`, equal to) `fromKey`. O(1) to
+   * create.
+   * @throws {@link NullPointerException} if `fromKey` is `null` or `undefined` under natural ordering
+   */
   tailMap(fromKey: K, inclusive: boolean): NavigableMap<K, V>;
   tailMap(fromKey: K, inclusive = true): NavigableMap<K, V> {
     return new SubMap(this, false, fromKey, inclusive, true, undefined, true, false);
   }
 
+  /**
+   * Returns a live view of the mappings with keys from `fromKey` (inclusive) to `toKey` (exclusive); same as
+   * `subMap(fromKey, true, toKey, false)`. O(1) to create.
+   * @throws {@link IllegalArgumentException} if `fromKey` is greater than `toKey`
+   * @throws {@link NullPointerException} if either bound is `null` or `undefined` under natural ordering
+   */
   subMap(fromKey: K, toKey: K): SortedMap<K, V>;
+  /**
+   * Returns a live view of the mappings with keys between `fromKey` and `toKey`, each end included when its flag is
+   * set. O(1) to create.
+   * @throws {@link IllegalArgumentException} if `fromKey` is greater than `toKey`
+   * @throws {@link NullPointerException} if either bound is `null` or `undefined` under natural ordering
+   */
   subMap(fromKey: K, fromInclusive: boolean, toKey: K, toInclusive: boolean): NavigableMap<K, V>;
   subMap(fromKey: K, a: K | boolean, b?: K, c?: boolean): NavigableMap<K, V> {
     return arguments.length >= 4
@@ -906,26 +1075,41 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
 
   // ---- SortedMap / NavigableMap
 
+  /** Returns the comparator that orders the keys, or `null` when natural ordering is used. */
   comparator(): Comparator<K> | null {
     return this.cmp;
   }
 
+  /**
+   * Returns the lowest key. O(log n).
+   * @throws {@link NoSuchElementException} if this map is empty
+   */
   firstKey(): K {
     return keyOrThrow(this.firstNode());
   }
 
+  /**
+   * Returns the highest key. O(1): the maximum is cached.
+   * @throws {@link NoSuchElementException} if this map is empty
+   */
   lastKey(): K {
     return keyOrThrow(this.lastNode());
   }
 
+  /** Returns the entry with the lowest key as an immutable snapshot, or `null` if this map is empty. O(log n). */
   firstEntry(): MapEntry<K, V> | null {
     return snapshot(this.firstNode());
   }
 
+  /** Returns the entry with the highest key as an immutable snapshot, or `null` if this map is empty. O(1). */
   lastEntry(): MapEntry<K, V> | null {
     return snapshot(this.lastNode());
   }
 
+  /**
+   * Removes and returns the entry with the lowest key as an immutable snapshot, or `null` if this map is empty. O(log
+   * n).
+   */
   pollFirstEntry(): MapEntry<K, V> | null {
     const n = this.firstNode();
     if (n === null) return null;
@@ -934,6 +1118,10 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return e;
   }
 
+  /**
+   * Removes and returns the entry with the highest key as an immutable snapshot, or `null` if this map is empty. O(log
+   * n).
+   */
   pollLastEntry(): MapEntry<K, V> | null {
     const n = this.lastNode();
     if (n === null) return null;
@@ -942,35 +1130,83 @@ export class TreeMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, 
     return e;
   }
 
+  /**
+   * Not supported: the key order decides positions.
+   * @throws {@link UnsupportedOperationException} always
+   */
   putFirst(_key: K, _value: V): V | null {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Not supported: the key order decides positions.
+   * @throws {@link UnsupportedOperationException} always
+   */
   putLast(_key: K, _value: V): V | null {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Returns the entry with the greatest key strictly less than `key` (an immutable snapshot), or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   lowerEntry(key: K): MapEntry<K, V> | null {
     return snapshot(this.lowerNode(key));
   }
+  /**
+   * Returns the greatest key strictly less than `key`, or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   lowerKey(key: K): K | null {
     return keyOrNull(this.lowerNode(key));
   }
+  /**
+   * Returns the entry with the greatest key less than or equal to `key` (an immutable snapshot), or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   floorEntry(key: K): MapEntry<K, V> | null {
     return snapshot(this.floorNode(key));
   }
+  /**
+   * Returns the greatest key less than or equal to `key`, or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   floorKey(key: K): K | null {
     return keyOrNull(this.floorNode(key));
   }
+  /**
+   * Returns the entry with the least key greater than or equal to `key` (an immutable snapshot), or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   ceilingEntry(key: K): MapEntry<K, V> | null {
     return snapshot(this.ceilingNode(key));
   }
+  /**
+   * Returns the least key greater than or equal to `key`, or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   ceilingKey(key: K): K | null {
     return keyOrNull(this.ceilingNode(key));
   }
+  /**
+   * Returns the entry with the least key strictly greater than `key` (an immutable snapshot), or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   higherEntry(key: K): MapEntry<K, V> | null {
     return snapshot(this.higherNode(key));
   }
+  /**
+   * Returns the least key strictly greater than `key`, or `null`. O(log n).
+   * @throws {@link NullPointerException} if `key` is `null` or `undefined` under natural ordering and this map is not
+   * empty
+   */
   higherKey(key: K): K | null {
     return keyOrNull(this.higherNode(key));
   }
@@ -1179,6 +1415,10 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
   }
 
   // range views check the range first and leave the null checks to the backing map, as the reference
+  /**
+   * O(log n) plus the cost of `fn`.
+   * @throws {@link ConcurrentModificationException} if `fn` adds or removes keys of this map
+   */
   override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
     if (!this.inRange(key)) {
       // a null result stays a no-op, as with the Map default
@@ -1189,10 +1429,18 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
     return this.m.computeIfAbsent(key, fn);
   }
 
+  /**
+   * O(log n) plus the cost of `fn`.
+   * @throws {@link ConcurrentModificationException} if `fn` adds or removes keys of this map
+   */
   override computeIfPresent(key: K, fn: (key: K, value: V) => V | null | undefined): V | null {
     return this.inRange(key) ? this.m.computeIfPresent(key, fn) : null;
   }
 
+  /**
+   * O(log n) plus the cost of `fn`.
+   * @throws {@link ConcurrentModificationException} if `fn` adds or removes keys of this map
+   */
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
     if (!this.inRange(key)) {
       const v = requireNonNull(fn)(key, null);
@@ -1202,6 +1450,11 @@ class SubMap<K, V> extends AbstractMap<K, V> implements NavigableMap<K, V>, Tree
     return this.m.compute(key, fn);
   }
 
+  /**
+   * O(log n) plus the cost of `fn`.
+   * @throws {@link NullPointerException} if `value` is `null` or `undefined`
+   * @throws {@link ConcurrentModificationException} if `fn` adds or removes keys of this map
+   */
   override merge(key: K, value: V, fn: (oldValue: V, value: V) => V | null | undefined): V | null {
     if (!this.inRange(key)) throw new IllegalArgumentException('key out of range');
     return this.m.merge(key, value, fn);
@@ -1483,8 +1736,9 @@ const TREE_CHARACTERISTICS = Spliterator.SIZED | Spliterator.DISTINCT | Splitera
 export const NO_ADD: unknown = Object.freeze({});
 
 /**
- * NavigableSet over the keys of a TreeMap or one of its range views.
- * With addValue !== NO_ADD, add(e) puts (e, addValue): this is how TreeSet is built.
+ * A {@link NavigableSet} over the keys of a {@link TreeMap} or one of its range views: the key views of `TreeMap`
+ * and the base of `TreeSet`. Views are live and fail-fast. With `addValue !== NO_ADD`, `add(e)` puts
+ * `(e, addValue)`: this is how `TreeSet` is built; key views of a map do not support `add`.
  */
 export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E> {
   /** @internal */
@@ -1498,10 +1752,15 @@ export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E
     this.addValue = addValue;
   }
 
+  /**
+   * Returns a fail-fast iterator over the elements in ascending order; O(1) amortized per step. Its `remove` writes
+   * through.
+   */
   iterator(): Iterator<E> {
     return this.m.iter(KEY);
   }
   /**
+   * Returns a spliterator over the elements, used to build streams; late-binding and fail-fast.
    * TreeMap keys: SIZED (until split)|DISTINCT|SORTED|ORDERED, getComparator() = comparator();
    * full descending view: SIZED (until split)|DISTINCT|ORDERED; ascending range: DISTINCT|SORTED|ORDERED,
    * descending range: DISTINCT|ORDERED, both of unknown size. Late-binding and fail-fast.
@@ -1516,74 +1775,155 @@ export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E
     const chars = sm.desc ? Spliterator.DISTINCT | Spliterator.ORDERED : Spliterator.DISTINCT | Spliterator.ORDERED | Spliterator.SORTED;
     return new IteratorSpliterator(this, null, -1, chars, { modCounter: sm.m, unknownSize: true, comparator: m.comparator() });
   }
+  /** Returns a fail-fast iterator over the elements in ascending order. */
   override [Symbol.iterator](): IterableIterator<E> {
     return jsIterator(this.m.iter<E>(KEY));
   }
+  /** Returns a fail-fast iterator over the elements in descending order. */
   descendingIterator(): Iterator<E> {
     return (this.m.descendingMap() as TreeBacked<E, unknown>).iter(KEY);
   }
+  /**
+   * Returns the number of elements. O(1) for a whole set or its descending view; a range view counts its elements,
+   * O(k).
+   */
   size(): number {
     return this.m.size();
   }
+  /** Returns `true` if this set has no elements. O(1) for a whole set; O(log n) for a range view. */
   override isEmpty(): boolean {
     return this.m.isEmpty();
   }
+  /**
+   * Returns `true` if this set contains an element that compares equal to `o`. O(log n); the ordering, not `equals()`,
+   * decides equality.
+   * @throws {@link NullPointerException} if `o` is `null` or `undefined` under natural ordering
+   */
   override contains(o: unknown): boolean {
     return this.m.containsKey(o);
   }
+  /**
+   * Adds `e` if no element that compares equal is present. O(log n).
+   * @returns `true` if the set changed
+   * @throws {@link UnsupportedOperationException} on a key-set view of a map
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined` under natural ordering
+   * @throws {@link ClassCastException} if `e` cannot be compared with the elements in this set
+   * @throws {@link IllegalArgumentException} if `e` is outside the range of a range view
+   */
   override add(e: E): boolean {
     if (this.addValue === NO_ADD) throw new UnsupportedOperationException();
     return this.m.put(e, this.addValue) === null;
   }
+  /**
+   * Removes the element that compares equal to `o`, if present. O(log n).
+   * @returns `true` if an element was removed
+   * @throws {@link NullPointerException} if `o` is `null` or `undefined` under natural ordering
+   */
   override remove(o: unknown): boolean {
     return this.m.removeKey(o);
   }
+  /** Removes all elements (for a range view, every element in its range). */
   override clear(): void {
     this.m.clear();
   }
+  /** Returns the comparator that orders this set, or `null` when it uses natural ordering. */
   comparator(): Comparator<E> | null {
     return this.m.comparator();
   }
+  /**
+   * Returns the lowest element.
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   first(): E {
     return this.m.firstKey();
   }
+  /**
+   * Returns the highest element.
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   last(): E {
     return this.m.lastKey();
   }
+  /**
+   * Returns the first (lowest) element; same as `first()`.
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   getFirst(): E {
     return this.m.firstKey();
   }
+  /**
+   * Returns the last (highest) element; same as `last()`.
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   getLast(): E {
     return this.m.lastKey();
   }
+  /**
+   * Removes and returns the lowest element. O(log n).
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   removeFirst(): E {
     return orThrow(this.m.pollFirstEntry()).getKey();
   }
+  /**
+   * Removes and returns the highest element. O(log n).
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   removeLast(): E {
     return orThrow(this.m.pollLastEntry()).getKey();
   }
+  /**
+   * Not supported: the ordering decides positions.
+   * @throws {@link UnsupportedOperationException} always
+   */
   addFirst(_e: E): void {
     throw new UnsupportedOperationException();
   }
+  /**
+   * Not supported: the ordering decides positions.
+   * @throws {@link UnsupportedOperationException} always
+   */
   addLast(_e: E): void {
     throw new UnsupportedOperationException();
   }
+  /**
+   * Returns the greatest element strictly less than `e`, or `null` if there is none. O(log n).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined` under natural ordering and this set is not
+   * empty
+   */
   lower(e: E): E | null {
     return this.m.lowerKey(e);
   }
+  /**
+   * Returns the greatest element less than or equal to `e`, or `null` if there is none. O(log n).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined` under natural ordering and this set is not
+   * empty
+   */
   floor(e: E): E | null {
     return this.m.floorKey(e);
   }
+  /**
+   * Returns the least element greater than or equal to `e`, or `null` if there is none. O(log n).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined` under natural ordering and this set is not
+   * empty
+   */
   ceiling(e: E): E | null {
     return this.m.ceilingKey(e);
   }
+  /**
+   * Returns the least element strictly greater than `e`, or `null` if there is none. O(log n).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined` under natural ordering and this set is not
+   * empty
+   */
   higher(e: E): E | null {
     return this.m.higherKey(e);
   }
+  /** Removes and returns the lowest element, or `null` if this set is empty. O(log n). */
   pollFirst(): E | null {
     const e = this.m.pollFirstEntry();
     return e === null ? null : e.getKey();
   }
+  /** Removes and returns the highest element, or `null` if this set is empty. O(log n). */
   pollLast(): E | null {
     const e = this.m.pollLastEntry();
     return e === null ? null : e.getKey();
@@ -1591,23 +1931,61 @@ export class NavigableKeySet<E> extends AbstractSet<E> implements NavigableSet<E
   private view(m: NavigableMap<E, unknown>): NavigableSet<E> {
     return new NavigableKeySet<E>(m as TreeBacked<E, unknown>, this.addValue);
   }
+  /** Returns a live view of this set in descending order: changes through either side are visible in the other. */
   descendingSet(): NavigableSet<E> {
     return this.view(this.m.descendingMap());
   }
+  /** Returns a live descending view; same as `descendingSet()`. */
   reversed(): NavigableSet<E> {
     return this.descendingSet();
   }
+  /**
+   * Returns a live view of the elements strictly less than `toElement`; same as `headSet(toElement, false)`. O(1) to
+   * create; adding an element outside the range through the view throws {@link IllegalArgumentException}.
+   * @throws {@link NullPointerException} if `toElement` is `null` or `undefined` under natural ordering
+   * @throws {@link IllegalArgumentException} if this set is itself a range view and `toElement` is outside its range
+   */
   headSet(toElement: E): SortedSet<E>;
+  /**
+   * Returns a live view of the elements less than (or, if `inclusive`, equal to) `toElement`. O(1) to create.
+   * @throws {@link NullPointerException} if `toElement` is `null` or `undefined` under natural ordering
+   * @throws {@link IllegalArgumentException} if this set is itself a range view and `toElement` is outside its range
+   */
   headSet(toElement: E, inclusive: boolean): NavigableSet<E>;
   headSet(toElement: E, inclusive = false): NavigableSet<E> {
     return this.view(this.m.headMap(toElement, inclusive));
   }
+  /**
+   * Returns a live view of the elements greater than or equal to `fromElement`; same as `tailSet(fromElement, true)`.
+   * O(1) to create; adding an element outside the range through the view throws {@link IllegalArgumentException}.
+   * @throws {@link NullPointerException} if `fromElement` is `null` or `undefined` under natural ordering
+   * @throws {@link IllegalArgumentException} if this set is itself a range view and `fromElement` is outside its range
+   */
   tailSet(fromElement: E): SortedSet<E>;
+  /**
+   * Returns a live view of the elements greater than (or, if `inclusive`, equal to) `fromElement`. O(1) to create.
+   * @throws {@link NullPointerException} if `fromElement` is `null` or `undefined` under natural ordering
+   * @throws {@link IllegalArgumentException} if this set is itself a range view and `fromElement` is outside its range
+   */
   tailSet(fromElement: E, inclusive: boolean): NavigableSet<E>;
   tailSet(fromElement: E, inclusive = true): NavigableSet<E> {
     return this.view(this.m.tailMap(fromElement, inclusive));
   }
+  /**
+   * Returns a live view of the elements from `fromElement` (inclusive) to `toElement` (exclusive); same as
+   * `subSet(fromElement, true, toElement, false)`. O(1) to create.
+   * @throws {@link IllegalArgumentException} if `fromElement` is greater than `toElement`, or either is outside this
+   * view's range
+   * @throws {@link NullPointerException} if either bound is `null` or `undefined` under natural ordering
+   */
   subSet(fromElement: E, toElement: E): SortedSet<E>;
+  /**
+   * Returns a live view of the elements between `fromElement` and `toElement`, each end included when its flag is set.
+   * O(1) to create.
+   * @throws {@link IllegalArgumentException} if `fromElement` is greater than `toElement`, or either is outside this
+   * view's range
+   * @throws {@link NullPointerException} if either bound is `null` or `undefined` under natural ordering
+   */
   subSet(fromElement: E, fromInclusive: boolean, toElement: E, toInclusive: boolean): NavigableSet<E>;
   subSet(fromElement: E, a: E | boolean, b?: E, c?: boolean): NavigableSet<E> {
     return arguments.length >= 4

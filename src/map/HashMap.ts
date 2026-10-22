@@ -105,8 +105,10 @@ export interface NodeIterator<K, V> {
 type Bucket<K, V> = HashNode<K, V> | HashNode<K, V>[];
 
 /**
- * Hash table map. Keys are equal by Objects.equals; null/undefined keys and values allowed.
- * Iteration order is unspecified.
+ * A hash table {@link Map}: the default map. Keys are equal by `equals()`/`hashCode()` (SameValueZero for
+ * primitives and objects without `equals()`); `null` and `undefined` keys and values are allowed. Iteration order is
+ * unspecified. `get`, `put`, `containsKey` and `remove` run in O(1) expected time (O(k) when k keys share one
+ * `hashCode()`); `containsValue` is O(n). Iterators and views are fail-fast.
  *
  * Storage is hybrid: small non-negative integer keys live in a dense array indexed by the key
  * (faster than any hash); other keys whose equality is SameValueZero (primitives, plain objects)
@@ -146,8 +148,17 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   private vs: Values<K, V> | undefined;
   private es: EntrySet<K, V> | undefined;
 
+  /** Creates an empty map. */
   constructor();
+  /**
+   * Creates an empty map. The arguments are sizing hints only: they are validated but storage grows on demand.
+   * @throws {@link IllegalArgumentException} if `initialCapacity` is negative or NaN, or `loadFactor` is not positive
+   */
   constructor(initialCapacity: number, loadFactor?: number);
+  /**
+   * Creates a map with the same mappings as `map`.
+   * @throws {@link NullPointerException} if `map` is `null` or `undefined`
+   */
   constructor(map: Map<K, V>);
   constructor(a?: number | Map<K, V>, loadFactor?: number) {
     super();
@@ -155,6 +166,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     else if (a !== undefined) this.putAll(requireNonNull(a));
   }
 
+  /** Returns a new map of the given `[key, value]` pairs; a later pair with an equal key replaces an earlier one. */
   static of<K, V>(...pairs: [K, V][]): HashMap<K, V> {
     const m = new HashMap<K, V>();
     for (const [k, v] of pairs) m.put(k, v);
@@ -162,8 +174,8 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   }
 
   /**
-   * An empty map sized for numMappings mappings (a sizing hint only).
-   * @throws IllegalArgumentException if numMappings is negative or NaN
+   * Returns an empty map intended for `numMappings` mappings (a sizing hint only).
+   * @throws {@link IllegalArgumentException} if `numMappings` is negative or NaN
    */
   static newHashMap<K, V>(numMappings: number): HashMap<K, V> {
     if (!(numMappings >= 0)) throw new IllegalArgumentException(`Negative number of mappings: ${numMappings}`);
@@ -202,10 +214,22 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
   protected newNode(key: K, value: V): HashNode<K, V> {
     return new HashNode(key, value);
   }
+  /**
+   * Called after a new mapping was added (by `put`, `putIfAbsent`, `compute*`, `merge`), with `modCount` already
+   * bumped. Not called by `clone()`. Does nothing here; `LinkedHashMap` links the node and may evict its eldest entry.
+   */
   protected afterNodeInsertion(_node: HashNode<K, V>): void {}
+  /**
+   * Called when an operation hits an existing key: `get`/`getOrDefault` hits, `put`/`putIfAbsent` on a present key,
+   * a matching `replace`, and `computeIfAbsent`/`computeIfPresent`/`compute`/`merge` that keep or update the key. Not
+   * called by `containsKey`, `entry.setValue` or `replaceAll`. Does nothing here; an access-ordered `LinkedHashMap`
+   * moves the node to the tail.
+   */
   protected afterNodeAccess(_node: HashNode<K, V>): void {}
+  /** Called after a mapping was removed (not by `clear()`, which subclasses override instead). Does nothing here. */
   protected afterNodeRemoval(_node: HashNode<K, V>): void {}
 
+  /** Returns the fail-fast cursor behind every view iterator and `[Symbol.iterator]`; override to change the order. */
   protected newNodeIterator(): NodeIterator<K, V> {
     return new HashIterator(this);
   }
@@ -252,7 +276,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     this.forEachNode(action);
   }
 
-  /** The node for key, or undefined. Fires no hook. */
+  /** Returns the node for `key`, or `undefined`. Fires no hook. */
   getNode(key: unknown): HashNode<K, V> | undefined {
     if (typeof key === 'string') return this.fast.get(key);
     if (isIndexKey(key)) {
@@ -314,7 +338,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     }
   }
 
-  /** Removes exactly this node (by identity). */
+  /** Removes exactly this node (by identity), then calls {@link HashMap.afterNodeRemoval}. */
   removeNode(node: HashNode<K, V>): void {
     const k = node.key;
     if (isIndexKey(k) && this.ints[k] === node) {
@@ -363,10 +387,12 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
 
   // Map
 
+  /** Returns the number of mappings. O(1). */
   override size(): number {
     return this.intCount + this.fast.size + this.valueCount;
   }
 
+  /** Returns `true` if this map has no mappings. O(1). */
   override isEmpty(): boolean {
     return this.intCount + this.fast.size + this.valueCount === 0;
   }
@@ -375,6 +401,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return this.getNode(key);
   }
 
+  /** Returns the value mapped to `key`, or `null` if there is none (or the key maps to `null`). O(1) expected. */
   override get(key: unknown): V | null {
     let n: HashNode<K, V> | undefined;
     // strings first: one typeof test instead of isIndexKey + isPlainKey
@@ -388,10 +415,12 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return n.value;
   }
 
+  /** Returns `true` if this map has a mapping for `key`, even if it maps to `null`. O(1) expected. */
   override containsKey(key: unknown): boolean {
     return this.getNode(key) !== undefined;
   }
 
+  /** Returns `true` if one or more keys map to a value equal to `value`. O(n): scans every value with `equals()`. */
   override containsValue(value: unknown): boolean {
     if (this.intCount !== 0) {
       const ints = this.ints;
@@ -410,6 +439,11 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return false;
   }
 
+  /**
+   * Maps `key` to `value`, replacing any previous value. O(1) expected. `null` and `undefined` keys and values are
+   * allowed.
+   * @returns the previous value, or `null` if there was no mapping
+   */
   override put(key: K, value: V): V | null {
     if (isIndexKey(key)) {
       const ints = this.ints;
@@ -455,7 +489,15 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return old;
   }
 
+  /**
+   * Removes the mapping for `key`, if present. O(1) expected.
+   * @returns the removed value, or `null` if there was no mapping
+   */
   override remove(key: unknown): V | null;
+  /**
+   * Removes the mapping for `key` only if it is currently mapped to a value equal to `value`. O(1) expected.
+   * @returns `true` if the mapping was removed
+   */
   override remove(key: unknown, value: unknown): boolean;
   override remove(key: unknown, value?: unknown): V | null | boolean {
     if (arguments.length >= 2) {
@@ -468,6 +510,11 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return n === undefined ? null : n.value;
   }
 
+  /**
+   * Copies every mapping of `m` into this map, as `put` would. O(m) expected for m mappings; putting a map into itself
+   * does nothing.
+   * @throws {@link NullPointerException} if `m` is null
+   */
   override putAll(m: Map<K, V>): void {
     requireNonNull(m);
     if (m === this) return;
@@ -478,6 +525,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     for (const e of m.entrySet().toArray()) this.put(e.getKey(), e.getValue());
   }
 
+  /** Removes all mappings. Open iterators then fail with {@link ConcurrentModificationException}. */
   override clear(): void {
     this.ints = [];
     this.intCount = 0;
@@ -487,19 +535,35 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     this.modCount++;
   }
 
+  /**
+   * Returns a live view of the keys, in the map's unspecified order. Removing from it removes the mapping; it does not
+   * support `add` (`UnsupportedOperationException`).
+   */
   override keySet(): Set<K> {
     return (this.ks ??= new KeySet(this));
   }
 
+  /**
+   * Returns a live view of the values. Removing from it removes the mapping; it does not support `add`
+   * (`UnsupportedOperationException`).
+   */
   override values(): Collection<V> {
     return (this.vs ??= new Values(this));
   }
 
+  /**
+   * Returns a live view of the mappings. Its entries are the map's own nodes, so `setValue` writes through; removing
+   * from it removes the mapping, and it does not support `add` (`UnsupportedOperationException`).
+   */
   entrySet(): Set<MapEntry<K, V>> {
     return (this.es ??= new EntrySet(this));
   }
 
   // a plain iterator object is faster than a generator
+  /**
+   * Returns a fail-fast iterator over the mappings as `[key, value]` pairs, in the same unspecified order as
+   * `entrySet()`.
+   */
   override [Symbol.iterator](): IterableIterator<[K, V]> {
     // unless a subclass changed the order, the cursor doubles as the JS iterator (one less hop per step)
     if (this.newNodeIterator === HashMap.prototype.newNodeIterator) return new HashIterator(this);
@@ -516,6 +580,7 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     };
   }
 
+  /** Returns the sum over all entries of `hash(key) ^ hash(value)`, in 32-bit arithmetic. O(n). */
   override hashCode(): number {
     let h = 0;
     this.forEachNode((n) => (h = (h + entryHash(n)) | 0));
@@ -524,8 +589,15 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
 
   // default methods
 
+  /**
+   * Returns the value mapped to `key`, or `defaultValue` if there is no mapping. A key mapped to `null` returns `null`.
+   * O(1) expected.
+   */
   override getOrDefault(key: unknown, defaultValue: V): V;
 
+  /**
+   * Returns the value mapped to `key`, or `defaultValue` (here possibly `null`) if there is no mapping. O(1) expected.
+   */
   override getOrDefault(key: unknown, defaultValue: V | null): V | null;
 
   override getOrDefault(key: unknown, defaultValue: V | null): V | null {
@@ -535,11 +607,21 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return n.value;
   }
 
+  /**
+   * Calls `action` for each mapping, in iteration order.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this map
+   */
   override forEach(action: (key: K, value: V) => void): void {
     requireNonNull(action);
     this.forEachNode((n) => action(n.key, n.value));
   }
 
+  /**
+   * Replaces each value with `fn(key, value)`, in iteration order. This is not a structural change.
+   * @throws {@link NullPointerException} if `fn` is null
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override replaceAll(fn: (key: K, value: V) => V): void {
     requireNonNull(fn);
     this.forEachNode((n) => {
@@ -547,6 +629,10 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     });
   }
 
+  /**
+   * Maps `key` to `value` if it is absent or mapped to `null`. O(1) expected.
+   * @returns the current value if it was non-null (and nothing changed), otherwise `null`
+   */
   override putIfAbsent(key: K, value: V): V | null {
     const n = this.getNode(key);
     if (n === undefined) {
@@ -560,7 +646,16 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return null;
   }
 
+  /**
+   * Replaces the value for `key` only if `key` currently has a mapping (even to `null`). O(1) expected.
+   * @returns the previous value, or `null` if there was no mapping
+   */
   override replace(key: K, value: V): V | null;
+  /**
+   * Replaces the value for `key` with `newValue` only if it is currently mapped to a value equal to `oldValue`. O(1)
+   * expected.
+   * @returns `true` if the value was replaced
+   */
   override replace(key: K, oldValue: V, newValue: V): boolean;
   override replace(key: K, a: V, b?: V): V | null | boolean {
     const n = this.getNode(key);
@@ -577,6 +672,13 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return old;
   }
 
+  /**
+   * If `key` is absent or mapped to `null`, stores `fn(key)` unless that is `null`/`undefined` (then nothing is
+   * stored). O(1) expected plus the cost of `fn`.
+   * @returns the existing non-null value, the newly stored value, or `null`
+   * @throws {@link NullPointerException} if `fn` is null
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override computeIfAbsent(key: K, fn: (key: K) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
@@ -593,6 +695,13 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return v;
   }
 
+  /**
+   * If `key` has a non-null value, replaces it with `fn(key, value)`; a `null`/`undefined` result removes the mapping.
+   * O(1) expected plus the cost of `fn`.
+   * @returns the new value, or `null` if the key was absent or has been removed
+   * @throws {@link NullPointerException} if `fn` is null
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override computeIfPresent(key: K, fn: (key: K, value: V) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
@@ -609,6 +718,13 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return v;
   }
 
+  /**
+   * Stores `fn(key, current)`, where `current` is the mapped value or `null`; a `null`/`undefined` result removes the
+   * mapping (or leaves the key absent). O(1) expected plus the cost of `fn`.
+   * @returns the new value, or `null` if there is now no mapping
+   * @throws {@link NullPointerException} if `fn` is null
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override compute(key: K, fn: (key: K, value: V | null) => V | null | undefined): V | null {
     requireNonNull(fn);
     const n = this.getNode(key);
@@ -624,6 +740,13 @@ export class HashMap<K, V> extends AbstractMap<K, V> {
     return v;
   }
 
+  /**
+   * If `key` is absent or mapped to `null`, maps it to `value`; otherwise stores `fn(oldValue, value)`, and a
+   * `null`/`undefined` result removes the mapping. O(1) expected plus the cost of `fn`.
+   * @returns the new value, or `null` if the mapping was removed
+   * @throws {@link NullPointerException} if `value` or `fn` is null
+   * @throws {@link ConcurrentModificationException} if `fn` structurally modifies this map
+   */
   override merge(key: K, value: V, fn: (oldValue: V, value: V) => V | null | undefined): V | null {
     requireNonNull(fn);
     requireNonNull(value);

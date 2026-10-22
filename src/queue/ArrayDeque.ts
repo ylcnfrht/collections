@@ -49,8 +49,17 @@ function checkElement(e: unknown): void {
 }
 
 /**
- * Resizable circular-buffer deque. Capacity is a power of two so indices wrap with a bitmask;
- * `head` is the first element, `tail` the next free slot, and head === tail means empty.
+ * Resizable circular-array (ring buffer) {@link Deque}: the general-purpose queue, deque and stack.
+ *
+ * Every operation at either end is O(1) (adds are amortized), with no per-element allocation.
+ * `contains`, `remove(o)` and the `remove*Occurrence` methods are O(n); removing an inner element
+ * shifts whichever side is shorter. Rejects `null` and `undefined` with {@link NullPointerException},
+ * so a `null` from `poll()` or `peek()` always means empty. Iterates head to tail; iterators and
+ * `forEach` are fail-fast.
+ *
+ * The buffer length is a power of two, at least 8 and 16 by default; one slot always stays free.
+ * When it fills, it doubles in place, moving the shorter wrapped segment. It never shrinks:
+ * `clear()` keeps the capacity.
  */
 export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
   /** @internal */ elements: unknown[];
@@ -59,8 +68,19 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
   /** @internal Structural modification counter used by fail-fast iterators. */
   modCount = 0;
 
+  /** Creates an empty deque with the default 16-slot buffer. */
   constructor();
+  /**
+   * Creates an empty deque sized for `numElements`: the buffer is the smallest power of two greater
+   * than `numElements` (at least 8, at most 2^30). It is only a hint: a negative or non-integer value
+   * is not rejected, and the deque still grows past it.
+   * @param numElements - expected number of elements
+   */
   constructor(numElements: number);
+  /**
+   * Creates a deque holding the elements of `c`, in its iteration order (head first). O(n).
+   * @throws {@link NullPointerException} if `c` is `null` or `undefined`, or holds `null` or `undefined`
+   */
   constructor(c: Collection<E>);
   constructor(arg?: number | Collection<E>) {
     super();
@@ -75,13 +95,17 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     }
   }
 
+  /**
+   * Creates a deque holding `xs`, the first argument at the head.
+   * @throws {@link NullPointerException} if any argument is `null` or `undefined`
+   */
   static of<E>(...xs: E[]): ArrayDeque<E> {
     const d = new ArrayDeque<E>(xs.length);
     d.copyIn(xs);
     return d;
   }
 
-  /** Shallow independent copy, of the same runtime class. */
+  /** Returns a shallow, independent copy of the same runtime class (same capacity), in O(capacity). */
   clone(): ArrayDeque<E> {
     const d = new (this.constructor as new () => ArrayDeque<E>)();
     d.elements = this.elements.slice();
@@ -92,16 +116,22 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
 
   // ---- size ----
 
+  /** Returns the number of elements. O(1), computed from the head and tail indexes. */
   size(): number {
     return (this.tail - this.head) & (this.elements.length - 1);
   }
 
+  /** Returns `true` if this deque has no elements. O(1). */
   override isEmpty(): boolean {
     return this.head === this.tail;
   }
 
   // ---- insertion ----
 
+  /**
+   * Inserts `e` at the front, in amortized O(1).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   addFirst(e: E): void {
     if (e === null || e === undefined) throw new NullPointerException();
     const a = this.elements;
@@ -111,6 +141,10 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     if (h === this.tail) this.grow();
   }
 
+  /**
+   * Inserts `e` at the end, in amortized O(1).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   addLast(e: E): void {
     if (e === null || e === undefined) throw new NullPointerException();
     const a = this.elements;
@@ -120,30 +154,60 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     if ((this.tail = (t + 1) & (a.length - 1)) === this.head) this.grow();
   }
 
+  /**
+   * Inserts `e` at the front; same as `addFirst(e)`. Amortized O(1).
+   * @returns always `true` (the deque is unbounded)
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   offerFirst(e: E): boolean {
     this.addFirst(e);
     return true;
   }
 
+  /**
+   * Inserts `e` at the end; same as `addLast(e)`. Amortized O(1).
+   * @returns always `true` (the deque is unbounded)
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   offerLast(e: E): boolean {
     this.addLast(e);
     return true;
   }
 
+  /**
+   * Inserts `e` at the end; same as `addLast(e)`. Amortized O(1).
+   * @returns always `true`
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   override add(e: E): boolean {
     this.addLast(e);
     return true;
   }
 
+  /**
+   * Inserts `e` at the end; same as `addLast(e)`. Amortized O(1).
+   * @returns always `true` (the deque is unbounded)
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   offer(e: E): boolean {
     this.addLast(e);
     return true;
   }
 
+  /**
+   * Pushes `e` onto the stack this deque represents, that is, inserts it at the front; same as `addFirst(e)`. Amortized O(1).
+   * @throws {@link NullPointerException} if `e` is `null` or `undefined`
+   */
   push(e: E): void {
     this.addFirst(e);
   }
 
+  /**
+   * Appends every element of `c` at the end, in `c`'s iteration order. Every element is checked first,
+   * so a rejected element leaves the deque unchanged.
+   * @returns `true` if this deque changed (`c` was not empty)
+   * @throws {@link NullPointerException} if `c` is null, or holds `null` or `undefined`
+   */
   override addAll(c: Collection<E>): boolean {
     const xs = requireNonNull(c).toArray();
     // validate first so a rejected element leaves the deque unchanged
@@ -155,6 +219,7 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
 
   // ---- removal ----
 
+  /** Removes and returns the first element in O(1), or `null` if this deque is empty. */
   pollFirst(): E | null {
     const a = this.elements;
     const h = this.head;
@@ -166,6 +231,7 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return e;
   }
 
+  /** Removes and returns the last element in O(1), or `null` if this deque is empty. */
   pollLast(): E | null {
     if (this.head === this.tail) return null;
     const a = this.elements;
@@ -177,33 +243,60 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return e;
   }
 
+  /**
+   * Removes and returns the first element. O(1).
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   removeFirst(): E {
     const e = this.pollFirst();
     if (e === null) throw new NoSuchElementException();
     return e;
   }
 
+  /**
+   * Removes and returns the last element. O(1).
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   removeLast(): E {
     const e = this.pollLast();
     if (e === null) throw new NoSuchElementException();
     return e;
   }
 
+  /** Removes and returns the head in O(1), or `null` if this deque is empty; same as `pollFirst()`. */
   poll(): E | null {
     return this.pollFirst();
   }
 
+  /**
+   * Pops the top of the stack this deque represents, that is, removes and returns the first element; same as `removeFirst()`. O(1).
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   pop(): E {
     return this.removeFirst();
   }
 
+  /**
+   * Removes and returns the first element; same as `removeFirst()`. O(1).
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   override remove(): E;
+  /**
+   * Removes the first element equal to `o` (by `Objects.equals`), if present; same as
+   * `removeFirstOccurrence(o)`. O(n).
+   * @returns `true` if an element was removed
+   */
   override remove(o: unknown): boolean;
   override remove(o?: unknown): E | boolean {
     if (arguments.length === 0) return this.removeFirst();
     return this.removeFirstOccurrence(o);
   }
 
+  /**
+   * Removes the first element (from head to tail) equal to `o`. O(n): a scan, then a shift of the shorter
+   * side. `null` or `undefined` simply returns `false`.
+   * @returns `true` if an element was removed
+   */
   removeFirstOccurrence(o: unknown): boolean {
     const i = this.indexOf(o);
     if (i < 0) return false;
@@ -211,6 +304,11 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return true;
   }
 
+  /**
+   * Removes the last element (the first found from tail to head) equal to `o`. O(n): a scan, then a shift
+   * of the shorter side. `null` or `undefined` simply returns `false`.
+   * @returns `true` if an element was removed
+   */
   removeLastOccurrence(o: unknown): boolean {
     const i = this.lastIndexOf(o);
     if (i < 0) return false;
@@ -218,6 +316,13 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return true;
   }
 
+  /**
+   * Removes every element for which `filter` returns `true`, in O(n). Every element is tested before
+   * anything is removed, so a throwing predicate, or one that modifies the deque, leaves the deque unchanged.
+   * @returns `true` if any element was removed
+   * @throws {@link NullPointerException} if `filter` is null
+   * @throws {@link ConcurrentModificationException} if `filter` structurally modifies this deque
+   */
   override removeIf(filter: (e: E) => boolean): boolean {
     requireNonNull(filter);
     const a = this.elements;
@@ -246,6 +351,7 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return true;
   }
 
+  /** Removes all elements. O(n); keeps the current capacity, since the buffer never shrinks. */
   override clear(): void {
     const a = this.elements;
     const h = this.head;
@@ -258,41 +364,62 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
 
   // ---- examination ----
 
+  /** Returns the first element without removing it, in O(1), or `null` if this deque is empty. */
   peekFirst(): E | null {
     return this.head === this.tail ? null : (this.elements[this.head] as E);
   }
 
+  /** Returns the last element without removing it, in O(1), or `null` if this deque is empty. */
   peekLast(): E | null {
     const a = this.elements;
     return this.head === this.tail ? null : (a[(this.tail - 1) & (a.length - 1)] as E);
   }
 
+  /** Returns the head without removing it, in O(1), or `null` if this deque is empty; same as `peekFirst()`. */
   peek(): E | null {
     return this.peekFirst();
   }
 
+  /**
+   * Returns the first element. O(1).
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   getFirst(): E {
     if (this.head === this.tail) throw new NoSuchElementException();
     return this.elements[this.head] as E;
   }
 
+  /**
+   * Returns the last element. O(1).
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   getLast(): E {
     if (this.head === this.tail) throw new NoSuchElementException();
     const a = this.elements;
     return a[(this.tail - 1) & (a.length - 1)] as E;
   }
 
+  /**
+   * Returns the head without removing it, in O(1); same as `getFirst()`.
+   * @throws {@link NoSuchElementException} if the deque is empty
+   */
   element(): E {
     return this.getFirst();
   }
 
+  /** Returns `true` if this deque contains an element equal to `o` (by `Objects.equals`). O(n); `false` for `null` or `undefined`. */
   override contains(o: unknown): boolean {
     return this.indexOf(o) >= 0;
   }
 
   // ---- bulk / views ----
 
+  /** Returns a new array with all elements, head to tail. Changing the array does not affect this deque. O(n). */
   override toArray(): E[];
+  /**
+   * Fills an array created by `generator(size())` with the elements head to tail, and returns it. O(n).
+   * @param generator - creates the target array for a given length
+   */
   override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
   override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     if (arguments.length > 0) return toArrayWith(this.toArray(), generator as (length: number) => A);
@@ -305,6 +432,11 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return out;
   }
 
+  /**
+   * Calls `action` for each element, head to tail.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this deque
+   */
   override forEach(action: (e: E) => void): void {
     requireNonNull(action);
     const a = this.elements;
@@ -316,6 +448,7 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     }
   }
 
+  /** Returns the elements head to tail as `[a, b, c]`; an element that is this deque prints as `(this Collection)`. */
   override toString(): string {
     const a = this.elements;
     const mask = a.length - 1;
@@ -328,23 +461,34 @@ export class ArrayDeque<E> extends AbstractCollection<E> implements Deque<E> {
     return s + ']';
   }
 
+  /** Returns a fail-fast iterator over the elements, head to tail. Its `remove` is O(n), shifting the shorter side. */
   iterator(): Iterator<E> {
     return new AscendingIterator(this);
   }
 
+  /** Returns a fail-fast iterator over the elements from last to first. Its `remove` is O(n), shifting the shorter side. */
   descendingIterator(): Iterator<E> {
     return new DescendingIterator(this);
   }
 
-  /** ORDERED|SIZED|SUBSIZED|NONNULL; late-binding, splits in halves; see DeqSpliterator for concurrent changes. */
+  /**
+   * Returns a spliterator over the elements, used to build streams: `ORDERED | SIZED | SUBSIZED | NONNULL`,
+   * head to tail, late-binding, splits in halves. It is not modCount-based: it traverses the range bound at
+   * first use, and throws {@link ConcurrentModificationException} when it reaches a slot vacated in the meantime.
+   */
   override spliterator(): Spliterator<E> {
     return new DeqSpliterator(this);
   }
 
+  /** Returns a JS iterator over the elements, head to tail, for `for...of` and spread; fail-fast. */
   override [Symbol.iterator](): IterableIterator<E> {
     return new JsIterator(this);
   }
 
+  /**
+   * Returns a live reverse-ordered view in O(1): its head is this deque's tail, and changes through either
+   * side are visible in the other.
+   */
   reversed(): Deque<E> {
     return new ReversedDeque(this);
   }

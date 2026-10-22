@@ -18,32 +18,71 @@ import { checkFromToIndex, checkIndex, checkPositionIndex, equals, hashCode, req
 import { AbstractCollection } from './AbstractCollection';
 
 /**
- * Skeleton of AbstractList for random-access storage.
+ * Skeleton implementation of the `List` interface for storage with fast positional access.
  *
- * Subclasses implement get(i) and size(); modifiable ones override set(i, e),
- * addAtIndex(i, e) and removeAt(i), and MUST increment `modCount` on every
- * structural change (add/remove) so iterators and subLists fail fast.
+ * A read-only subclass implements `get(index)` and `size()`. It inherits fail-fast iterators and list iterators,
+ * `indexOf`/`lastIndexOf`, live `subList` views, `reversed()`, `sort`, `replaceAll`, the sequenced methods
+ * (`getFirst`, `removeLast`, ...), value `equals`/`hashCode` with any `List`, and an index-based spliterator when
+ * the list carries the {@link RandomAccess} brand (the brand is not added for you).
+ *
+ * To be modifiable, override `set(index, e)`; to grow and shrink, also override `addAtIndex(index, e)` and
+ * `removeAt(index)`. All three throw {@link UnsupportedOperationException} by default. Every `add`/`addAll`
+ * overload, `addFirst`/`addLast`, list-iterator `add` and `subList(...).add` end in `addAtIndex`, so override that
+ * hook rather than the overloaded `add`. Each structural change (one that changes the size) MUST increment
+ * `modCount`, so iterators, sublists and spliterators fail fast with {@link ConcurrentModificationException}; `set`
+ * is not structural.
  */
 export abstract class AbstractList<E> extends AbstractCollection<E> implements List<E> {
-  /** Structural modification counter used by fail-fast iterators; subclasses increment it on every add/remove. */
+  /**
+   * Structural modification counter. Iterators, sublists and spliterators record it and throw
+   * {@link ConcurrentModificationException} when it changes behind them. Subclasses increment it once per
+   * structural change (add, remove, clear); `set` leaves it alone.
+   */
   modCount = 0;
 
+  /**
+   * Returns the element at `index`. Subclasses implement it and should validate with `Objects.checkIndex`.
+   * @throws {@link IndexOutOfBoundsException} if `index < 0 || index >= size()`
+   */
   abstract get(index: number): E;
 
+  /**
+   * Replaces the element at `index` and returns the old one. Not structural: does not change `modCount`.
+   * @throws {@link UnsupportedOperationException} unless a subclass overrides it
+   */
   set(_index: number, _e: E): E {
     throw new UnsupportedOperationException();
   }
 
-  /** Positional insert behind add(index, e). Override this instead of the overloaded add(). */
+  /**
+   * Positional insert behind every add path (`add(e)`, `add(index, e)`, `addAll`, `addFirst`/`addLast`, list-iterator
+   * and sublist `add`). Override this instead of the overloaded `add()`, validate `0 <= index <= size()` and
+   * increment `modCount`.
+   * @throws {@link UnsupportedOperationException} unless a subclass overrides it
+   */
   protected addAtIndex(_index: number, _e: E): void {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Removes and returns the element at `index`; shifts later elements left. Iterator `remove()`, `removeFirst`/
+   * `removeLast` and the inherited removal methods use it. Overrides must increment `modCount`.
+   * @throws {@link UnsupportedOperationException} unless a subclass overrides it
+   */
   removeAt(_index: number): E {
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Appends `e` (via `addAtIndex(size(), e)`) and returns `true`.
+   * @throws {@link UnsupportedOperationException} if `addAtIndex` is not overridden
+   */
   override add(e: E): boolean;
+  /**
+   * Inserts `e` at `index` (via `addAtIndex`), shifting later elements right.
+   * @throws {@link IndexOutOfBoundsException} if `index < 0 || index > size()` (when the subclass checks it)
+   * @throws {@link UnsupportedOperationException} if `addAtIndex` is not overridden
+   */
   override add(index: number, e: E): void;
   override add(a: E | number, b?: E): boolean | void {
     if (arguments.length >= 2) {
@@ -54,7 +93,16 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     return true;
   }
 
+  /**
+   * Appends the elements of `c` in its iteration order (via `addAllAt`); returns `true` if `c` was not empty.
+   * @throws {@link NullPointerException} if `c` is `null`
+   */
   override addAll(c: Collection<E>): boolean;
+  /**
+   * Inserts the elements of `c` at `index` in its iteration order (via `addAllAt`); returns `true` if `c` was not empty.
+   * @throws {@link IndexOutOfBoundsException} if `index < 0 || index > size()`
+   * @throws {@link NullPointerException} if `c` is `null`
+   */
   override addAll(index: number, c: Collection<E>): boolean;
   override addAll(a: Collection<E> | number, b?: Collection<E>): boolean {
     if (arguments.length >= 2) return this.addAllAt(a as number, b as Collection<E>);
@@ -83,18 +131,24 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     return arr.length > 0;
   }
 
+  /** Returns the index of the first element equal to `o`, or -1; a forward scan with a list iterator. */
   indexOf(o: unknown): number {
     const it = this.listIterator();
     while (it.hasNext()) if (equals(o, it.next())) return it.previousIndex();
     return -1;
   }
 
+  /** Returns the index of the last element equal to `o`, or -1; a backward scan with a list iterator. */
   lastIndexOf(o: unknown): number {
     const it = this.listIterator(this.size());
     while (it.hasPrevious()) if (equals(o, it.previous())) return it.nextIndex();
     return -1;
   }
 
+  /**
+   * Removes every element via `removeRange(0, size())` (list-iterator `remove` calls).
+   * @throws {@link UnsupportedOperationException} if `removeAt` is not overridden and the list is not empty
+   */
   override clear(): void {
     this.removeRange(0, this.size());
   }
@@ -112,15 +166,30 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     }
   }
 
+  /**
+   * Returns a fail-fast iterator built on `get`/`removeAt`: it throws {@link ConcurrentModificationException} when
+   * `modCount` changes other than through the iterator itself.
+   */
   iterator(): Iterator<E> {
     return new Itr(this);
   }
 
+  /**
+   * Returns a fail-fast list iterator starting at `index`, built on `get`/`set`/`add(index, e)`/`removeAt`.
+   * @throws {@link IndexOutOfBoundsException} if `index < 0 || index > size()`
+   */
   listIterator(index = 0): ListIterator<E> {
     checkPositionIndex(index, this.size());
     return new ListItr(this, index);
   }
 
+  /**
+   * Returns a live view of `[fromIndex, toIndex)`: changes through it write to this list, and a structural change made
+   * to this list directly makes the view throw {@link ConcurrentModificationException}. Carries the
+   * {@link RandomAccess} brand when this list does.
+   * @throws {@link IndexOutOfBoundsException} if `fromIndex < 0` or `toIndex > size()`
+   * @throws {@link IllegalArgumentException} if `fromIndex > toIndex`
+   */
   subList(fromIndex: number, toIndex: number): List<E> {
     subListRangeCheck(fromIndex, toIndex, this.size());
     return new SubList(this, null, 0, fromIndex, toIndex);
@@ -135,12 +204,21 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     return new IteratorSpliterator(this, null, -1, ORDERED_SIZED);
   }
 
+  /**
+   * Replaces each element with `operator(element)`, through the list iterator's `set`.
+   * @throws {@link NullPointerException} if `operator` is `null`
+   */
   replaceAll(operator: (e: E) => E): void {
     requireNonNull(operator);
     const it = this.listIterator();
     while (it.hasNext()) it.set(operator(it.next()));
   }
 
+  /**
+   * Sorts the list stably by `c` (natural ordering when `null` or omitted): sorts a copy, then writes it back with the
+   * list iterator's `set`, so it is not a structural change.
+   * @throws {@link ClassCastException} if natural ordering meets values that cannot be compared
+   */
   sort(c: Comparator<E> | null = null): void {
     const a = stableSort(this.toArray(), c);
     const it = this.listIterator();
@@ -152,40 +230,66 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
 
   // SequencedCollection
 
+  /**
+   * Inserts `e` at index 0, via `addAtIndex`.
+   * @throws {@link UnsupportedOperationException} if `addAtIndex` is not overridden
+   */
   addFirst(e: E): void {
     this.add(0, e);
   }
 
+  /**
+   * Appends `e` at the end, via `addAtIndex`.
+   * @throws {@link UnsupportedOperationException} if `addAtIndex` is not overridden
+   */
   addLast(e: E): void {
     this.add(e);
   }
 
+  /**
+   * Returns the element at index 0.
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   getFirst(): E {
     if (this.isEmpty()) throw new NoSuchElementException();
     return this.get(0);
   }
 
+  /**
+   * Returns the element at index `size() - 1`.
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   getLast(): E {
     if (this.isEmpty()) throw new NoSuchElementException();
     return this.get(this.size() - 1);
   }
 
+  /**
+   * Removes and returns the element at index 0, via `removeAt`.
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   removeFirst(): E {
     if (this.isEmpty()) throw new NoSuchElementException();
     return this.removeAt(0);
   }
 
+  /**
+   * Removes and returns the last element, via `removeAt`.
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   removeLast(): E {
     if (this.isEmpty()) throw new NoSuchElementException();
     return this.removeAt(this.size() - 1);
   }
 
+  /** Returns a live reverse-ordered view; writes through it reach this list. `reversed().reversed()` is this list. */
   reversed(): List<E> {
     return ReverseOrderListView.of(this, true);
   }
 
   // Object
 
+  /** Returns `true` if `o` is a `List` with equal elements in the same order (any `List` implementation). */
   override equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isList(o)) return false;
@@ -195,6 +299,7 @@ export abstract class AbstractList<E> extends AbstractCollection<E> implements L
     return !(a.hasNext() || b.hasNext());
   }
 
+  /** Returns `31 * h + hashCode(e)` over the elements, starting at 1, so equal lists hash the same. */
   override hashCode(): number {
     let h = 1;
     const it = this.iterator();

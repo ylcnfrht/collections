@@ -47,16 +47,21 @@ const PUT_FIRST = 1;
 const PUT_LAST = 2;
 
 /**
- * Hash map with a predictable iteration order: insertion order by default (re-putting a key keeps
- * its place), or access order when constructed with accessOrder = true (every get, put, compute or merge
- * hit moves the key to the end, which makes it a structural change for live iterators).
- * Override removeEldestEntry, or use LinkedHashMap.lru(n), to build an LRU cache.
+ * A {@link HashMap} whose entries are also linked in a doubly linked list, giving a predictable iteration order and
+ * the {@link SequencedMap} operations. The order is insertion order by default (putting an existing key again keeps
+ * its place), or access order when constructed with `accessOrder = true` (every `get`, `getOrDefault`, `put`,
+ * `putIfAbsent`, `replace`, `compute*` or `merge` hit moves the key to the end, which is a structural change for open
+ * iterators). `null` and `undefined` keys and values are allowed. Lookups and updates are O(1) expected; first/last
+ * access and polling are O(1).
+ *
+ * Override {@link LinkedHashMap.removeEldestEntry}, or use {@link LinkedHashMap.lru}, to build an LRU cache.
  */
 export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K, V> {
   /** @internal eldest node */
   head: LinkedNode<K, V> | null = null;
   /** @internal youngest node */
   tail: LinkedNode<K, V> | null = null;
+  /** `true` if the map iterates in access order (least recently used first), `false` for insertion order. */
   readonly accessOrder: boolean;
   /** @internal evict the eldest entry while size exceeds this (set by lru()) */
   maxSize = Infinity;
@@ -67,8 +72,18 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
   private les: LinkedEntrySet<K, V> | undefined;
   private rev: ReversedLinkedHashMap<K, V> | undefined;
 
+  /** Creates an empty insertion-ordered map. */
   constructor();
+  /**
+   * Creates an empty map. `initialCapacity` and `loadFactor` are validated sizing hints only; `accessOrder = true`
+   * selects access order instead of insertion order.
+   * @throws {@link IllegalArgumentException} if `initialCapacity` is negative or NaN, or `loadFactor` is not positive
+   */
   constructor(initialCapacity: number, loadFactor?: number, accessOrder?: boolean);
+  /**
+   * Creates an insertion-ordered map with the mappings of `map`, in `map`'s iteration order.
+   * @throws {@link NullPointerException} if `map` is `null` or `undefined`
+   */
   constructor(map: Map<K, V>);
   constructor(a?: number | Map<K, V>, loadFactor?: number, accessOrder = false) {
     // never hand the map to super: its putAll would run before our fields exist
@@ -78,13 +93,18 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     if (a !== undefined && typeof a !== 'number') this.putAll(requireNonNull(a));
   }
 
+  /** Returns a new insertion-ordered map of the given `[key, value]` pairs; a repeated key keeps its first position. */
   static override of<K, V>(...pairs: [K, V][]): LinkedHashMap<K, V> {
     const m = new LinkedHashMap<K, V>();
     for (const [k, v] of pairs) m.put(k, v);
     return m;
   }
 
-  /** An access-ordered map that evicts its least recently used entry beyond maxSize entries. */
+  /**
+   * Returns an empty access-ordered map that evicts its least recently used entry whenever an insertion takes it
+   * above `maxSize` entries: a ready-made LRU cache.
+   * @throws {@link IllegalArgumentException} if `maxSize` is less than 1 or NaN
+   */
   static lru<K, V>(maxSize: number): LinkedHashMap<K, V> {
     if (!(maxSize >= 1)) throw new IllegalArgumentException(`Illegal max size: ${maxSize}`);
     const m = new LinkedHashMap<K, V>(0, 0.75, true);
@@ -93,8 +113,8 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
   }
 
   /**
-   * An empty insertion-ordered map sized for numMappings mappings (a sizing hint only).
-   * @throws IllegalArgumentException if numMappings is negative or NaN
+   * Returns an empty insertion-ordered map intended for `numMappings` mappings (a sizing hint only).
+   * @throws {@link IllegalArgumentException} if `numMappings` is negative or NaN
    */
   static newLinkedHashMap<K, V>(numMappings: number): LinkedHashMap<K, V> {
     if (!(numMappings >= 0)) throw new IllegalArgumentException(`Negative number of mappings: ${numMappings}`);
@@ -119,8 +139,10 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
   }
 
   /**
-   * Called after each insertion with the eldest entry; returning true removes it.
-   * May also modify the map itself (then return false).
+   * Called after each insertion of a new key (not after updating an existing one, nor while copying in `clone()`)
+   * with the eldest entry: the head, the least recently inserted or used. Returning `true` removes that entry. An
+   * override may also modify the map itself and return `false`. The default returns `false`, so nothing is evicted.
+   * `putFirst` links its new entry at the head first, so returning `true` there evicts the entry just inserted.
    */
   protected removeEldestEntry(_eldest: MapEntry<K, V>): boolean {
     return false;
@@ -132,6 +154,10 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return new LinkedNode(key, value, null);
   }
 
+  /**
+   * Called after a new mapping was added: links the node at the end (at the front for `putFirst`), then removes the
+   * eldest entry if the map exceeds the `lru()` size or {@link LinkedHashMap.removeEldestEntry} returns `true`.
+   */
   protected override afterNodeInsertion(node: HashNode<K, V>): void {
     // linked only now: hashing a self-containing key must not see the node yet
     if (this.putMode === PUT_FIRST) this.linkFirst(node as LinkedNode<K, V>);
@@ -142,6 +168,10 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     if ((this.size() > this.maxSize || this.removeEldestEntry(h)) && (this.head === h || h.before !== null)) this.removeNode(h);
   }
 
+  /**
+   * Called when an operation hits an existing key (see {@link HashMap}): moves the node to the end in access order
+   * (or for `putLast`), or to the front for `putFirst`; a move bumps `modCount`. Does nothing in insertion order.
+   */
   protected override afterNodeAccess(node: HashNode<K, V>): void {
     const mode = this.putMode;
     if ((mode === PUT_LAST || (mode === PUT_NORM && this.accessOrder)) && this.tail !== node) {
@@ -153,12 +183,14 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     }
   }
 
+  /** Called after a mapping was removed: unlinks its node from the list. */
   protected override afterNodeRemoval(node: HashNode<K, V>): void {
     const n = node as LinkedNode<K, V>;
     this.unlink(n);
     n.before = n.after = null;
   }
 
+  /** Returns the fail-fast cursor behind every view iterator; it walks the list from head to tail. */
   protected override newNodeIterator(): NodeIterator<K, V> {
     return new LinkedIterator(this, false, ENTRY);
   }
@@ -213,6 +245,10 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
   // Map
 
   // own copy so the access hook inlines here instead of at HashMap.get's shared call site
+  /**
+   * Returns the value mapped to `key`, or `null` if there is none (or the key maps to `null`). O(1) expected. In access
+   * order a hit moves the key to the end, a structural change for open iterators.
+   */
   override get(key: unknown): V | null {
     let n: LinkedNode<K, V> | undefined;
     if (isIndexKey(key)) {
@@ -227,11 +263,13 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return n.value;
   }
 
+  /** Returns `true` if one or more keys map to a value equal to `value`. O(n), walking the list. */
   override containsValue(value: unknown): boolean {
     for (let n = this.head; n !== null; n = n.after) if (equals(value, n.value)) return true;
     return false;
   }
 
+  /** Removes all mappings. */
   override clear(): void {
     // unlink every node: a node that is not in the map must have null links (eviction relies on it)
     for (let n = this.head; n !== null; ) {
@@ -243,6 +281,11 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     this.head = this.tail = null;
   }
 
+  /**
+   * Calls `action` for each mapping, in insertion or access order.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this map
+   */
   override forEach(action: (key: K, value: V) => void): void {
     requireNonNull(action);
     const mc = this.modCount;
@@ -252,50 +295,89 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     }
   }
 
+  /**
+   * Returns a live view of the keys in this map's order; same as `sequencedKeySet()`. Removing from it removes the
+   * mapping; it does not support `add` (`UnsupportedOperationException`).
+   */
   override keySet(): SequencedSet<K> {
     return this.sequencedKeySet();
   }
 
+  /**
+   * Returns a live view of the values in this map's order; same as `sequencedValues()`. Removing from it removes the
+   * mapping; it does not support `add` (`UnsupportedOperationException`).
+   */
   override values(): SequencedCollection<V> {
     return this.sequencedValues();
   }
 
+  /**
+   * Returns a live view of the mappings in this map's order; same as `sequencedEntrySet()`. Its entries are the map's
+   * own nodes, so `setValue` writes through; it does not support `add` (`UnsupportedOperationException`).
+   */
   override entrySet(): SequencedSet<MapEntry<K, V>> {
     return this.sequencedEntrySet();
   }
 
+  /** Returns a fail-fast iterator over the mappings as `[key, value]` pairs, in insertion or access order. */
   override [Symbol.iterator](): IterableIterator<[K, V]> {
     return new LinkedJsIterator(this, false, PAIR);
   }
 
   // SequencedMap
 
+  /**
+   * Returns a live, sequenced view of the keys in this map's order. Removal (including `removeFirst`/`removeLast`)
+   * writes through; `add`, `addFirst` and `addLast` throw {@link UnsupportedOperationException}.
+   */
   sequencedKeySet(): SequencedSet<K> {
     return (this.lks ??= new LinkedKeySet(this, false));
   }
 
+  /**
+   * Returns a live, sequenced view of the values in this map's order. Removal writes through; adding throws
+   * {@link UnsupportedOperationException}.
+   */
   sequencedValues(): SequencedCollection<V> {
     return (this.lvs ??= new LinkedValues(this, false));
   }
 
+  /**
+   * Returns a live, sequenced view of the mappings in this map's order. Its entries are the map's own nodes, so
+   * `setValue` writes through; adding throws {@link UnsupportedOperationException}.
+   */
   sequencedEntrySet(): SequencedSet<MapEntry<K, V>> {
     return (this.les ??= new LinkedEntrySet(this, false));
   }
 
+  /**
+   * Returns a live reverse-ordered view: changes through either side are visible in the other. Writes go to this map: a
+   * new key put through the view still lands at this map's end, and `putFirst`/`putLast` on the view put at this map's
+   * end/front.
+   */
   reversed(): SequencedMap<K, V> {
     return (this.rev ??= new ReversedLinkedHashMap(this));
   }
 
+  /**
+   * Returns the first (eldest) entry as an immutable snapshot, or `null` if this map is empty. O(1); it does not count
+   * as an access.
+   */
   firstEntry(): MapEntry<K, V> | null {
     const n = this.head;
     return n === null ? null : new SimpleImmutableEntry(n.key, n.value);
   }
 
+  /**
+   * Returns the last (youngest) entry as an immutable snapshot, or `null` if this map is empty. O(1); it does not count
+   * as an access.
+   */
   lastEntry(): MapEntry<K, V> | null {
     const n = this.tail;
     return n === null ? null : new SimpleImmutableEntry(n.key, n.value);
   }
 
+  /** Removes and returns the first (eldest) entry as an immutable snapshot, or `null` if this map is empty. O(1). */
   pollFirstEntry(): MapEntry<K, V> | null {
     const n = this.head;
     if (n === null) return null;
@@ -303,6 +385,7 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return new SimpleImmutableEntry(n.key, n.value);
   }
 
+  /** Removes and returns the last (youngest) entry as an immutable snapshot, or `null` if this map is empty. O(1). */
   pollLastEntry(): MapEntry<K, V> | null {
     const n = this.tail;
     if (n === null) return null;
@@ -310,12 +393,19 @@ export class LinkedHashMap<K, V> extends HashMap<K, V> implements SequencedMap<K
     return new SimpleImmutableEntry(n.key, n.value);
   }
 
-  /** Inserts or updates the mapping and moves it to the front. */
+  /**
+   * Maps `key` to `value` and moves the mapping to the front, in either order mode. A new key may be evicted at once by
+   * {@link LinkedHashMap.removeEldestEntry}.
+   * @returns the previous value, or `null` if there was no mapping
+   */
   putFirst(key: K, value: V): V | null {
     return this.putAt(key, value, true);
   }
 
-  /** Inserts or updates the mapping and moves it to the end. */
+  /**
+   * Maps `key` to `value` and moves the mapping to the end, in either order mode.
+   * @returns the previous value, or `null` if there was no mapping
+   */
   putLast(key: K, value: V): V | null {
     return this.putAt(key, value, false);
   }

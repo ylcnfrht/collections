@@ -9,17 +9,24 @@ import { isSet } from '../util/guards';
 const PRESENT = true;
 
 /**
- * Sorted set backed by a TreeMap (red-black tree): O(log n) add/remove/contains/navigation.
- * Ordered by the comparator, or natural ordering (naturalCompare) when null; the comparator defines equality.
- * Inherits AbstractSet through NavigableKeySet, the key-set machinery it shares with TreeMap.
+ * A sorted {@link NavigableSet} backed by a {@link TreeMap} (a red-black tree). Elements are ordered by the comparator
+ * given to the constructor, or naturally (numbers, strings, bigints, booleans, `Date`s, objects with `compareTo`) when
+ * there is none; the ordering, not `equals()`, decides which elements are equal.
+ *
+ * `add`, `remove`, `contains` and the navigation methods (`floor`, `ceiling`, `higher`, `lower`) run in O(log n);
+ * iteration is in ascending order. Under natural ordering `null`/`undefined` elements throw
+ * {@link NullPointerException} and elements of mixed types throw {@link ClassCastException}. Range and descending
+ * views are live; iterators are fail-fast. It shares its key-set machinery with `TreeMap.navigableKeySet()`.
  */
 export class TreeSet<E> extends NavigableKeySet<E> implements NavigableSet<E> {
   /**
-   * new TreeSet(), new TreeSet(comparator), or a copy of a collection.
-   * Copying a SortedSet (anything with a comparator() method) keeps the source's comparator and order,
-   * like the TreeSet(SortedSet) constructor; any other collection is ordered naturally. The type system
-   * cannot tell the two overloads apart, so the choice is made at run time.
-   * @throws IllegalArgumentException if source is neither a comparator nor a collection
+   * Creates an empty set, an empty set ordered by a comparator, or a copy of a collection. With no argument (or
+   * `null`) elements are ordered naturally. Copying a sorted set (a {@link Set} with a `comparator()` method) keeps
+   * the source's comparator and order; any other collection is ordered naturally. The type system cannot tell the two
+   * source kinds apart, so the choice is made at run time.
+   * @param source - a comparator, a collection to copy, or nothing for natural ordering
+   * @throws {@link IllegalArgumentException} if `source` is neither a comparator nor a collection
+   * @throws {@link NullPointerException} / {@link ClassCastException} if a copied element cannot be compared
    */
   constructor(source?: Comparator<E> | Collection<E> | null) {
     if (source != null && typeof source !== 'function') requireCollection(source, 'a Comparator or a Collection');
@@ -27,6 +34,7 @@ export class TreeSet<E> extends NavigableKeySet<E> implements NavigableSet<E> {
     if (source != null && typeof source !== 'function') this.addAll(source);
   }
 
+  /** Returns a new naturally ordered set of the given elements; duplicates are dropped. */
   static of<E>(...elements: E[]): TreeSet<E> {
     const s = new TreeSet<E>();
     for (const e of elements) s.add(e);

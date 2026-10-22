@@ -189,21 +189,77 @@ export function toIdentityString(o: unknown): string {
   return `${name}@${(identityHashCode(o) >>> 0).toString(16)}`;
 }
 
+/**
+ * Static helpers for values: the equality, hashing, null-check and index-check rules every collection in this
+ * library uses. `equals` and `hashCode` here define what "equal elements" and "equal keys" mean.
+ */
 export const Objects = {
+  /**
+   * Returns `true` when `a` and `b` are equal: `a.equals(b)` when `a` has an `equals` method, otherwise SameValueZero
+   * (`NaN` equals `NaN`, `+0` equals `-0`); `Date`s compare by time. `null` and `undefined` equal only themselves.
+   */
   equals,
+  /**
+   * Returns a 32-bit hash consistent with {@link Objects.equals}: integer numbers in 32-bit range hash to themselves,
+   * other numbers by their bits, strings by `31 * h + charCode`, booleans to 1231/1237, bigints by their 64-bit
+   * value, `Date`s by time, objects through their `hashCode()` method or else by identity. `null`/`undefined` give 0.
+   */
   hashCode,
+  /** Returns a combined hash of the values (`h = 31 * h + hashCode(v)`, starting at 1), e.g. for a `hashCode()` method. */
   hash,
+  /**
+   * Returns a hash that is stable per object reference and ignores any `hashCode()` method; `null`/`undefined` give 0
+   * and primitives hash by value.
+   */
   identityHashCode,
+  /**
+   * Returns `o` when it is neither `null` nor `undefined`.
+   * @param message - error message, or a function producing it that is called only on failure
+   * @throws {@link NullPointerException} if `o` is `null` or `undefined`
+   */
   requireNonNull,
+  /** Returns `true` when `o` is `null` or `undefined`. */
   isNull,
+  /** Returns `true` when `o` is neither `null` nor `undefined`. */
   nonNull: (o: unknown) => !isNull(o),
+  /**
+   * Returns the string form collections use in `toString()`: `String(o)`, with `null` as `"null"` and `undefined` as
+   * `"undefined"`. With `nullDefault`, both `null` and `undefined` give `nullDefault`.
+   */
   toString,
+  /**
+   * Returns `index` when it is an integer with `0 <= index < length`.
+   * @throws {@link IndexOutOfBoundsException} otherwise
+   */
   checkIndex,
+  /**
+   * Returns `fromIndex` when `0 <= fromIndex <= toIndex <= length` (all integers).
+   * @throws {@link IndexOutOfBoundsException} otherwise
+   */
   checkFromToIndex,
+  /**
+   * Returns `fromIndex` when the range `[fromIndex, fromIndex + size)` lies within `[0, length)` (all non-negative
+   * integers).
+   * @throws {@link IndexOutOfBoundsException} otherwise
+   */
   checkFromIndexSize,
+  /**
+   * Returns `o`, or `defaultObj` when `o` is `null` or `undefined`.
+   * @throws {@link NullPointerException} if both are `null` or `undefined`
+   */
   requireNonNullElse,
+  /**
+   * Returns `o`, or `supplier()` when `o` is `null` or `undefined`; the supplier is called only then.
+   * @throws {@link NullPointerException} if the supplier is needed and it or its result is `null`/`undefined`
+   */
   requireNonNullElseGet,
+  /** Returns 0 when `a === b` (without calling `c`), otherwise `c(a, b)`. */
   compare,
+  /** Like {@link Objects.equals}, but plain and typed arrays compare element by element, recursively. */
   deepEquals,
+  /**
+   * Returns `ConstructorName@hexhash` built from the identity hash, ignoring any `toString()`/`hashCode()` method.
+   * @throws {@link NullPointerException} if `o` is `null` or `undefined`
+   */
   toIdentityString,
 };

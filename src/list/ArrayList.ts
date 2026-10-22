@@ -21,16 +21,34 @@ function outOfBounds(index: number, length: number): never {
 }
 
 /**
- * Resizable list backed by a dense native array. Never contains holes: every index in
- * [0, size) holds a value, so V8 keeps the backing store in a packed elements kind.
+ * Resizable list backed by a dense native array; the default {@link List} implementation.
+ *
+ * `get` and `set` are O(1), appending is amortized O(1), and inserting or removing at index `i`
+ * is O(n − i) because the tail shifts (so `addFirst`/`removeFirst` are O(n)). `contains`, `indexOf`
+ * and `remove(o)` are O(n) scans; `sort` is a stable O(n log n). Permits `null` and `undefined`
+ * elements. Iterates in index order; iterators, `forEach` and views are fail-fast, and `sort`
+ * and `replaceAll` count as structural changes (`set` does not).
+ *
+ * The backing array never contains holes: every index in [0, size) holds a value, so the engine
+ * keeps it in a packed elements kind.
  */
 export class ArrayList<E> extends AbstractList<E> {
   /** @internal Backing array; never reassigned, so iterators may cache it. */
   readonly es: E[];
 
+  /** Creates an empty list. */
   constructor();
-  /** initialCapacity is only a hint: preallocating would create holes. */
+  /**
+   * Creates an empty list. `initialCapacity` is validated but only a hint: nothing is
+   * preallocated, since preallocating would create holes in the backing array.
+   * @param initialCapacity - expected number of elements
+   * @throws {@link IllegalArgumentException} if `initialCapacity` is negative or not an integer
+   */
   constructor(initialCapacity: number);
+  /**
+   * Creates a list holding the elements of `c`, in its iteration order. O(n).
+   * @throws {@link NullPointerException} if `c` is `null` or `undefined`
+   */
   constructor(c: Collection<E>);
   constructor(arg?: number | Collection<E>) {
     super();
@@ -43,6 +61,10 @@ export class ArrayList<E> extends AbstractList<E> {
     }
   }
 
+  /**
+   * Creates a mutable list holding `xs` in argument order. Unlike `List.of`, the result is
+   * modifiable and may hold `null` and `undefined`. Called on a subclass, returns an instance of it.
+   */
   static of<E>(...xs: E[]): ArrayList<E> {
     const l = new this<E>();
     const a = l.es;
@@ -55,31 +77,44 @@ export class ArrayList<E> extends AbstractList<E> {
     return true;
   }
 
+  /** Marker for O(1) positional access; always `true`. */
   get [RANDOM_ACCESS](): true {
     return true;
   }
 
-  /** Capacity hint; the native array manages its own storage. */
+  /**
+   * Does nothing: capacity is only a hint, and the native array manages its own storage.
+   * Kept for API compatibility; the argument is not validated.
+   */
   ensureCapacity(_minCapacity: number): void {}
 
-  /** Capacity is the native array's business, but like the reference this still fails open iterators. */
+  /**
+   * Does not change storage (the native array manages it), but counts as a structural change,
+   * so open iterators fail fast afterwards.
+   */
   trimToSize(): void {
     this.modCount++;
   }
 
-  /** Shallow, independent copy of the same class. */
+  /** Returns a shallow, independent copy of the same runtime class, in O(n). */
   clone(): this {
     return new (this.constructor as new (c: Collection<E>) => this)(this);
   }
 
+  /** Returns the number of elements. O(1). */
   size(): number {
     return this.es.length;
   }
 
+  /** Returns `true` if this list has no elements. O(1). */
   override isEmpty(): boolean {
     return this.es.length === 0;
   }
 
+  /**
+   * Returns the element at `index`. O(1).
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` >= `size()`
+   */
   get(index: number): E {
     const a = this.es;
     // (index >>> 0) === index rejects negatives, fractions and NaN in one compare
@@ -87,6 +122,11 @@ export class ArrayList<E> extends AbstractList<E> {
     return a[index];
   }
 
+  /**
+   * Replaces the element at `index` with `e`. O(1); not a structural change, so open iterators stay valid.
+   * @returns the element previously at `index`
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` >= `size()`
+   */
   override set(index: number, e: E): E {
     const a = this.es;
     if ((index >>> 0) !== index || index >= a.length) outOfBounds(index, a.length);
@@ -96,7 +136,16 @@ export class ArrayList<E> extends AbstractList<E> {
   }
 
   // same arguments.length dispatch as AbstractList.add, inlined so append is a bare push
+  /**
+   * Appends `e` to the end of this list, in amortized O(1). `null` and `undefined` are allowed.
+   * @returns always `true`
+   */
   override add(e: E): boolean;
+  /**
+   * Inserts `e` at `index`, shifting the element there and all later ones one position to the right.
+   * O(n − index).
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` > `size()`
+   */
   override add(index: number, e: E): void;
   override add(a: E | number, b?: E): boolean | void {
     if (arguments.length >= 2) {
@@ -117,6 +166,12 @@ export class ArrayList<E> extends AbstractList<E> {
     this.modCount++;
   }
 
+  /**
+   * Removes the element at `index`, shifting later elements one position to the left.
+   * O(n − index); O(1) for the last element.
+   * @returns the removed element
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` >= `size()`
+   */
   override removeAt(index: number): E {
     const a = this.es;
     const n = a.length;
@@ -129,6 +184,11 @@ export class ArrayList<E> extends AbstractList<E> {
     return old;
   }
 
+  /**
+   * Removes the first element equal to `o` (by `Objects.equals`), if present. O(n): a linear scan,
+   * then a shift of the tail.
+   * @returns `true` if an element was removed
+   */
   override remove(o: unknown): boolean {
     const i = this.indexOf(o);
     if (i < 0) return false;
@@ -136,10 +196,15 @@ export class ArrayList<E> extends AbstractList<E> {
     return true;
   }
 
+  /** Returns `true` if this list contains an element equal to `o` (by `Objects.equals`). O(n) scan; `null` is allowed. */
   override contains(o: unknown): boolean {
     return this.indexOf(o) >= 0;
   }
 
+  /**
+   * Returns the index of the first element equal to `o` (by `Objects.equals`), or -1 if there is none.
+   * O(n) scan from the front; `NaN` matches `NaN`.
+   */
   override indexOf(o: unknown): number {
     const a = this.es;
     if (o === null || (typeof o !== 'object' && typeof o !== 'function')) {
@@ -162,6 +227,10 @@ export class ArrayList<E> extends AbstractList<E> {
     return -1;
   }
 
+  /**
+   * Returns the index of the last element equal to `o` (by `Objects.equals`), or -1 if there is none.
+   * O(n) scan from the back; `NaN` matches `NaN`.
+   */
   override lastIndexOf(o: unknown): number {
     const a = this.es;
     if (o === null || (typeof o !== 'object' && typeof o !== 'function')) {
@@ -182,17 +251,28 @@ export class ArrayList<E> extends AbstractList<E> {
     return -1;
   }
 
+  /** Returns a new array with all elements, in index order. Changing the array does not affect this list. O(n). */
   override toArray(): E[];
+  /**
+   * Fills an array created by `generator(size())` with the elements in index order, and returns it. O(n).
+   * @param generator - creates the target array for a given length
+   */
   override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
   override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     return arguments.length > 0 ? toArrayWith(this.es, generator as (length: number) => A) : this.es.slice();
   }
 
+  /** Removes all elements. Truncates the backing array, so no references to the removed elements are kept. */
   override clear(): void {
     this.modCount++;
     this.es.length = 0;
   }
 
+  /**
+   * Calls `action` for each element, in index order.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this list
+   */
   override forEach(action: (e: E) => void): void {
     requireNonNull(action);
     forEachImpl(this, this.es, action);
@@ -231,8 +311,12 @@ export class ArrayList<E> extends AbstractList<E> {
   }
 
   /**
-   * Like the reference: every element is tested before anything is removed, so a throwing predicate, or one that
-   * modifies the list (ConcurrentModificationException), leaves the list unchanged.
+   * Removes every element for which `filter` returns `true`, in O(n) with one compaction pass. Every
+   * element is tested before anything is removed, so a throwing predicate, or one that modifies the list,
+   * leaves the list unchanged.
+   * @returns `true` if any element was removed
+   * @throws {@link NullPointerException} if `filter` is null
+   * @throws {@link ConcurrentModificationException} if `filter` structurally modifies this list
    */
   override removeIf(filter: (e: E) => boolean): boolean {
     requireNonNull(filter);
@@ -258,6 +342,12 @@ export class ArrayList<E> extends AbstractList<E> {
   }
 
 
+  /**
+   * Replaces each element with the result of `operator` applied to it, in order. O(n). Counts as a
+   * structural change: open iterators fail fast afterwards.
+   * @throws {@link NullPointerException} if `operator` is null
+   * @throws {@link ConcurrentModificationException} if `operator` structurally modifies this list
+   */
   override replaceAll(operator: (e: E) => E): void {
     requireNonNull(operator);
     const a = this.es;
@@ -269,6 +359,13 @@ export class ArrayList<E> extends AbstractList<E> {
     this.modCount++;
   }
 
+  /**
+   * Sorts this list in place. The sort is stable (equal elements keep their order) and O(n log n).
+   * Counts as a structural change: open iterators fail fast afterwards.
+   * @param c - the comparator; `null` or omitted means natural ordering
+   * @throws {@link ClassCastException} if natural ordering is used and the elements have none
+   * @throws {@link ConcurrentModificationException} if the comparator structurally modifies this list
+   */
   override sort(c: Comparator<E> | null = null): void {
     const a = this.es;
     const mc = this.modCount;
@@ -282,35 +379,52 @@ export class ArrayList<E> extends AbstractList<E> {
     this.modCount++;
   }
 
+  /**
+   * Returns the first element. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override getFirst(): E {
     if (this.es.length === 0) throw new NoSuchElementException();
     return this.es[0];
   }
 
+  /**
+   * Returns the last element. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override getLast(): E {
     const a = this.es;
     if (a.length === 0) throw new NoSuchElementException();
     return a[a.length - 1];
   }
 
+  /** Returns a fail-fast iterator over the elements in index order. Its `remove` is O(n), like `removeAt`. */
   override iterator(): Iterator<E> {
     return new ArrayListItr(this, 0);
   }
 
+  /**
+   * Returns a fail-fast list iterator starting at `index`: the first `next()` returns the element at
+   * `index`. Its `set` is O(1); its `add` and `remove` are O(n), like the positional methods.
+   * @param index - start position, 0 by default
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` > `size()`
+   */
   override listIterator(index = 0): ListIterator<E> {
     checkPositionIndex(index, this.es.length);
     return new ArrayListItr(this, index);
   }
 
-  /** ORDERED|SIZED|SUBSIZED; late-binding, fail-fast, splits in halves. */
+  /** Returns a spliterator over the elements, used to build streams: `ORDERED | SIZED | SUBSIZED`, late-binding, fail-fast, splits in halves. */
   override spliterator(): Spliterator<E> {
     return new OwnedArraySpliterator(this, () => this.es, Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED);
   }
 
+  /** Returns a JS iterator over the elements in index order, for `for...of` and spread; fail-fast. */
   override [Symbol.iterator](): IterableIterator<E> {
     return new ArrayListJsItr(this);
   }
 
+  /** Returns `true` if `o` is a {@link List} of any class with equal elements in the same order. O(n). */
   override equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isList(o)) return false;
@@ -336,6 +450,7 @@ export class ArrayList<E> extends AbstractList<E> {
     return !it.hasNext();
   }
 
+  /** Returns the list hash code, `h = 31 * h + hash(e)` from 1 in 32-bit arithmetic, consistent with `equals`. O(n). */
   override hashCode(): number {
     const a = this.es;
     let h = 1;
@@ -346,6 +461,7 @@ export class ArrayList<E> extends AbstractList<E> {
     return h;
   }
 
+  /** Returns the elements in index order as `[a, b, c]`; an element that is this list prints as `(this Collection)`. */
   override toString(): string {
     const a = this.es;
     let s = '[';

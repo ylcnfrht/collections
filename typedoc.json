@@ -1,7 +1,12 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "entryPoints": ["src/index.ts"],
-  "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme"],
+  "entryPoints": [
+    "src/index.ts"
+  ],
+  "plugin": [
+    "typedoc-plugin-markdown",
+    "typedoc-vitepress-theme"
+  ],
   "out": "docs/api",
   "docsRoot": "docs",
   "name": "@nodestd/collections",
@@ -10,7 +15,10 @@
   "excludeInternal": true,
   "excludePrivate": true,
   "categorizeByGroup": true,
-  "sort": ["kind", "alphabetical"],
+  "sort": [
+    "kind",
+    "alphabetical"
+  ],
   "hidePageHeader": true,
   "hideBreadcrumbs": true,
   "useCodeBlocks": true,
@@ -40,5 +48,11 @@
     "Acc",
     "Window",
     "ClosableSource"
-  ]
+  ],
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": true
+  },
+  "treatValidationWarningsAsErrors": true
 }

@@ -21,6 +21,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # every public symbol documented and every {@link} resolvable (typedoc.json treats warnings as errors)
+      - if: matrix.node == 22
+        run: npx typedoc --emit none
       # the bundle must load and keep real class names (they show in errors and logs)
       - run: node -e "const l = require('./dist'); if (new l.ArrayList().constructor.name !== 'ArrayList') throw new Error('class names mangled')"
 

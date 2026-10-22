@@ -3,6 +3,7 @@ import { requireNonNull } from './Objects';
 
 /** Any indexable, length-bearing array: plain arrays and typed arrays alike. */
 export interface WritableArrayLike<E> {
+  /** Number of slots in the array. */
   readonly length: number;
   [index: number]: E;
 }

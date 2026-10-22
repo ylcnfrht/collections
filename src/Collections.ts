@@ -84,7 +84,12 @@ export function reverse(list: List<unknown>): void {
 }
 
 /** Random source for shuffle: a function returning a number in [0, 1) (like Math.random), or a generator with nextInt(bound) in [0, bound). */
-export type RandomSource = (() => number) | { nextInt(bound: number): number };
+export type RandomSource =
+  | (() => number)
+  | {
+      /** Returns a uniformly distributed integer in [0, `bound`). */
+      nextInt(bound: number): number;
+    };
 
 /**
  * Fisher–Yates shuffle. rnd is a `() => number` in [0, 1) (default Math.random) or an object with
@@ -1566,72 +1571,326 @@ export {
 };
 export type { TypeCheck };
 
+/**
+ * Static algorithms and factories that work on any collection: sorting, searching, reordering, empty and singleton
+ * collections, and unmodifiable, checked and synchronized wrappers.
+ *
+ * List algorithms use `get`/`set` loops on lists with the {@link RandomAccess} brand and list iterators (or one array
+ * copy) on others, so they stay O(n) on a `LinkedList`. Every method throws {@link NullPointerException} for a
+ * `null` or `undefined` collection argument.
+ */
 export const Collections = {
+  /**
+   * Sorts `list` stably by `c`, or by natural ordering when `c` is `null` or omitted; delegates to `list.sort(c)`.
+   * O(n log n).
+   * @throws {@link ClassCastException} if natural ordering meets values that cannot be compared
+   * @throws {@link UnsupportedOperationException} if the list does not support `set`
+   */
   sort,
+  /**
+   * Reverses the order of the elements of `list` in place. O(n).
+   * @throws {@link UnsupportedOperationException} if the list does not support `set`
+   */
   reverse,
+  /**
+   * Randomly permutes `list` in place (Fisher-Yates). O(n). Pass a seeded {@link RandomSource} for a reproducible
+   * order; the default is `Math.random`. A non-random-access list of 5 or more elements is shuffled in an array copy
+   * and written back with its list iterator.
+   * @throws {@link NullPointerException} if `rnd` is explicitly `null`
+   * @throws {@link UnsupportedOperationException} if the list does not support `set`
+   */
   shuffle,
+  /**
+   * Swaps the elements at positions `i` and `j` (a no-op when they are equal).
+   * @throws {@link IndexOutOfBoundsException} if `i` or `j` is out of range
+   */
   swap,
+  /**
+   * Replaces every element of `list` with `v`. O(n).
+   * @throws {@link UnsupportedOperationException} if the list does not support `set`
+   */
   fill,
+  /**
+   * Copies `src` over the first `src.size()` elements of `dest`; the rest of `dest` is unchanged. O(n).
+   * @throws {@link IndexOutOfBoundsException} if `dest` is shorter than `src`
+   * @throws {@link UnsupportedOperationException} if `dest` does not support `set`
+   */
   copy,
+  /**
+   * Returns the smallest element of `coll` by `c`, or by natural ordering when `c` is `null` or omitted; the first
+   * one found on ties. O(n).
+   * @throws {@link NoSuchElementException} if `coll` is empty
+   * @throws {@link ClassCastException} if natural ordering meets values that cannot be compared
+   * @throws {@link NullPointerException} if natural ordering meets a `null` element
+   */
   min,
+  /**
+   * Returns the largest element of `coll` by `c`, or by natural ordering when `c` is `null` or omitted; the first
+   * one found on ties. O(n).
+   * @throws {@link NoSuchElementException} if `coll` is empty
+   * @throws {@link ClassCastException} if natural ordering meets values that cannot be compared
+   * @throws {@link NullPointerException} if natural ordering meets a `null` element
+   */
   max,
+  /** Returns the number of elements of `coll` equal to `o` (by `Objects.equals`). O(n). */
   frequency,
+  /**
+   * Returns `true` if `c1` and `c2` have no element in common. Iterates one collection and calls `contains` on the
+   * other, preferring a `Set` (or else the larger collection) for the `contains` side.
+   */
   disjoint,
+  /**
+   * Searches `list`, which must be sorted ascending by `c` (natural ordering when `c` is `null` or omitted), for `key`.
+   * O(log n) comparisons; a list without the {@link RandomAccess} brand also costs O(n) iterator moves.
+   * The result is undefined if the list is not sorted.
+   * @returns the index of a matching element (any one, if there are several), otherwise
+   * `-(insertionPoint) - 1`, where `insertionPoint` is the index at which `key` would be inserted;
+   * so the result is `>= 0` only when the key is found
+   * @throws {@link ClassCastException} if natural ordering meets values that cannot be compared
+   */
   binarySearch,
+  /**
+   * Rotates `list` in place by `distance`: the element at index `i` moves to `(i + distance) mod size()`. Any integer
+   * distance works, including negative ones and ones larger than the size. O(n).
+   * @throws {@link IllegalArgumentException} if `distance` is not an integer
+   * @throws {@link UnsupportedOperationException} if the list does not support `set`
+   */
   rotate,
+  /**
+   * Returns an immutable list of `n` copies of `o` (which may be `null`), in O(1) space. `nCopies(0, o)` is the shared
+   * empty list.
+   * @throws {@link IllegalArgumentException} if `n` is negative or not an integer
+   */
   nCopies,
+  /**
+   * Adds each of `elements` to `coll` in order; returns `true` if `coll` changed.
+   * @throws {@link UnsupportedOperationException} if `coll` does not support `add`
+   */
   addAll,
+  /**
+   * Returns the first index at which `target` occurs as a contiguous run in `source`, or -1. An empty `target`
+   * matches at 0. O(n·m).
+   */
   indexOfSubList,
+  /**
+   * Returns the last index at which `target` occurs as a contiguous run in `source`, or -1. An empty `target`
+   * matches at `source.size()`. O(n·m).
+   */
   lastIndexOfSubList,
+  /**
+   * Replaces every element of `list` equal to `oldVal` (by `Objects.equals`) with `newVal`; returns `true` if any
+   * was replaced. O(n).
+   * @throws {@link UnsupportedOperationException} if the list does not support `set`
+   */
   replaceAll,
+  /**
+   * Returns a comparator that imposes the reverse of `c`, or of natural ordering when `c` is `null` or omitted.
+   * Reverse natural ordering is one shared instance, and reversing a reversed comparator returns the original.
+   */
   reverseOrder,
+  /** Returns the shared immutable empty list ({@link Collections.EMPTY_LIST}); random access. */
   emptyList,
+  /** Returns the shared immutable empty set ({@link Collections.EMPTY_SET}). */
   emptySet,
+  /** Returns the shared immutable empty map ({@link Collections.EMPTY_MAP}). */
   emptyMap,
+  /**
+   * Returns the shared immutable empty sorted set (natural ordering). Like a `TreeSet`, it rejects `null` queries
+   * with {@link NullPointerException}; `first()`/`last()` throw {@link NoSuchElementException}.
+   */
   emptySortedSet,
+  /**
+   * Returns the shared immutable empty navigable set (natural ordering); `lower`/`floor`/`ceiling`/`higher` return
+   * `null`. Like a `TreeSet`, it rejects `null` queries with {@link NullPointerException}.
+   */
   emptyNavigableSet,
+  /** Returns the shared immutable empty sorted map (natural ordering); it rejects `null` keys like a `TreeMap`. */
   emptySortedMap,
+  /** Returns the shared immutable empty navigable map (natural ordering); it rejects `null` keys like a `TreeMap`. */
   emptyNavigableMap,
+  /**
+   * Returns the shared iterator over nothing: `hasNext()` is `false`, `next()` throws {@link NoSuchElementException},
+   * `remove()` throws {@link IllegalStateException}.
+   */
   emptyIterator,
+  /**
+   * Returns the shared list iterator over nothing: `next()`/`previous()` throw {@link NoSuchElementException},
+   * `remove()`/`set()` throw {@link IllegalStateException}, `add()` throws {@link UnsupportedOperationException}.
+   */
   emptyListIterator,
+  /** Returns the shared enumeration over nothing: `hasMoreElements()` is `false`, `nextElement()` throws {@link NoSuchElementException}. */
   emptyEnumeration,
+  /**
+   * Returns an immutable random-access list holding only `o` (which may be `null`). Value equality with any `List`.
+   * Mutators that would change it throw {@link UnsupportedOperationException}.
+   */
   singletonList,
+  /**
+   * Returns an immutable set holding only `o` (which may be `null`). Value equality with any `Set`.
+   * Mutators that would change it throw {@link UnsupportedOperationException}.
+   */
   singleton,
+  /**
+   * Returns an immutable map holding only the mapping `key` to `value` (either may be `null`). Value equality with
+   * any `Map`.
+   * Mutators that would change it throw {@link UnsupportedOperationException}.
+   */
   singletonMap,
+  /**
+   * Returns a read-only live view of `c`: reads pass through, every mutator (also through iterators) throws
+   * {@link UnsupportedOperationException}. `equals`/`hashCode` are by identity, not the backing collection's.
+   * Wrapping a view this method returned returns it unchanged.
+   */
   unmodifiableCollection,
+  /**
+   * Returns a read-only live view of a sequenced collection; `reversed()` is read-only too. Every mutator throws
+   * {@link UnsupportedOperationException}; `equals`/`hashCode` are by identity.
+   */
   unmodifiableSequencedCollection,
+  /**
+   * Returns a read-only live view of `list`, with list equality. `subList`, `reversed()` and the iterators are
+   * read-only too; every mutator throws {@link UnsupportedOperationException}. Carries the {@link RandomAccess} brand
+   * when `list` does. Wrapping a view this method returned returns it unchanged.
+   */
   unmodifiableList,
+  /**
+   * Returns a read-only live view of `s`, with set equality. Every mutator throws
+   * {@link UnsupportedOperationException}. Wrapping a view this method returned returns it unchanged.
+   */
   unmodifiableSet,
+  /**
+   * Returns a read-only live view of a sequenced set, with set equality; `reversed()` is read-only too. Wrapping an
+   * unmodifiable sequenced (or sorted) set returns it.
+   */
   unmodifiableSequencedSet,
+  /**
+   * Returns a read-only live view of a sorted set; `subSet`/`headSet`/`tailSet` views are read-only too. Every
+   * mutator throws {@link UnsupportedOperationException}.
+   */
   unmodifiableSortedSet,
+  /**
+   * Returns a read-only live view of a navigable set; every derived view (`descendingSet`, `subSet`, ...) is
+   * read-only too. Every mutator, `pollFirst`/`pollLast` included, throws {@link UnsupportedOperationException}.
+   */
   unmodifiableNavigableSet,
+  /**
+   * Returns a read-only live view of `m`, with map equality. `keySet()`, `values()` and `entrySet()` are read-only
+   * (entries reject `setValue`); every mutator throws {@link UnsupportedOperationException}. Wrapping a view this
+   * method returned returns it unchanged.
+   */
   unmodifiableMap,
+  /**
+   * Returns a read-only live view of a sequenced map, with map equality; `reversed()` and the sequenced views are
+   * read-only too. Wrapping an unmodifiable sequenced (or sorted) map returns it.
+   */
   unmodifiableSequencedMap,
+  /**
+   * Returns a read-only live view of a sorted map; sub-map views are read-only too. Every mutator throws
+   * {@link UnsupportedOperationException}.
+   */
   unmodifiableSortedMap,
+  /**
+   * Returns a read-only live view of a navigable map; every derived view and entry is read-only too. Every mutator,
+   * `pollFirstEntry`/`pollLastEntry` included, throws {@link UnsupportedOperationException}.
+   */
   unmodifiableNavigableMap,
+  /**
+   * Returns a set backed by the empty `map`: `add(e)` is `map.put(e, true)`, and every other operation goes through
+   * `map.keySet()`. The set takes on the map's key semantics, e.g. an identity set over an `IdentityHashMap`.
+   * Use the map only through the returned set.
+   * @throws {@link IllegalArgumentException} if `map` is not empty
+   */
   newSetFromMap,
+  /**
+   * Like `newSetFromMap`, for a sequenced map: `addFirst`/`addLast` use `putFirst`/`putLast`, and `reversed()` is a
+   * set over the reversed map.
+   * @throws {@link IllegalArgumentException} if `map` is not empty
+   */
   newSequencedSetFromMap,
+  /**
+   * Returns a last-in-first-out `Queue` view of `deque`: `add`/`offer` push at the front and `remove`/`poll`/
+   * `element`/`peek` read the front, so the queue behaves as a stack. `equals`/`hashCode` are by identity.
+   */
   asLifoQueue,
+  /**
+   * Returns an `Enumeration` over `c`'s iterator, for legacy APIs. Its `asIterator()` does not support `remove()`.
+   */
   enumeration,
+  /** Returns a new `ArrayList` holding the remaining elements of the enumeration `e`, in order. */
   list,
+  /**
+   * Returns a live view of `c` that throws {@link ClassCastException} when an element failing `type` is inserted
+   * (`null` passes the check; the backing collection decides). `equals`/`hashCode` are by identity. `addAll` checks
+   * every element before adding any.
+   * @param type - runtime check standing in for a class token, e.g. `(x) => typeof x === 'string'`
+   */
   checkedCollection,
+  /**
+   * Returns a live list view that type-checks every inserted element, including through `set`, `replaceAll`, list
+   * iterators and `subList`/`reversed()` views. List equality.
+   * @throws {@link ClassCastException} when an element failing `type` is inserted
+   */
   checkedList,
+  /**
+   * Returns a live set view that type-checks every inserted element. Set equality.
+   * @throws {@link ClassCastException} when an element failing `type` is inserted
+   */
   checkedSet,
+  /**
+   * Returns a live sorted-set view that type-checks every inserted element, including through sub-set views.
+   * @throws {@link ClassCastException} when an element failing `type` is inserted
+   */
   checkedSortedSet,
+  /**
+   * Returns a live navigable-set view that type-checks every inserted element, including through derived views.
+   * @throws {@link ClassCastException} when an element failing `type` is inserted
+   */
   checkedNavigableSet,
+  /**
+   * Returns a live queue view that type-checks every inserted element (`add`, `offer`, ...).
+   * @throws {@link ClassCastException} when an element failing `type` is inserted
+   */
   checkedQueue,
+  /**
+   * Returns a live map view that type-checks keys and values on every way in: `put`, `putIfAbsent`, `replace`,
+   * `putAll` (checked before any is put), results of `replaceAll`/`compute*`/`merge`, and `setValue` on entries.
+   * Map equality.
+   * @throws {@link ClassCastException} when a key fails `keyType` or a value fails `valueType`
+   */
   checkedMap,
+  /**
+   * Like `checkedMap`, for a sorted map; sub-map views are checked too.
+   * @throws {@link ClassCastException} when a key fails `keyType` or a value fails `valueType`
+   */
   checkedSortedMap,
+  /**
+   * Like `checkedMap`, for a navigable map; derived maps and key sets are checked too.
+   * @throws {@link ClassCastException} when a key fails `keyType` or a value fails `valueType`
+   */
   checkedNavigableMap,
+  /**
+   * Returns a delegating view of `c` with its own identity: `equals`/`hashCode` are by identity. JS runs one thread
+   * per realm, so there is nothing to lock; the method exists so ported code keeps working.
+   */
   synchronizedCollection,
+  /** Returns a delegating view of `l` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedList,
+  /** Returns a delegating view of `s` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedSet,
+  /** Returns a delegating view of `s` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedSortedSet,
+  /** Returns a delegating view of `s` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedNavigableSet,
+  /** Returns a delegating view of `m` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedMap,
+  /** Returns a delegating view of `m` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedSortedMap,
+  /** Returns a delegating view of `m` (no locking is needed in JS); every method, `equals` included, passes through. */
   synchronizedNavigableMap,
+  /** The shared immutable empty list, typed `never`; `emptyList()` returns the same instance with an element type. */
   EMPTY_LIST,
+  /** The shared immutable empty set, typed `never`; `emptySet()` returns the same instance with an element type. */
   EMPTY_SET,
+  /** The shared immutable empty map, typed `never`; `emptyMap()` returns the same instance with key and value types. */
   EMPTY_MAP,
 };

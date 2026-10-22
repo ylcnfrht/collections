@@ -306,21 +306,29 @@ class EmptySpliterator<T> extends BaseSpliterator<T> {
 const EMPTY: Spliterator<never> = new EmptySpliterator<never>();
 
 /**
- * Spliterators.AbstractSpliterator: subclasses implement tryAdvance only. trySplit copies out
- * growing batches (1024, 2048, ... up to 2^25 elements) into an array-backed spliterator.
+ * Spliterators.AbstractSpliterator: subclasses implement tryAdvance only; forEachRemaining loops tryAdvance.
+ * trySplit copies out growing batches (1024, 2048, ... up to 2^25 elements) into an array-backed spliterator.
  */
 abstract class AbstractSpliteratorImpl<T> extends BaseSpliterator<T> {
   private readonly chars: number;
   private est: number;
   private batch = 0;
 
-  /** @param est estimated size (Infinity if unknown); @param additionalCharacteristics SIZED implies SUBSIZED */
+  /**
+   * Creates a spliterator reporting `est` and `additionalCharacteristics`.
+   * @param est - estimated size (`Infinity` if unknown)
+   * @param additionalCharacteristics - the characteristic flags; SIZED implies SUBSIZED
+   */
   protected constructor(est: number, additionalCharacteristics: number) {
     super();
     this.est = est;
     this.chars = (additionalCharacteristics & SIZED) !== 0 ? additionalCharacteristics | SUBSIZED : additionalCharacteristics;
   }
 
+  /**
+   * Copies the next batch of elements (1024 more than the previous batch, at most 2^25) into an array-backed
+   * spliterator and returns it, or `null` when the estimate is 1 or less or no element remains.
+   */
   override trySplit(): Spliterator<T> | null {
     let held: T | undefined;
     const hold = (t: T) => {
@@ -343,10 +351,12 @@ abstract class AbstractSpliteratorImpl<T> extends BaseSpliterator<T> {
     return null;
   }
 
+  /** Returns the estimate given to the constructor, lowered by each `trySplit`. */
   estimateSize(): number {
     return this.est;
   }
 
+  /** Returns the characteristics given to the constructor (plus SUBSIZED when SIZED). */
   characteristics(): number {
     return this.chars;
   }
@@ -397,43 +407,64 @@ export class SpliteratorIterator<T> implements Iterator<T> {
   }
 }
 
-/** Static factories for spliterators and the AbstractSpliterator base class. */
+/** Static factories for {@link Spliterator}s over arrays, collections and iterators, and the AbstractSpliterator base classes. */
 export class Spliterators {
   private constructor() {}
 
-  /** Base class for spliterators that only implement tryAdvance; see AbstractSpliteratorImpl. */
+  /**
+   * Base class for spliterators that only implement `tryAdvance`: extend it and call
+   * `super(estimatedSize, characteristics)` (`Infinity` when the size is unknown; SIZED implies SUBSIZED). It provides
+   * `forEachRemaining`, `estimateSize`, `characteristics` and a `trySplit` that copies out growing batches.
+   */
   static readonly AbstractSpliterator = AbstractSpliteratorImpl;
+  /** `AbstractSpliterator` for an int source of numbers; behaves the same. */
   static readonly AbstractIntSpliterator = AbstractIntSpliteratorImpl;
+  /** `AbstractSpliterator` for a long source of numbers; behaves the same. */
   static readonly AbstractLongSpliterator = AbstractLongSpliteratorImpl;
+  /** `AbstractSpliterator` for a double source of numbers; behaves the same. */
   static readonly AbstractDoubleSpliterator = AbstractDoubleSpliteratorImpl;
 
-  /** Empty spliterator: SIZED|SUBSIZED, never splits. */
+  /** Returns an empty spliterator (a shared instance): SIZED | SUBSIZED, size 0, never splits. */
   static emptySpliterator<T>(): Spliterator<T> {
     return EMPTY;
   }
+  /** Returns the empty spliterator, typed for numbers. */
   static emptyIntSpliterator(): Spliterator<number> {
     return EMPTY;
   }
+  /** Returns the empty spliterator, typed for numbers. */
   static emptyLongSpliterator(): Spliterator<number> {
     return EMPTY;
   }
+  /** Returns the empty spliterator, typed for numbers. */
   static emptyDoubleSpliterator(): Spliterator<number> {
     return EMPTY;
   }
 
   /**
-   * spliterator(array, characteristics) / spliterator(array, fromIndex, toIndex, characteristics):
-   * over the array (range), reporting characteristics | SIZED | SUBSIZED, splitting in halves.
-   * @throws ArrayIndexOutOfBoundsException for a bad range
-   *
-   * spliterator(collection, characteristics): late-binding over collection.iterator(), sized by
-   * collection.size(); adds SIZED | SUBSIZED unless CONCURRENT is given.
-   *
-   * spliterator(iterator, size, characteristics): over the iterator, sized by size; adds SIZED | SUBSIZED unless CONCURRENT.
+   * Returns a spliterator over the whole array-like (typed arrays too), without copying, reporting
+   * `characteristics | SIZED | SUBSIZED` and splitting in halves.
+   * @throws {@link NullPointerException} if array is null
    */
   static spliterator<T>(array: ArrayLike<T>, characteristics: number): Spliterator<T>;
+  /**
+   * Returns a spliterator over `array[fromIndex..toIndex)`, without copying, reporting
+   * `characteristics | SIZED | SUBSIZED` and splitting in halves.
+   * @throws {@link ArrayIndexOutOfBoundsException} if fromIndex > toIndex, fromIndex < 0 or toIndex > array.length
+   * @throws {@link NullPointerException} if array is null
+   */
   static spliterator<T>(array: ArrayLike<T>, fromIndex: number, toIndex: number, characteristics: number): Spliterator<T>;
+  /**
+   * Returns a late-binding spliterator over `collection.iterator()`, sized by `collection.size()` at first use; adds
+   * SIZED | SUBSIZED unless CONCURRENT is given.
+   * @throws {@link NullPointerException} if collection is null
+   */
   static spliterator<T>(collection: Collection<T>, characteristics: number): Spliterator<T>;
+  /**
+   * Returns a spliterator over the library {@link Iterator} (`hasNext()`/`next()`), sized by `size`; adds
+   * SIZED | SUBSIZED unless CONCURRENT is given.
+   * @throws {@link NullPointerException} if iterator is null
+   */
   static spliterator<T>(iterator: Iterator<T>, size: number, characteristics: number): Spliterator<T>;
   static spliterator<T>(src: ArrayLike<T> | Collection<T> | Iterator<T>, a: number, b?: number, c?: number): Spliterator<T> {
     requireNonNull(src);
@@ -453,12 +484,20 @@ export class Spliterators {
     return new ArraySpliterator(array, 0, array.length, a | SIZED | SUBSIZED);
   }
 
-  /** Over the iterator, with no size: SIZED and SUBSIZED are cleared, estimateSize() is Infinity. */
+  /**
+   * Returns a spliterator over the library {@link Iterator} with no known size: SIZED and SUBSIZED are cleared and
+   * `estimateSize()` is `Infinity`.
+   * @throws {@link NullPointerException} if iterator is null
+   */
   static spliteratorUnknownSize<T>(iterator: Iterator<T>, characteristics: number): Spliterator<T> {
     return new IteratorSpliterator(null, requireNonNull(iterator), Infinity, characteristics & ~(SIZED | SUBSIZED), KEEP_ESTIMATE);
   }
 
-  /** Iterator over the spliterator's remaining elements (remove() unsupported). */
+  /**
+   * Returns an {@link Iterator} (`hasNext()`/`next()`) over the spliterator's remaining elements; `remove()` throws
+   * {@link UnsupportedOperationException}.
+   * @throws {@link NullPointerException} if spliterator is null
+   */
   static iterator<T>(spliterator: Spliterator<T>): Iterator<T> {
     return new SpliteratorIterator(requireNonNull(spliterator));
   }
@@ -466,9 +505,13 @@ export class Spliterators {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export declare namespace Spliterators {
+  /** Instance type of `Spliterators.AbstractSpliterator`. */
   type AbstractSpliterator<T> = AbstractSpliteratorImpl<T>;
+  /** Instance type of `Spliterators.AbstractIntSpliterator`. */
   type AbstractIntSpliterator = AbstractIntSpliteratorImpl;
+  /** Instance type of `Spliterators.AbstractLongSpliterator`. */
   type AbstractLongSpliterator = AbstractLongSpliteratorImpl;
+  /** Instance type of `Spliterators.AbstractDoubleSpliterator`. */
   type AbstractDoubleSpliterator = AbstractDoubleSpliteratorImpl;
 }
 

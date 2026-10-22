@@ -4,10 +4,19 @@ import type { Set } from '../interfaces/Set';
 
 // TS interfaces vanish at runtime, so set and random-access checks use brands.
 export const SET_BRAND: unique symbol = Symbol.for('@nodestd/collections.Set');
+/**
+ * Brand key of the {@link RandomAccess} marker: a list whose `[RANDOM_ACCESS]` property is `true` has O(1)
+ * `get(index)`. A registered symbol (`Symbol.for`), so separate copies of the library agree on it.
+ */
 export const RANDOM_ACCESS: unique symbol = Symbol.for('@nodestd/collections.RandomAccess');
 
-/** Marker for lists with O(1) get(index), like RandomAccess. */
+/**
+ * Marker for lists with fast (O(1)) positional access, such as `ArrayList`, `Vector` and `List.of` lists.
+ * Generic algorithms (e.g. `Collections.binarySearch`, `Collections.reverse`) check it with {@link isRandomAccess}
+ * and use `get`/`set` loops instead of iterators. A custom list opts in by defining `[RANDOM_ACCESS]` as `true`.
+ */
 export interface RandomAccess {
+  /** Always `true`; its presence is the marker. */
   readonly [RANDOM_ACCESS]: true;
 }
 
@@ -28,6 +37,7 @@ export function isEntry(o: unknown): o is MapEntry<unknown, unknown> {
   return typeof (o as MapEntry<unknown, unknown>)?.getKey === 'function' && typeof (o as MapEntry<unknown, unknown>).getValue === 'function';
 }
 
+/** Returns `true` when `o` carries the {@link RandomAccess} marker (its `[RANDOM_ACCESS]` property is `true`). */
 export function isRandomAccess(o: unknown): o is RandomAccess {
   return (o as Partial<RandomAccess>)?.[RANDOM_ACCESS] === true;
 }

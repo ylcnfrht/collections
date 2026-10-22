@@ -27,13 +27,29 @@ function isPrimitive(o: unknown): boolean {
   return o === null || (typeof o !== 'object' && typeof o !== 'function');
 }
 
-/** Doubly linked List and Deque. Allows null and undefined elements. */
+/**
+ * Doubly linked list that implements both {@link List} and {@link Deque}, so one object serves as a
+ * list, a FIFO queue and a stack.
+ *
+ * Adding, removing and reading at either end is O(1), and so are `add`, `set` and `remove` through a
+ * `ListIterator`. Positional access (`get`, `set`, `add(i, e)`, `removeAt`) walks from the nearer end,
+ * O(min(i, n − i)). `contains`, `indexOf` and `remove(o)` are O(n).
+ *
+ * Permits `null` and `undefined` elements. Because `poll()` and `peek()` return `null` when the list
+ * is empty, check `isEmpty()` when `null` may be stored. Iterates head to tail; iterators, `forEach`
+ * and views are fail-fast.
+ */
 export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>, Deque<E> {
   /** @internal */ first: Node<E> | null = null;
   /** @internal */ last: Node<E> | null = null;
   /** @internal */ _size = 0;
 
+  /** Creates an empty list. */
   constructor();
+  /**
+   * Creates a list holding the elements of `c`, in its iteration order. O(n).
+   * @throws {@link NullPointerException} if `c` is `null` or `undefined`
+   */
   constructor(c: Collection<E>);
   constructor(c?: Collection<E>) {
     super();
@@ -41,13 +57,14 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     if (arguments.length > 0) this.addAllAt(0, c as Collection<E>);
   }
 
+  /** Creates a mutable list holding `xs` in argument order; `null` and `undefined` are allowed. */
   static of<E>(...xs: E[]): LinkedList<E> {
     const l = new LinkedList<E>();
     for (let i = 0; i < xs.length; i++) l.linkLast(xs[i]);
     return l;
   }
 
-  /** Shallow independent copy, of the same runtime class. */
+  /** Returns a shallow, independent copy of the same runtime class, in O(n). */
   clone(): LinkedList<E> {
     const c = new (this.constructor as new () => LinkedList<E>)();
     for (let x = this.first; x !== null; x = x.next) c.linkLast(x.item);
@@ -170,15 +187,26 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
 
   // Collection / List
 
+  /** Returns the number of elements. O(1). */
   size(): number {
     return this._size;
   }
 
+  /** Returns `true` if this list has no elements. O(1). */
   override isEmpty(): boolean {
     return this._size === 0;
   }
 
+  /**
+   * Appends `e` at the tail, in O(1). `null` and `undefined` are allowed.
+   * @returns always `true`
+   */
   override add(e: E): boolean;
+  /**
+   * Inserts `e` at `index`, shifting the element there and all later ones one position to the right.
+   * Walks from the nearer end: O(min(index, n − index)), then O(1) to link.
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` > `size()`
+   */
   override add(index: number, e: E): void;
   override add(a: E | number, b?: E): boolean | void {
     if (arguments.length >= 2) {
@@ -226,11 +254,21 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return true;
   }
 
+  /**
+   * Returns the element at `index`. O(min(index, n − index)), walking from the nearer end.
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` >= `size()`
+   */
   override get(index: number): E {
     checkIndex(index, this._size);
     return this.node(index).item;
   }
 
+  /**
+   * Replaces the element at `index` with `e`. O(min(index, n − index)), walking from the nearer end;
+   * not a structural change.
+   * @returns the element previously at `index`
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` >= `size()`
+   */
   override set(index: number, e: E): E {
     checkIndex(index, this._size);
     const x = this.node(index);
@@ -239,15 +277,25 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return old;
   }
 
+  /**
+   * Removes the element at `index`. O(min(index, n − index)) to reach the node, then O(1) to unlink it.
+   * @returns the removed element
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` >= `size()`
+   */
   override removeAt(index: number): E {
     checkIndex(index, this._size);
     return this.unlink(this.node(index));
   }
 
+  /** Returns `true` if this list contains an element equal to `o` (by `Objects.equals`). O(n) scan from the head; `null` is allowed. */
   override contains(o: unknown): boolean {
     return this.findFirst(o) !== null;
   }
 
+  /**
+   * Returns the index of the first element equal to `o` (by `Objects.equals`), or -1 if there is none.
+   * O(n) scan from the head; `NaN` matches `NaN`.
+   */
   override indexOf(o: unknown): number {
     let i = 0;
     if (isPrimitive(o)) {
@@ -259,6 +307,10 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return -1;
   }
 
+  /**
+   * Returns the index of the last element equal to `o` (by `Objects.equals`), or -1 if there is none.
+   * O(n) scan from the tail; `NaN` matches `NaN`.
+   */
   override lastIndexOf(o: unknown): number {
     let i = this._size - 1;
     if (isPrimitive(o)) {
@@ -270,7 +322,12 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return -1;
   }
 
+  /** Returns a new array with all elements, head to tail. Changing the array does not affect this list. O(n). */
   override toArray(): E[];
+  /**
+   * Fills an array created by `generator(size())` with the elements head to tail, and returns it. O(n).
+   * @param generator - creates the target array for a given length
+   */
   override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
   override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     const out = new Array<E>(this._size);
@@ -279,6 +336,7 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 
+  /** Removes all elements. O(n): unlinks every node, so a stray reference to one cannot keep the others alive. */
   override clear(): void {
     // unlink every node so a stray iterator or node reference can't keep the whole chain alive
     for (let x = this.first; x !== null; ) {
@@ -292,6 +350,11 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     this.modCount++;
   }
 
+  /**
+   * Calls `action` for each element, head to tail.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this list
+   */
   override forEach(action: (e: E) => void): void {
     requireNonNull(action);
     const mc = this.modCount;
@@ -301,7 +364,13 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     }
   }
 
-  /** Like the reference (an iterator-removal loop): elements removed before a throwing predicate stay removed. */
+  /**
+   * Removes every element for which `filter` returns `true`. O(n), unlinking each match as it goes, so
+   * elements removed before a throwing predicate stay removed.
+   * @returns `true` if any element was removed
+   * @throws {@link NullPointerException} if `filter` is null
+   * @throws {@link ConcurrentModificationException} if `filter` structurally modifies this list
+   */
   override removeIf(filter: (e: E) => boolean): boolean {
     requireNonNull(filter);
     let mc = this.modCount;
@@ -320,6 +389,12 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return removed;
   }
 
+  /**
+   * Replaces each element with the result of `operator` applied to it, head to tail. O(n); not a
+   * structural change.
+   * @throws {@link NullPointerException} if `operator` is null
+   * @throws {@link ConcurrentModificationException} if `operator` structurally modifies this list
+   */
   override replaceAll(operator: (e: E) => E): void {
     requireNonNull(operator);
     const mc = this.modCount;
@@ -329,124 +404,189 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     }
   }
 
+  /** Returns a fail-fast iterator over the elements, head to tail. Its `remove` is O(1). */
   override iterator(): Iterator<E> {
     return new ListItr(this, 0);
   }
 
+  /**
+   * Returns a fail-fast list iterator starting at `index`: the first `next()` returns the element at
+   * `index`. Reaching it takes O(min(index, n − index)); then `add`, `set` and `remove` through it are O(1).
+   * @param index - start position, 0 by default
+   * @throws {@link IndexOutOfBoundsException} if `index` < 0 or `index` > `size()`
+   */
   override listIterator(index = 0): ListIterator<E> {
     checkPositionIndex(index, this._size);
     return new ListItr(this, index);
   }
 
-  /** ORDERED|SIZED|SUBSIZED; late-binding, fail-fast, splits off growing array batches. */
+  /** Returns a spliterator over the elements, used to build streams: `ORDERED | SIZED | SUBSIZED`, late-binding, fail-fast, splits off growing array batches. */
   override spliterator(): Spliterator<E> {
     return new LLSpliterator(this);
   }
 
   // plain iterator object instead of a generator: several times faster in for..of
+  /** Returns a JS iterator over the elements, head to tail, for `for...of` and spread; fail-fast. */
   override [Symbol.iterator](): IterableIterator<E> {
     return new ValueItr(this);
   }
 
   // SequencedCollection / Deque
 
+  /** Inserts `e` at the head, in O(1). `null` and `undefined` are allowed. */
   override addFirst(e: E): void {
     this.linkFirst(e);
   }
 
+  /** Appends `e` at the tail, in O(1). `null` and `undefined` are allowed. */
   override addLast(e: E): void {
     this.linkLast(e);
   }
 
+  /**
+   * Returns the first element. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override getFirst(): E {
     const f = this.first;
     if (f === null) throw new NoSuchElementException();
     return f.item;
   }
 
+  /**
+   * Returns the last element. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override getLast(): E {
     const l = this.last;
     if (l === null) throw new NoSuchElementException();
     return l.item;
   }
 
+  /**
+   * Removes and returns the first element. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override removeFirst(): E {
     const f = this.first;
     if (f === null) throw new NoSuchElementException();
     return this.unlinkFirst(f);
   }
 
+  /**
+   * Removes and returns the last element. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override removeLast(): E {
     const l = this.last;
     if (l === null) throw new NoSuchElementException();
     return this.unlinkLast(l);
   }
 
+  /**
+   * Inserts `e` at the tail, in O(1). `null` and `undefined` are allowed.
+   * @returns always `true`
+   */
   offer(e: E): boolean {
     this.linkLast(e);
     return true;
   }
 
+  /**
+   * Inserts `e` at the head, in O(1). `null` and `undefined` are allowed.
+   * @returns always `true`
+   */
   offerFirst(e: E): boolean {
     this.linkFirst(e);
     return true;
   }
 
+  /**
+   * Inserts `e` at the tail, in O(1). `null` and `undefined` are allowed.
+   * @returns always `true`
+   */
   offerLast(e: E): boolean {
     this.linkLast(e);
     return true;
   }
 
+  /** Removes and returns the head in O(1), or `null` if this list is empty (ambiguous when `null` is stored: check `isEmpty()`). */
   poll(): E | null {
     const f = this.first;
     return f === null ? null : this.unlinkFirst(f);
   }
 
+  /** Removes and returns the first element in O(1), or `null` if this list is empty (ambiguous when `null` is stored: check `isEmpty()`). */
   pollFirst(): E | null {
     const f = this.first;
     return f === null ? null : this.unlinkFirst(f);
   }
 
+  /** Removes and returns the last element in O(1), or `null` if this list is empty (ambiguous when `null` is stored: check `isEmpty()`). */
   pollLast(): E | null {
     const l = this.last;
     return l === null ? null : this.unlinkLast(l);
   }
 
+  /** Returns the head without removing it, in O(1), or `null` if this list is empty (ambiguous when `null` is stored: check `isEmpty()`). */
   peek(): E | null {
     const f = this.first;
     return f === null ? null : f.item;
   }
 
+  /** Returns the first element without removing it, in O(1), or `null` if this list is empty (ambiguous when `null` is stored: check `isEmpty()`). */
   peekFirst(): E | null {
     const f = this.first;
     return f === null ? null : f.item;
   }
 
+  /** Returns the last element without removing it, in O(1), or `null` if this list is empty (ambiguous when `null` is stored: check `isEmpty()`). */
   peekLast(): E | null {
     const l = this.last;
     return l === null ? null : l.item;
   }
 
+  /**
+   * Returns the head without removing it, in O(1); same as `getFirst()`.
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   element(): E {
     return this.getFirst();
   }
 
+  /** Pushes `e` onto the stack this list represents, that is, inserts it at the head; same as `addFirst(e)`. O(1). */
   push(e: E): void {
     this.linkFirst(e);
   }
 
+  /**
+   * Pops the top of the stack this list represents, that is, removes and returns the head; same as `removeFirst()`. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   pop(): E {
     return this.removeFirst();
   }
 
-  /** remove() takes the head; remove(o) removes the first occurrence of o. */
+  /**
+   * Removes and returns the head; same as `removeFirst()`. O(1).
+   * @throws {@link NoSuchElementException} if the list is empty
+   */
   override remove(): E;
+  /**
+   * Removes the first element equal to `o` (by `Objects.equals`), if present; same as
+   * `removeFirstOccurrence(o)`. O(n).
+   * @returns `true` if an element was removed
+   */
   override remove(o: unknown): boolean;
   override remove(o?: unknown): E | boolean {
     if (arguments.length === 0) return this.removeFirst();
     return this.removeFirstOccurrence(o);
   }
 
+  /**
+   * Removes the first element (from head to tail) equal to `o`. O(n) scan from the head, then O(1) to unlink.
+   * @returns `true` if an element was removed
+   */
   removeFirstOccurrence(o: unknown): boolean {
     const x = this.findFirst(o);
     if (x === null) return false;
@@ -454,6 +594,11 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return true;
   }
 
+  /**
+   * Removes the last element (the first found from tail to head) equal to `o`. O(n) scan from the tail,
+   * then O(1) to unlink.
+   * @returns `true` if an element was removed
+   */
   removeLastOccurrence(o: unknown): boolean {
     const x = this.findLast(o);
     if (x === null) return false;
@@ -461,17 +606,22 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return true;
   }
 
+  /** Returns a fail-fast iterator over the elements from tail to head. Its `remove` is O(1). */
   descendingIterator(): Iterator<E> {
     return new DescendingItr(this);
   }
 
-  /** Live reverse-ordered view; itself a LinkedList that writes through to this one. */
+  /**
+   * Returns a live, reverse-ordered view in O(1). The view is itself a `LinkedList` whose reads and
+   * writes go through to this list, with the ends swapped.
+   */
   override reversed(): LinkedList<E> {
     return new ReverseOrderLinkedListView(this);
   }
 
   // Object
 
+  /** Returns `true` if `o` is a {@link List} of any class with equal elements in the same order. O(n). */
   override equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isList(o) || o.size() !== this._size) return false;
@@ -485,6 +635,7 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return !it.hasNext();
   }
 
+  /** Returns the list hash code, `h = 31 * h + hash(e)` from 1 in 32-bit arithmetic, consistent with `equals`. O(n). */
   override hashCode(): number {
     let h = 1;
     for (let x = this.first; x !== null; x = x.next) {
@@ -494,6 +645,7 @@ export class LinkedList<E> extends AbstractSequentialList<E> implements List<E>,
     return h;
   }
 
+  /** Returns the elements head to tail as `[a, b, c]`; an element that is this list prints as `(this Collection)`. */
   override toString(): string {
     let s = '[';
     for (let x = this.first; x !== null; x = x.next) {

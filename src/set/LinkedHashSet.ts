@@ -12,7 +12,11 @@ import { HashSet } from './HashSet';
 const UNUSED_STORAGE = { ints: Object.freeze([]), fast: new globalThis.Set(), buckets: new globalThis.Map() };
 
 /**
- * Hash set that iterates in insertion order (re-adding an element keeps its place).
+ * A hash {@link Set} that iterates in insertion order (re-adding an element keeps its place) and supports the
+ * {@link SequencedSet} operations. Elements are equal by `equals()`/`hashCode()`; `null` and `undefined` are allowed.
+ * `add`, `remove` and `contains` run in O(1) expected time, as do first/last access and removal; iterators are
+ * fail-fast. Backed by a {@link LinkedHashMap}.
+ *
  * Extends HashSet so `instanceof HashSet` holds, but HashSet keeps no map to reuse: every method is
  * overridden to use a LinkedHashMap instead, and the inherited storage fields (shared empty ones) and modCount stay unused.
  */
@@ -21,8 +25,17 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
   readonly map: LinkedHashMap<E, boolean>;
   private rev: ReversedLinkedHashSet<E> | undefined;
 
+  /** Creates an empty set. */
   constructor();
+  /**
+   * Creates an empty set. The arguments are sizing hints only: they are validated but storage grows on demand.
+   * @throws {@link IllegalArgumentException} if `initialCapacity` is negative or NaN, or `loadFactor` is not positive
+   */
   constructor(initialCapacity: number, loadFactor?: number);
+  /**
+   * Creates a set with the elements of `c`, in `c`'s iteration order; duplicates are dropped.
+   * @throws {@link IllegalArgumentException} if `c` is neither a number nor a collection
+   */
   constructor(c: Collection<E>);
   constructor(a?: number | Collection<E>, loadFactor?: number) {
     // never hand the collection to super: its addAll would run before map exists
@@ -35,14 +48,15 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
   }
 
   /**
-   * An empty LinkedHashSet sized for numElements (capacity is only a hint, so this just validates it).
-   * @throws IllegalArgumentException if numElements is negative or NaN
+   * Returns an empty set intended for `numElements` elements (capacity is only a hint, so this just validates it).
+   * @throws {@link IllegalArgumentException} if `numElements` is negative or NaN
    */
   static newLinkedHashSet<E>(numElements: number): LinkedHashSet<E> {
     if (!(numElements >= 0)) throw new IllegalArgumentException(`Negative number of elements: ${numElements}`);
     return new LinkedHashSet<E>();
   }
 
+  /** Returns a new set of the given elements in argument order; a repeated element keeps its first position. */
   static override of<E>(...xs: E[]): LinkedHashSet<E> {
     const s = new LinkedHashSet<E>();
     for (const x of xs) s.add(x);
@@ -59,86 +73,143 @@ export class LinkedHashSet<E> extends HashSet<E> implements SequencedSet<E> {
     return s;
   }
 
+  /** Returns the number of elements. O(1). */
   override size(): number {
     return this.map.size();
   }
 
+  /** Returns `true` if this set has no elements. O(1). */
   override isEmpty(): boolean {
     return this.map.isEmpty();
   }
 
+  /**
+   * Returns `true` if this set contains an element equal to `o` (by `equals()`, SameValueZero for primitives). O(1)
+   * expected.
+   */
   override contains(o: unknown): boolean {
     return this.map.containsKey(o);
   }
 
+  /**
+   * Adds `e` if no equal element is present. O(1) expected. `null` and `undefined` are allowed. A new element goes to
+   * the end; re-adding an element keeps its place.
+   * @returns `true` if the set changed
+   */
   override add(e: E): boolean {
     return this.map.put(e, true) === null;
   }
 
+  /**
+   * Removes the element equal to `o`, if present. O(1) expected.
+   * @returns `true` if an element was removed
+   */
   override remove(o: unknown): boolean {
     return this.map.removeKey(o) !== undefined;
   }
 
+  /** Removes all elements. */
   override clear(): void {
     this.map.clear();
   }
 
+  /** Returns a fail-fast iterator over the elements, in insertion order; its `remove` is supported. */
   override iterator(): Iterator<E> {
     return this.map.sequencedKeySet().iterator();
   }
 
-  /** SIZED|SUBSIZED|DISTINCT|ORDERED, late-binding (the backing key set's). */
+  /**
+   * Returns a spliterator over the elements, used to build streams; fail-fast like the iterator. SIZED, SUBSIZED,
+   * DISTINCT and ORDERED; late-binding.
+   */
   override spliterator(): Spliterator<E> {
     return this.map.sequencedKeySet().spliterator();
   }
 
+  /** Returns a fail-fast iterator over the elements, in insertion order. */
   override [Symbol.iterator](): IterableIterator<E> {
     return this.map.sequencedKeySet()[Symbol.iterator]() as IterableIterator<E>;
   }
 
+  /**
+   * Calls `action` for each element, in insertion order.
+   * @throws {@link NullPointerException} if `action` is null
+   * @throws {@link ConcurrentModificationException} if `action` structurally modifies this set
+   */
   override forEach(action: (e: E) => void): void {
     this.map.sequencedKeySet().forEach(action);
   }
 
+  /** Returns a new array with all elements, in insertion order. Changing the array does not affect this set. */
   override toArray(): E[];
+  /**
+   * Fills an array created by `generator(size())` with the elements, in insertion order, and returns it.
+   * @param generator - creates the target array for a given length
+   */
   override toArray<A extends WritableArrayLike<E>>(generator: (length: number) => A): A;
   override toArray<A extends WritableArrayLike<E>>(generator?: (length: number) => A): E[] | A {
     const out = this.map.sequencedKeySet().toArray();
     return arguments.length > 0 ? toArrayWith(out, generator as (length: number) => A) : out;
   }
 
+  /**
+   * Removes every element for which `filter` returns `true`, in one O(n) pass.
+   * @returns `true` if any element was removed
+   * @throws {@link NullPointerException} if `filter` is null
+   * @throws {@link ConcurrentModificationException} if `filter` structurally modifies this set
+   */
   override removeIf(filter: (e: E) => boolean): boolean {
     return this.map.sequencedKeySet().removeIf(filter);
   }
 
   // SequencedSet
 
+  /**
+   * Returns the first (eldest) element. O(1).
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   getFirst(): E {
     return this.map.sequencedKeySet().getFirst();
   }
 
+  /**
+   * Returns the last (youngest) element. O(1).
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   getLast(): E {
     return this.map.sequencedKeySet().getLast();
   }
 
+  /**
+   * Removes and returns the first element. O(1).
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   removeFirst(): E {
     return this.map.sequencedKeySet().removeFirst();
   }
 
+  /**
+   * Removes and returns the last element. O(1).
+   * @throws {@link NoSuchElementException} if this set is empty
+   */
   removeLast(): E {
     return this.map.sequencedKeySet().removeLast();
   }
 
-  /** Adds e, or moves it, to the front. */
+  /** Adds `e` as the first element, or moves it to the front if already present. O(1) expected. */
   addFirst(e: E): void {
     this.map.putFirst(e, true);
   }
 
-  /** Adds e, or moves it, to the end. */
+  /** Adds `e` as the last element, or moves it to the end if already present. O(1) expected. */
   addLast(e: E): void {
     this.map.putLast(e, true);
   }
 
+  /**
+   * Returns a live reverse-ordered view: changes through either side are visible in the other. Writes go to this set:
+   * `add` of a new element appends it here, so it shows up first in the view.
+   */
   reversed(): SequencedSet<E> {
     return (this.rev ??= new ReversedLinkedHashSet(this));
   }

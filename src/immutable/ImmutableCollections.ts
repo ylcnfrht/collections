@@ -769,16 +769,37 @@ class LazyEntrySet<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
 }
 
 // interfaces, not type aliases, so documentation tools list their members
+/**
+ * The list interface (ordered, index-based collection), declared under this name so `List` works both as a type and as the
+ * factory object with `of`, `copyOf` and `ofLazy`.
+ */
 export interface List<E> extends ListType<E> {}
+/**
+ * The set interface (collection without duplicates), declared under this name so `Set` works both as a type and as the
+ * factory object with `of`, `copyOf` and `ofLazy`.
+ */
 export interface Set<E> extends SetType<E> {}
+/**
+ * The map interface (key to value mapping), declared under this name so `Map` works both as a type and as the
+ * factory object with `of`, `ofEntries`, `entry`, `copyOf` and `ofLazy`.
+ */
 export interface Map<K, V> extends MapType<K, V> {}
 
 /** Unmodifiable lists: random access, null elements and null queries rejected, value equality with any List. */
 export const List = {
+  /**
+   * Returns an unmodifiable list of the arguments, in argument order.
+   * @throws {@link NullPointerException} if an element is `null` or `undefined`
+   */
   of<E>(...elements: E[]): ListType<E> {
     // the rest array is fresh, so it can be frozen in place
     return listOf(rejectNulls(elements));
   },
+  /**
+   * Returns an unmodifiable list of the elements of `c`, in its iteration order. Returns `c` itself when it
+   * already is a list made by `List.of` or `List.copyOf`.
+   * @throws {@link NullPointerException} if `c` is `null` or contains a `null` or `undefined` element
+   */
   copyOf<E>(c: Collection<E>): ListType<E> {
     if (c instanceof ImmutableList && c.nullHostile) return c;
     return listOf(rejectNulls(requireNonNull(c).toArray()));
@@ -800,11 +821,19 @@ export const List = {
 
 /** Unmodifiable sets: null elements and null queries rejected, value equality with any Set; iteration order is unspecified. */
 export const Set = {
-  /** @throws IllegalArgumentException on a duplicate element */
+  /**
+   * Returns an unmodifiable set of the arguments. Iteration order is unspecified.
+   * @throws {@link IllegalArgumentException} on a duplicate element
+   * @throws {@link NullPointerException} if an element is `null` or `undefined`
+   */
   of<E>(...elements: E[]): SetType<E> {
     return buildSet(elements, true, true, true);
   },
-  /** Duplicates are dropped. */
+  /**
+   * Returns an unmodifiable set of the elements of `c`; duplicates are dropped and iteration order is unspecified.
+   * Returns `c` itself when it already is a set made by `Set.of` or `Set.copyOf`.
+   * @throws {@link NullPointerException} if `c` is `null` or contains a `null` or `undefined` element
+   */
   copyOf<E>(c: Collection<E>): SetType<E> {
     if (c instanceof ImmutableSet && c.nullHostile) return c;
     return buildSet(requireNonNull(c).toArray(), false, true, true);
@@ -868,17 +897,36 @@ const Entry = {
 
 /** Unmodifiable maps: null keys/values and null queries rejected, duplicate keys rejected; iteration order is unspecified. */
 export const Map = {
-  /** Map.of(k1, v1, k2, v2, ...). @throws IllegalArgumentException on an odd argument count or a duplicate key */
+  /**
+   * `Map.of(k1, v1, k2, v2, ...)`: returns an unmodifiable map of the key/value pairs. Iteration order is unspecified.
+   * Typed overloads cover up to 10 pairs; for more, prefer `ofEntries`.
+   * @throws {@link IllegalArgumentException} on an odd argument count or a duplicate key
+   * @throws {@link NullPointerException} if a key or value is `null` or `undefined`
+   */
   of: mapOf,
+  /**
+   * Returns an unmodifiable map of the given entries (only their keys and values are copied). Iteration order is
+   * unspecified.
+   * @throws {@link IllegalArgumentException} on a duplicate key
+   * @throws {@link NullPointerException} if an entry, key or value is `null` or `undefined`
+   */
   ofEntries<K, V>(...entries: MapEntry<K, V>[]): MapType<K, V> {
     const es: MapEntry<K, V>[] = [];
     for (const e of entries) es.push(new KeyValueHolder(requireNonNull(e).getKey(), e.getValue()));
     return buildMap(es, true, true);
   },
-  /** Immutable entry; setValue throws UnsupportedOperationException. */
+  /**
+   * Returns an immutable entry, for use with `ofEntries`; `setValue` throws {@link UnsupportedOperationException}.
+   * @throws {@link NullPointerException} if `k` or `v` is `null` or `undefined`
+   */
   entry<K, V>(k: K, v: V): MapEntry<K, V> {
     return immutableEntry(k, v);
   },
+  /**
+   * Returns an unmodifiable copy of `m`; iteration order is unspecified. Returns `m` itself when it already is a
+   * map made by `Map.of`, `Map.ofEntries` or `Map.copyOf`.
+   * @throws {@link NullPointerException} if `m` is `null` or holds a `null` or `undefined` key or value
+   */
   copyOf<K, V>(m: MapType<K, V>): MapType<K, V> {
     if (m instanceof ImmutableMap && m.nullHostile) return m;
     const es: MapEntry<K, V>[] = [];

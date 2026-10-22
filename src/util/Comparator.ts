@@ -6,6 +6,11 @@ export type Comparator<T> = (a: T, b: T) => number;
 
 /** Comparable: objects that define their own natural ordering. */
 export interface Comparable<T> {
+  /**
+   * Compares this object with `o`: returns a negative number, zero or a positive number as this object is less than,
+   * equal to or greater than `o`. Natural ordering (sorting without a comparator, `TreeMap`, `TreeSet`,
+   * `PriorityQueue`) calls this method when the first operand defines it.
+   */
   compareTo(o: T): number;
 }
 
@@ -106,6 +111,12 @@ function then<T>(c: Comparator<T>, other: Comparator<T>): Comparator<T> {
  * `c.thenComparingInt/Long/Double(key)` → `thenComparingInt/Long/Double(c, key)`.
  */
 export const Comparator = {
+  /**
+   * Returns the natural-ordering comparator: `compareTo()` when the first value defines it, otherwise numbers
+   * (`NaN` last), strings (UTF-16 code unit order), bigints, booleans (`false` first) and `Date`s.
+   * The comparator throws {@link NullPointerException} for `null`/`undefined` and {@link ClassCastException} for
+   * values that cannot be compared with each other.
+   */
   naturalOrder<T>(): Comparator<T> {
     return naturalCompare;
   },
@@ -125,14 +136,26 @@ export const Comparator = {
     const kc = arguments.length > 1 ? requireNonNull(keyComparator) : (naturalCompare as Comparator<U>);
     return (a, b) => kc(key(a), key(b));
   },
+  /**
+   * Compares by the numeric key that `key` extracts (`NaN` last, `-0` equal to `0`).
+   * @throws {@link NullPointerException} if `key` is `null`
+   */
   comparingInt<T>(key: (t: T) => number): Comparator<T> {
     requireNonNull(key);
     return (a, b) => compareKeys(key(a), key(b));
   },
+  /**
+   * Compares by the `number` or `bigint` key that `key` extracts.
+   * @throws {@link NullPointerException} if `key` is `null`
+   */
   comparingLong<T>(key: (t: T) => number | bigint): Comparator<T> {
     requireNonNull(key);
     return (a, b) => compareKeys(key(a), key(b));
   },
+  /**
+   * Compares by the numeric key that `key` extracts (`NaN` last, `-0` equal to `0`).
+   * @throws {@link NullPointerException} if `key` is `null`
+   */
   comparingDouble<T>(key: (t: T) => number): Comparator<T> {
     requireNonNull(key);
     return (a, b) => compareKeys(key(a), key(b));
@@ -149,12 +172,24 @@ export const Comparator = {
     const k = arguments.length > 2 ? Comparator.comparing(key, keyComparator) : Comparator.comparing(key);
     return then(c, k);
   },
+  /**
+   * Returns `c`, with ties broken by `comparingInt(key)`.
+   * @throws {@link NullPointerException} if `c` or `key` is `null`
+   */
   thenComparingInt<T>(c: Comparator<T>, key: (t: T) => number): Comparator<T> {
     return then(requireNonNull(c), Comparator.comparingInt(key));
   },
+  /**
+   * Returns `c`, with ties broken by `comparingLong(key)`.
+   * @throws {@link NullPointerException} if `c` or `key` is `null`
+   */
   thenComparingLong<T>(c: Comparator<T>, key: (t: T) => number | bigint): Comparator<T> {
     return then(requireNonNull(c), Comparator.comparingLong(key));
   },
+  /**
+   * Returns `c`, with ties broken by `comparingDouble(key)`.
+   * @throws {@link NullPointerException} if `c` or `key` is `null`
+   */
   thenComparingDouble<T>(c: Comparator<T>, key: (t: T) => number): Comparator<T> {
     return then(requireNonNull(c), Comparator.comparingDouble(key));
   },

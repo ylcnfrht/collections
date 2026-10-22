@@ -20,6 +20,10 @@ import { Optional } from './Optional';
 import { closeAfterFailure } from './pipeline/Sink';
 
 // interfaces, not type aliases, so documentation tools list their members
+/**
+ * A mutable reduction for `stream.collect`: supplier, accumulator, combiner, finisher and characteristics. The
+ * `Collector` value holds `Collector.of` and `Collector.Characteristics`; ready-made ones are in {@link Collectors}.
+ */
 export interface Collector<T, A, R> extends CollectorType<T, A, R> {}
 export type { CollectorCharacteristics };
 
@@ -241,9 +245,11 @@ function toUnmodifiableSet<T>(): CollectorType<T, Set<T>, Set<T>> {
 }
 
 /** Elements are appended with String(); null gives "null". */
+/** Concatenates the elements with nothing between them. */
 function joining(): CollectorType<string | null, Hidden, string>;
+/** Concatenates the elements with `delimiter` between them. */
 function joining(delimiter: string): CollectorType<string | null, Hidden, string>;
-/** A null/undefined delimiter, prefix or suffix throws NullPointerException when the collector is used, like the reference. */
+/** Concatenates the elements with `delimiter` between them, wrapped in `prefix` and `suffix`. A null/undefined argument throws NullPointerException when the collector is used, like the reference. */
 function joining(delimiter: string, prefix: string, suffix: string): CollectorType<string | null, Hidden, string>;
 function joining(d?: string, p?: string, s?: string): CollectorType<string | null, Hidden, string> {
   // arguments.length, not default parameters: joining(undefined) must fail like joining(null)
@@ -386,8 +392,11 @@ function averagingDouble<T>(mapper: (t: T) => number): CollectorType<T, Hidden, 
   return collectingAndThen(summarizingDouble(mapper), (st) => st.getAverage()) as CollectorType<T, Hidden, number>;
 }
 
+/** Reduces with `op`; an empty {@link Optional} when there are no elements (or the result is null). */
 function reducing<T>(op: (a: T, b: T) => T): CollectorType<T, Hidden, Optional<NonNullable<T>>>;
+/** Reduces with `op` starting from `identity`; `identity` when there are no elements. */
 function reducing<T>(identity: T, op: (a: T, b: T) => T): CollectorType<T, Hidden, T>;
+/** Maps each element with `mapper`, then reduces with `op` starting from `identity`. */
 function reducing<T, U>(identity: U, mapper: (t: T) => U, op: (a: U, b: U) => U): CollectorType<T, Hidden, U>;
 function reducing(...args: unknown[]): AnyCollector {
   type F = (a: unknown, b: unknown) => unknown;
@@ -433,9 +442,15 @@ function groupingImpl<T, K, D, A, M extends Map<K, D>>(
   }, noIdChars) as CollectorType<T, Hidden, M>;
 }
 
-/** Default map HashMap, default downstream toList(). @throws NullPointerException "element cannot be mapped to a null key" */
+/**
+ * Groups the elements by `classifier` into a `HashMap` from each key to a `List` of the elements with that key, in
+ * encounter order.
+ * @throws {@link NullPointerException} "element cannot be mapped to a null key" if `classifier` returns null
+ */
 function groupingBy<T, K>(classifier: (t: T) => K): CollectorType<T, Hidden, Map<K, List<T>>>;
+/** Groups by `classifier` into a `HashMap`, reducing each bucket with `downstream`. */
 function groupingBy<T, K, A, D>(classifier: (t: T) => K, downstream: CollectorType<T, A, D>): CollectorType<T, Hidden, Map<K, D>>;
+/** Groups by `classifier` into the map `mapFactory()` creates, reducing each bucket with `downstream`. */
 function groupingBy<T, K, D, A, M extends Map<K, D>>(classifier: (t: T) => K, mapFactory: () => M, downstream: CollectorType<T, A, D>): CollectorType<T, Hidden, M>;
 function groupingBy(classifier: (t: unknown) => unknown, a?: unknown, b?: unknown): CollectorType<unknown, unknown, unknown> {
   const [mapFactory, downstream] = groupingArgs(arguments.length, a, b);
@@ -447,7 +462,9 @@ function groupingBy(classifier: (t: unknown) => unknown, a?: unknown, b?: unknow
  * The default map is a HashMap standing in for a concurrent hash map (so null-valued results are not rejected).
  */
 function groupingByConcurrent<T, K>(classifier: (t: T) => K): CollectorType<T, Hidden, Map<K, List<T>>>;
+/** As `groupingBy(classifier, downstream)`, reported as CONCURRENT and UNORDERED. */
 function groupingByConcurrent<T, K, A, D>(classifier: (t: T) => K, downstream: CollectorType<T, A, D>): CollectorType<T, Hidden, Map<K, D>>;
+/** As `groupingBy(classifier, mapFactory, downstream)`, reported as CONCURRENT and UNORDERED. */
 function groupingByConcurrent<T, K, D, A, M extends Map<K, D>>(classifier: (t: T) => K, mapFactory: () => M, downstream: CollectorType<T, A, D>): CollectorType<T, Hidden, M>;
 function groupingByConcurrent(classifier: (t: unknown) => unknown, a?: unknown, b?: unknown): CollectorType<unknown, unknown, unknown> {
   const [mapFactory, downstream] = groupingArgs(arguments.length, a, b);
@@ -466,6 +483,7 @@ function groupingArgs(n: number, a: unknown, b: unknown): [() => Map<unknown, un
 
 /** The result always maps both false and true. */
 function partitioningBy<T>(predicate: (t: T) => boolean): CollectorType<T, Hidden, Map<boolean, List<T>>>;
+/** Partitions by `predicate`, reducing both partitions with `downstream`. */
 function partitioningBy<T, D, A>(predicate: (t: T) => boolean, downstream: CollectorType<T, A, D>): CollectorType<T, Hidden, Map<boolean, D>>;
 function partitioningBy<T, D, A>(predicate: (t: T) => boolean, ds?: CollectorType<T, A, D>): CollectorType<T, Hidden, Map<boolean, D>> {
   predicate = lazy(predicate);
@@ -488,7 +506,9 @@ function partitioningBy<T, D, A>(predicate: (t: T) => boolean, ds?: CollectorTyp
  * a null merge result removes the key). Default map HashMap.
  */
 function toMap<T, K, U>(keyMapper: (t: T) => K, valueMapper: (t: T) => U): CollectorType<T, Hidden, Map<K, U>>;
+/** Into a `HashMap`; values of equal keys are combined with `mergeFunction(old, new)`. */
 function toMap<T, K, U>(keyMapper: (t: T) => K, valueMapper: (t: T) => U, mergeFunction: (a: U, b: U) => U): CollectorType<T, Hidden, Map<K, U>>;
+/** Into the map `mapFactory()` creates; values of equal keys are combined with `mergeFunction(old, new)`. */
 function toMap<T, K, U, M extends Map<K, U>>(keyMapper: (t: T) => K, valueMapper: (t: T) => U, mergeFunction: (a: U, b: U) => U, mapFactory: () => M): CollectorType<T, Hidden, M>;
 function toMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: unknown) => unknown, ...rest: unknown[]): AnyCollector {
   return toMapImpl(arguments.length, keyMapper, valueMapper, rest[0], rest[1], CH_ID);
@@ -496,7 +516,9 @@ function toMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: unknown) => 
 
 /** Same results as toMap, reported as CONCURRENT, UNORDERED and IDENTITY_FINISH. Default map: HashMap (null keys are not rejected). */
 function toConcurrentMap<T, K, U>(keyMapper: (t: T) => K, valueMapper: (t: T) => U): CollectorType<T, Hidden, Map<K, U>>;
+/** As `toMap(keyMapper, valueMapper, mergeFunction)`, reported as CONCURRENT, UNORDERED and IDENTITY_FINISH. */
 function toConcurrentMap<T, K, U>(keyMapper: (t: T) => K, valueMapper: (t: T) => U, mergeFunction: (a: U, b: U) => U): CollectorType<T, Hidden, Map<K, U>>;
+/** As `toMap(keyMapper, valueMapper, mergeFunction, mapFactory)`, reported as CONCURRENT, UNORDERED and IDENTITY_FINISH. */
 function toConcurrentMap<T, K, U, M extends Map<K, U>>(keyMapper: (t: T) => K, valueMapper: (t: T) => U, mergeFunction: (a: U, b: U) => U, mapFactory: () => M): CollectorType<T, Hidden, M>;
 function toConcurrentMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: unknown) => unknown, ...rest: unknown[]): AnyCollector {
   return toMapImpl(arguments.length, keyMapper, valueMapper, rest[0], rest[1], CH_CONCURRENT_ID);
@@ -517,6 +539,7 @@ function toMapImpl(n: number, keyMapper: (t: unknown) => unknown, valueMapper: (
 
 /** Unmodifiable, null-free result; null keys and values throw NullPointerException, duplicates as toMap. */
 function toUnmodifiableMap<T, K, U>(keyMapper: (t: T) => K, valueMapper: (t: T) => U): CollectorType<T, Hidden, Map<K, U>>;
+/** As the two-argument form; values of equal keys are combined with `mergeFunction(old, new)`. */
 function toUnmodifiableMap<T, K, U>(keyMapper: (t: T) => K, valueMapper: (t: T) => U, mergeFunction: (a: U, b: U) => U): CollectorType<T, Hidden, Map<K, U>>;
 function toUnmodifiableMap(keyMapper: (t: unknown) => unknown, valueMapper: (t: unknown) => unknown, mergeFunction?: (a: unknown, b: unknown) => unknown): AnyCollector {
   requireNonNull(keyMapper, 'keyMapper');
@@ -574,42 +597,175 @@ function teeing<T, R1, R2, R>(downstream1: CollectorType<T, Hidden, R1>, downstr
   }, (p) => merger(f1(p.left), f2(p.right)), ch) as CollectorType<T, Hidden, R>;
 }
 
+/**
+ * Ready-made {@link Collector}s for `stream.collect`: into collections and maps, string joining, counting, sums,
+ * averages and statistics, min/max and reductions, grouping and partitioning, and adapters (`mapping`,
+ * `filtering`, `flatMapping`, `collectingAndThen`, `teeing`) that compose into one-pass aggregations. Function
+ * arguments that are `null` throw {@link NullPointerException} when the collector first calls them.
+ */
 export const Collectors = {
+  /**
+   * Returns a collector that adds the elements, in encounter order, to the collection `collectionFactory()` creates
+   * and returns that collection. Nulls and modifiability are as the collection allows.
+   */
   toCollection,
+  /**
+   * Returns a collector into a new, modifiable `ArrayList` in encounter order; `null` elements are allowed.
+   */
   toList,
+  /**
+   * Returns a collector into an unmodifiable list in encounter order.
+   * @throws {@link NullPointerException} (from the finisher) if an element is null
+   */
   toUnmodifiableList,
+  /**
+   * Returns a collector into a new, modifiable `HashSet` (duplicates dropped, no defined order); `null` is allowed.
+   */
   toSet,
+  /**
+   * Returns a collector into an unmodifiable set; duplicates are dropped.
+   * @throws {@link NullPointerException} (from the finisher) if an element is null
+   */
   toUnmodifiableSet,
+  /**
+   * Returns a collector that concatenates the elements into a string, in encounter order. Optional `delimiter`
+   * between elements, and `prefix`/`suffix` around the whole (all three or just the delimiter); an empty stream gives
+   * `prefix + suffix`. A `null` element is written as `"null"`, other non-strings through their `toString`.
+   * @throws {@link NullPointerException} (when used) if delimiter, prefix or suffix is null or undefined
+   */
   joining,
+  /**
+   * Returns a collector that applies `mapper` to each element and passes the result to `downstream`; the result is
+   * the downstream's. Mostly used as a downstream of `groupingBy` / `partitioningBy`.
+   */
   mapping,
+  /**
+   * Returns a collector that passes only the elements matching `predicate` to `downstream`. As a `groupingBy`
+   * downstream it keeps groups whose elements were all filtered out (with an empty result), unlike a `filter` before.
+   */
   filtering,
+  /**
+   * Returns a collector that passes every element of the stream `mapper` returns to `downstream`. A `null`/`undefined`
+   * result counts as empty; each mapped stream is closed after its elements are consumed.
+   */
   flatMapping,
+  /**
+   * Returns a collector that applies `finisher` to the result of `downstream`; `IDENTITY_FINISH` is dropped.
+   * @throws {@link NullPointerException} if downstream or finisher is null
+   */
   collectingAndThen,
+  /**
+   * Returns a collector that counts the elements; `0` for an empty stream.
+   */
   counting,
+  /**
+   * Returns a collector of the smallest element by `comparator` (the first of equal ones) as an {@link Optional}, empty
+   * for an empty stream. A `null` result gives an empty optional.
+   * @throws {@link NullPointerException} if comparator is null
+   */
   minBy,
+  /**
+   * Returns a collector of the largest element by `comparator` (the first of equal ones) as an {@link Optional}, empty
+   * for an empty stream. A `null` result gives an empty optional.
+   * @throws {@link NullPointerException} if comparator is null
+   */
   maxBy,
+  /**
+   * Returns a collector of the sum of `mapper` over the elements; `0` when empty. A plain sum: it does not wrap on 32-bit
+   * overflow (a difference from the reference).
+   */
   summingInt,
+  /**
+   * Returns a collector of the sum of `mapper` over the elements; `0` when empty. Exact up to `Number.MAX_SAFE_INTEGER`.
+   */
   summingLong,
+  /**
+   * Returns a collector of the sum of `mapper` over the elements, using compensated (Kahan) summation; `0` when empty.
+   */
   summingDouble,
+  /**
+   * Returns a collector of the arithmetic mean of `mapper` over the elements; `0` when empty.
+   */
   averagingInt,
+  /**
+   * Returns a collector of the arithmetic mean of `mapper` over the elements; `0` when empty.
+   */
   averagingLong,
+  /**
+   * Returns a collector of the arithmetic mean of `mapper` over the elements (compensated summation); `0` when empty.
+   */
   averagingDouble,
+  /**
+   * Returns the collector form of `stream.reduce`, mostly used as a downstream. `reducing(op)` gives an {@link Optional}
+   * (empty when there are no elements or the result is `null`); `reducing(identity, op)` gives `identity` folded with
+   * every element; `reducing(identity, mapper, op)` maps each element first.
+   */
   reducing,
+  /**
+   * Returns a collector that groups the elements by `classifier` into a map from each key to its bucket's `downstream`
+   * result (default `toList()`, so each bucket is an `ArrayList` in encounter order). The default map is a `HashMap`,
+   * whose iteration order is not defined; pass `mapFactory` (for example `() => new TreeMap()`) to choose one.
+   * @throws {@link NullPointerException} "element cannot be mapped to a null key" if the classifier returns null
+   */
   groupingBy,
+  /**
+   * Returns a collector with the same results as `groupingBy`, reported as `CONCURRENT` and `UNORDERED`. The
+   * default map is a `HashMap` (concurrency is moot on one thread).
+   * @throws {@link NullPointerException} "element cannot be mapped to a null key" if the classifier returns null
+   */
   groupingByConcurrent,
+  /**
+   * Returns a collector that splits the elements by `predicate` into an unmodifiable map with exactly two keys, `false`
+   * then `true`, both always present; each value is the `downstream` result (default `toList()`).
+   */
   partitioningBy,
+  /**
+   * Returns a collector into a map of `keyMapper(e)` to `valueMapper(e)`, by default a `HashMap`. Without
+   * `mergeFunction` keys must be unique; with it, values of equal keys are combined as `merge(old, new)` (a `null`
+   * merge result removes the key). `mapFactory` chooses the map, for example a `LinkedHashMap` for encounter order.
+   * @throws {@link IllegalStateException} "Duplicate key k (attempted merging values v1 and v2)" on a duplicate key without mergeFunction
+   * @throws {@link NullPointerException} if a value is null
+   */
   toMap,
+  /**
+   * Returns a collector like `toMap` (same duplicate-key rules) whose result is an unmodifiable map.
+   * @throws {@link IllegalStateException} on a duplicate key without mergeFunction
+   * @throws {@link NullPointerException} if a key or value is null, or keyMapper, valueMapper or a given mergeFunction is null
+   */
   toUnmodifiableMap,
+  /**
+   * Returns a collector with the same results as `toMap`, reported as `CONCURRENT`, `UNORDERED` and
+   * `IDENTITY_FINISH`. The default map is a `HashMap`.
+   * @throws {@link IllegalStateException} on a duplicate key without mergeFunction
+   * @throws {@link NullPointerException} if a value is null
+   */
   toConcurrentMap,
+  /**
+   * Returns a collector of an {@link IntSummaryStatistics} (count, sum, min, max, average) of `mapper` over the elements.
+   */
   summarizingInt,
+  /**
+   * Returns a collector of a {@link LongSummaryStatistics} (count, sum, min, max, average) of `mapper` over the elements.
+   */
   summarizingLong,
+  /**
+   * Returns a collector of a {@link DoubleSummaryStatistics} (compensated sums) of `mapper` over the elements.
+   */
   summarizingDouble,
+  /**
+   * Returns a collector that sends every element to both `downstream1` and `downstream2` and returns
+   * `merger(result1, result2)`: two aggregations in one pass. Its characteristics are those both report, minus
+   * `IDENTITY_FINISH`.
+   * @throws {@link NullPointerException} if an argument, or a function a downstream returns, is null
+   */
   teeing,
 };
 
 // ---- Collector value side
 
+/** A collector whose container is the result: IDENTITY_FINISH is always reported, plus the given characteristics. */
 function of<T, R>(supplier: () => R, accumulator: (r: R, t: T) => void, combiner: (a: R, b: R) => R, ...characteristics: CollectorCharacteristics[]): CollectorType<T, R, R>;
+/** A collector with a finisher; exactly the given characteristics are reported. */
 function of<T, A, R>(supplier: () => A, accumulator: (a: A, t: T) => void, combiner: (a: A, b: A) => A, finisher: (a: A) => R, ...characteristics: CollectorCharacteristics[]): CollectorType<T, A, R>;
 function of(supplier: () => unknown, accumulator: (a: unknown, t: unknown) => void, combiner: (a: unknown, b: unknown) => unknown, ...rest: unknown[]): AnyCollector {
   requireNonNull(supplier);
@@ -625,6 +781,7 @@ function of(supplier: () => unknown, accumulator: (a: unknown, t: unknown) => vo
   return make(supplier, accumulator, combiner, finisher, cs.length === 0 ? CH_NOID : chars(...cs));
 }
 
+/** Factory and characteristic constants for {@link Collector}. */
 export const Collector = {
   /**
    * Collector from functions. Without a finisher the result is the container and IDENTITY_FINISH is
@@ -632,9 +789,13 @@ export const Collector = {
    * @throws NullPointerException if any function or characteristic is null
    */
   of,
+  /** The characteristic names as constants; the same strings as {@link CollectorCharacteristics}. */
   Characteristics: {
+    /** One container may be fed concurrently; no effect on the single JS thread. */
     CONCURRENT: 'CONCURRENT',
+    /** The result does not depend on encounter order. */
     UNORDERED: 'UNORDERED',
+    /** The finisher is the identity: the container is the result and the finisher is skipped. */
     IDENTITY_FINISH: 'IDENTITY_FINISH',
   } as const satisfies Record<CollectorCharacteristics, CollectorCharacteristics>,
 };

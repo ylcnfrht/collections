@@ -9,8 +9,18 @@ import { IteratorSpliterator, KEEP_ESTIMATE } from '../stream/Spliterators';
 const SORTED_SET = Spliterator.DISTINCT | Spliterator.SORTED | Spliterator.ORDERED | Spliterator.SIZED | Spliterator.SUBSIZED;
 import { AbstractCollection } from './AbstractCollection';
 
-/** Skeleton of AbstractSet: value equality with any Set, hashCode = sum of element hashes. */
+/**
+ * Skeleton implementation of the `Set` interface on top of {@link AbstractCollection}.
+ *
+ * A read-only subclass implements `iterator()` and `size()` and must not yield duplicates; a modifiable one also
+ * overrides `add(e)` (which throws {@link UnsupportedOperationException} by default) and returns an iterator whose
+ * `remove()` works. It inherits value `equals` with any `Set`, `hashCode` as the sum of element hashes, a
+ * `removeAll` that walks the smaller side, and a `DISTINCT` spliterator (`SORTED | ORDERED` too for a set with
+ * `comparator()`, `first()`, `last()` and `headSet()`). There is no `modCount`: fail-fast behaviour is whatever
+ * the subclass's iterator provides.
+ */
 export abstract class AbstractSet<E> extends AbstractCollection<E> implements Set<E> {
+  /** Runtime brand that marks this object as a `Set` (TypeScript interfaces do not exist at runtime); always `true`. */
   get [SET_BRAND](): true {
     return true;
   }
@@ -20,6 +30,10 @@ export abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
     return Object.assign(Object.create(Object.getPrototypeOf(this)) as object, this) as this;
   }
 
+  /**
+   * Returns `true` if `o` is a `Set` of the same size that this set `containsAll` of; any `Set` implementation
+   * compares. A {@link ClassCastException} or {@link NullPointerException} from `containsAll` counts as "not equal".
+   */
   override equals(o: unknown): boolean {
     if (o === this) return true;
     if (!isSet(o) || o.size() !== this.size()) return false;
@@ -63,6 +77,7 @@ export abstract class AbstractSet<E> extends AbstractCollection<E> implements Se
     return new IteratorSpliterator(this, null, -1, Spliterator.DISTINCT | Spliterator.SIZED | Spliterator.SUBSIZED, KEEP_ESTIMATE);
   }
 
+  /** Returns the sum of the element hashes (32-bit), so equal sets hash the same whatever their order. */
   override hashCode(): number {
     let h = 0;
     const it = this.iterator();
