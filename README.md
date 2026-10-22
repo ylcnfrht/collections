@@ -1,5 +1,6 @@
 # @nodestd/collections
 
+[![npm](https://img.shields.io/npm/v/@nodestd/collections.svg)](https://www.npmjs.com/package/@nodestd/collections)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![TypeScript](https://img.shields.io/badge/types-TypeScript-3178c6.svg)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)
@@ -10,6 +11,8 @@ Framework.**
 
 Lists, queues, sets, maps and lazy streams with one consistent API: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`,
 `PriorityQueue`, `Stream`, `Collectors` and the rest, following the same interfaces and documented behaviour.
+
+**Documentation: [nodestd.github.io/collections](https://nodestd.github.io/collections/)**
 
 ## Why
 

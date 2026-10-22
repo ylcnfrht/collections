@@ -404,7 +404,7 @@ The in-process suite covers many more cases than the [isolated comparison](#isol
 | --- | --- |
 | Machine | Apple M1 Pro, 16 GB, macOS 14 |
 | Runtime | Node.js v24.12.0 |
-| Library | `@nodestd/collections` 1.0.0 (branch `jcf-rewrite`, commit `5f67687`) |
+| Library | `@nodestd/collections` 1.0.0 before release (commit `5f67687`) |
 | Harness | `tinybench` 6.2.0, 300 ms per case after 100 ms warm-up |
 | Competitors | `js-sdsl` 4.4.2, `mnemonist` 0.40.5, `@datastructures-js/priority-queue` 6.4.0 |
 
@@ -551,8 +551,12 @@ npm run bench -- HashMap       # files whose name contains "HashMap" (HashMap an
 npm run bench -- TreeMap
 npm run bench -- Stream
 npm run bench:isolated         # isolated comparison in Docker (needs a running Docker daemon)
-npm run bench:isolated -- --only lru-cache --reps 5
+npm run bench:isolated -- --only lru-cache,hashmap-get-int --reps 5
+node bench/demo/index.js       # HashMap.get vs a native Map, printing calls, time and ns per call
+node bench/demo/index.js strings
 ```
+
+`bench/demo/index.js` needs `npm run build` first; it runs the same `get` test on this library's `HashMap` and on a native `Map`, each in its own Node process, and prints the number of calls, the time taken, calls per second and nanoseconds per call.
 
 The filter is a case-insensitive substring of the file name in `bench/`. The available files are `ArrayList`, `LinkedList`, `HashMap`, `LinkedHashMap`, `TreeMap`, `PriorityQueue`, `ArrayDeque`, `Collections`, `Stream`, `Collectors` and `Gatherers`. Each group prints a table of ops/sec, relative margin of error and the ratio to the fastest case. The run ends with a "Not fastest in" summary of every group where this library's case lost, and by how much.
 

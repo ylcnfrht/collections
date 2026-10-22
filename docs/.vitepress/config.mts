@@ -9,10 +9,16 @@ export default withMermaid(
     base: '/collections/',
     cleanUrls: true,
     lastUpdated: true,
+    sitemap: { hostname: 'https://nodestd.github.io/collections/' },
     head: [
       ['link', { rel: 'icon', type: 'image/svg+xml', href: '/collections/logo.svg' }],
       ['meta', { name: 'theme-color', content: '#4f46e5' }],
       ['meta', { property: 'og:type', content: 'website' }],
+      ['meta', { property: 'og:url', content: 'https://nodestd.github.io/collections/' }],
+      ['meta', { property: 'og:image', content: 'https://nodestd.github.io/collections/og.png' }],
+      ['meta', { property: 'og:image:width', content: '1200' }],
+      ['meta', { property: 'og:image:height', content: '630' }],
+      ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
       ['meta', { property: 'og:title', content: '@nodestd/collections' }],
       [
         'meta',
