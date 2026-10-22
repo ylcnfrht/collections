@@ -23,8 +23,8 @@ export interface Spliterator<T> {
 }
 
 /**
- * Comparator typed with method-style (bivariant) parameters, so a Spliterator<T> stays covariant in T
- * like the reference's Comparator<? super T>; a plain function type would make every Collection invariant.
+ * Comparator typed with method-style (bivariant) parameters, so a `Spliterator<T>` stays covariant in `T`
+ * like the reference's `Comparator<? super T>`; a plain function type would make every Collection invariant.
  */
 export type SourceComparator<T> = { bivarianceHack(a: T, b: T): number }['bivarianceHack'];
 

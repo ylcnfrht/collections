@@ -7,7 +7,11 @@ import { data } from './pages.data';
 // the sidebar is enough to list it here.
 interface Item { text: string; link?: string; items?: Item[] }
 const { theme } = useData();
-const groups = computed(() => (theme.value.sidebar as Item[]).filter((g) => g.items?.length));
+// the guide sidebar; /api/ has its own, generated one
+const groups = computed(() => {
+  const sb = theme.value.sidebar as Item[] | Record<string, Item[]>;
+  return (Array.isArray(sb) ? sb : sb['/']).filter((g) => g.items?.length);
+});
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // summaries are plain text from the Markdown source; `code` spans become <code>
 const html = (s: string) => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');

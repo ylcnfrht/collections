@@ -27,10 +27,11 @@ import type {
 } from './Stream';
 import './StreamSupport';
 
-export type Stream<T> = StreamType<T>;
-export type IntStream = IntStreamType;
-export type LongStream = LongStreamType;
-export type DoubleStream = DoubleStreamType;
+// interfaces, not type aliases, so documentation tools list their members
+export interface Stream<T> extends StreamType<T> {}
+export interface IntStream extends IntStreamType {}
+export interface LongStream extends LongStreamType {}
+export interface DoubleStream extends DoubleStreamType {}
 
 type Ctor = typeof RefPipeline | typeof IntPipeline | typeof LongPipeline | typeof DoublePipeline;
 type Closeable = { isParallel(): boolean; spliterator(): Spliterator<any>; close(): void };

@@ -66,8 +66,8 @@
     "bench:isolated": "ts-node --transpile-only -P tsconfig.test.json bench/isolated/run-all.ts",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "docs:api": "typedoc",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
+    "docs:dev": "typedoc && vitepress dev docs",
+    "docs:build": "typedoc && vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
@@ -83,6 +83,8 @@
     "ts-node": "^10.9.2",
     "tsup": "8.5.1",
     "typedoc": "0.28.20",
+    "typedoc-plugin-markdown": "4.14.1",
+    "typedoc-vitepress-theme": "1.1.4",
     "typescript": "^5.8.3",
     "vitepress": "1.6.4",
     "vitepress-plugin-mermaid": "2.0.17"

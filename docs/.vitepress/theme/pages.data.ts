@@ -7,7 +7,7 @@ const DOCS = join(__dirname, '../..');
 
 function pages(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.name.startsWith('.') ? [] : e.isDirectory() ? pages(join(dir, e.name)) : e.name.endsWith('.md') ? [join(dir, e.name)] : [],
+    e.name.startsWith('.') || e.name === 'api' ? [] : e.isDirectory() ? pages(join(dir, e.name)) : e.name.endsWith('.md') ? [join(dir, e.name)] : [],
   );
 }
 

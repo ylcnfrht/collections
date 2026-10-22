@@ -188,9 +188,6 @@ The rest of the type system:
 
 ## API reference
 
-Every exported class, interface and function is documented in the TypeDoc API reference. Generate it locally and
-open `docs-api/index.html`:
-
-```sh
-npm run docs:api
-```
+Every exported class, interface, type and function, with its signatures and documentation comments, is in the
+[API reference](https://nodestd.github.io/collections/api/). It is generated from the source with TypeDoc each time
+the site is built; `npm run docs:dev` generates it and serves the site locally.

@@ -113,7 +113,7 @@ The full list is in [Differences from the Java API](docs/advanced/compatibility.
 - [Data structures primer](docs/guide/data-structures.md): what each structure is and how it stores data
 - [Choosing a collection](docs/guide/choosing-a-collection.md)
 - [Coming from JS](docs/guide/coming-from-js.md): `Array`/`Map`/`Set` side by side
-- [All documentation](docs/README.md); API reference: `npm run docs:api`
+- [All documentation](docs/README.md) and the [API reference](https://nodestd.github.io/collections/api/)
 
 ## Contributing
 

@@ -19,7 +19,8 @@ import type { Collector as CollectorType, CollectorCharacteristics } from './Col
 import { Optional } from './Optional';
 import { closeAfterFailure } from './pipeline/Sink';
 
-export type Collector<T, A, R> = CollectorType<T, A, R>;
+// interfaces, not type aliases, so documentation tools list their members
+export interface Collector<T, A, R> extends CollectorType<T, A, R> {}
 export type { CollectorCharacteristics };
 
 /** Anything with forEach and close: the streams flatMapping consumes. */

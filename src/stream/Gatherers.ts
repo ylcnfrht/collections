@@ -5,9 +5,10 @@ import type { List } from '../interfaces/List';
 import { requireNonNull } from '../util/Objects';
 import type { Downstream as DownstreamType, Gatherer as GathererType, Integrator as IntegratorType } from './Gatherer';
 
-export type Gatherer<T, A, R> = GathererType<T, A, R>;
-export type Integrator<A, T, R> = IntegratorType<A, T, R>;
-export type Downstream<T> = DownstreamType<T>;
+// interfaces, not type aliases, so documentation tools list their members
+export interface Gatherer<T, A, R> extends GathererType<T, A, R> {}
+export interface Integrator<A, T, R> extends IntegratorType<A, T, R> {}
+export interface Downstream<T> extends DownstreamType<T> {}
 
 /** What the factories here return: a Gatherer with every member defined. */
 export interface DefinedGatherer<T, A, R> extends GathererType<T, A, R> {

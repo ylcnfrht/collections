@@ -12,7 +12,8 @@ const ROOT = join(__dirname, '..');
 function markdownFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
-    if (statSync(p).isDirectory()) return markdownFiles(p);
+    // docs/api is generated from the sources by typedoc, and not committed
+    if (statSync(p).isDirectory()) return p === join(ROOT, 'docs', 'api') ? [] : markdownFiles(p);
     return p.endsWith('.md') && !p.endsWith('COMPATIBILITY.md') ? [p] : [];
   });
 }

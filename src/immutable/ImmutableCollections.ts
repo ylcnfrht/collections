@@ -768,9 +768,10 @@ class LazyEntrySet<K, V> extends ImmutableSetBase<MapEntry<K, V>> {
   }
 }
 
-export type List<E> = ListType<E>;
-export type Set<E> = SetType<E>;
-export type Map<K, V> = MapType<K, V>;
+// interfaces, not type aliases, so documentation tools list their members
+export interface List<E> extends ListType<E> {}
+export interface Set<E> extends SetType<E> {}
+export interface Map<K, V> extends MapType<K, V> {}
 
 /** Unmodifiable lists: random access, null elements and null queries rejected, value equality with any List. */
 export const List = {
