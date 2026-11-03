@@ -225,6 +225,55 @@ console.log(s.ceiling(25));           // → null
 > Because `null` means "absent", `get` is ambiguous on a map that stores `null` values. Use `containsKey` or
 > `getOrDefault` there.
 
+### Throwing and non-throwing pairs
+
+Most operations that throw on an empty collection have a twin that returns `null` instead. Pick the one that fits:
+throw when emptiness is a bug, return `null` when it is an expected case.
+
+| Throws when there is nothing | Returns `null` instead | Exception |
+|---|---|---|
+| `queue.remove()` | `queue.poll()` | `NoSuchElementException` |
+| `queue.element()` | `queue.peek()` | `NoSuchElementException` |
+| `deque.removeFirst()` / `removeLast()` | `deque.pollFirst()` / `pollLast()` | `NoSuchElementException` |
+| `deque.getFirst()` / `getLast()` | `deque.peekFirst()` / `peekLast()` | `NoSuchElementException` |
+| `deque.pop()` | `deque.pollFirst()` | `NoSuchElementException` |
+| `sortedMap.firstKey()` / `lastKey()` | `navigableMap.firstEntry()` / `lastEntry()` (then `?.getKey()`) | `NoSuchElementException` |
+| `stack.pop()` / `stack.peek()` | `stack.empty()` first, or an `ArrayDeque` with `pollFirst()` / `peekFirst()` | `EmptyStackException` |
+| `iterator.next()` | `iterator.hasNext()` first | `NoSuchElementException` |
+| `optional.get()` / `orElseThrow()` | `optional.orElse(null)`, `orElseGet(fn)`, `ifPresent(fn)` | `NoSuchElementException` |
+
+These have no `null`-returning twin; check `isEmpty()` or the index first:
+
+| Throws | Exception |
+|---|---|
+| `list.get(index)`, `list.set(index, e)`, `list.removeAt(index)` out of range | `IndexOutOfBoundsException` |
+| `list.getFirst()` / `getLast()` / `removeFirst()` / `removeLast()` on an empty list (a `LinkedList` also has `peekFirst()` / `pollFirst()`) | `NoSuchElementException` |
+| `sortedSet.first()` / `last()` on an empty set (`pollFirst()` / `pollLast()` return `null` but remove the element) | `NoSuchElementException` |
+| `Collections.min` / `max` of an empty collection | `NoSuchElementException` |
+
+Lookups that can find nothing never throw for it: `map.get`, `map.remove(key)`, `floor`/`ceiling`/`lower`/`higher`,
+`firstEntry`/`lastEntry` and `stream.findFirst()` (an empty `Optional`) all report "nothing" without an exception.
+Exceptions that signal a programming error, such as `ConcurrentModificationException`, `NullPointerException` or
+`UnsupportedOperationException`, have no non-throwing form.
+
+```ts
+import { ArrayDeque, TreeMap, ArrayList } from '@nodestd/collections';
+
+const queue = new ArrayDeque<string>();
+console.log(queue.poll()); // → null
+try {
+  queue.remove();
+} catch (e) {
+  console.log((e as Error).name); // → NoSuchElementException
+}
+
+const prices = new TreeMap<number, string>();
+console.log(prices.firstEntry()?.getKey() ?? 'none'); // → none
+
+const list = new ArrayList<number>();
+console.log(list.isEmpty() ? null : list.getFirst()); // → null
+```
+
 ### Which collections accept null
 
 | Accepts `null` elements / keys | Rejects (throws `NullPointerException`) |
