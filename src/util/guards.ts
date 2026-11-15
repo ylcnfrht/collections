@@ -3,12 +3,12 @@ import type { Map, MapEntry } from '../interfaces/Map';
 import type { Set } from '../interfaces/Set';
 
 // TS interfaces vanish at runtime, so set and random-access checks use brands.
-export const SET_BRAND: unique symbol = Symbol.for('@ylcnfrht/typescript-collection-framework.Set');
+export const SET_BRAND: unique symbol = Symbol.for('@ylcnfrht/collections.Set');
 /**
  * Brand key of the {@link RandomAccess} marker: a list whose `[RANDOM_ACCESS]` property is `true` has O(1)
  * `get(index)`. A registered symbol (`Symbol.for`), so separate copies of the library agree on it.
  */
-export const RANDOM_ACCESS: unique symbol = Symbol.for('@ylcnfrht/typescript-collection-framework.RandomAccess');
+export const RANDOM_ACCESS: unique symbol = Symbol.for('@ylcnfrht/collections.RandomAccess');
 
 /**
  * Marker for lists with fast (O(1)) positional access, such as `ArrayList`, `Vector` and `List.of` lists.

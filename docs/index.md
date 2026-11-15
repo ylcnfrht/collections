@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: '@ylcnfrht/typescript-collection-framework'
+  name: '@ylcnfrht/collections'
   text: Collections for TypeScript
   tagline: Lists, queues, sets, maps and lazy streams with one consistent API, inspired by the Java Collections Framework.
   actions:
@@ -14,7 +14,7 @@ hero:
       link: /introduction
     - theme: alt
       text: View on GitHub
-      link: https://github.com/ylcnfrht/typescript-collection-framework
+      link: https://github.com/ylcnfrht/collections
 
 features:
   - icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h14M5 15h14"/></svg>'
@@ -62,19 +62,19 @@ Eight workloads from our [isolated benchmark](./advanced/performance.md#isolated
 ::: code-group
 
 ```sh [npm]
-npm install @ylcnfrht/typescript-collection-framework
+npm install @ylcnfrht/collections
 ```
 
 ```sh [pnpm]
-pnpm add @ylcnfrht/typescript-collection-framework
+pnpm add @ylcnfrht/collections
 ```
 
 ```sh [yarn]
-yarn add @ylcnfrht/typescript-collection-framework
+yarn add @ylcnfrht/collections
 ```
 
 ```sh [bun]
-bun add @ylcnfrht/typescript-collection-framework
+bun add @ylcnfrht/collections
 ```
 
 :::

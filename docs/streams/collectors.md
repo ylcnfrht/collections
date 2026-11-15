@@ -38,7 +38,7 @@ Every example below is self-contained. Hash-based results are printed through `g
 > unlike `toUnmodifiableList()`.
 
 ```ts
-import { Stream, Collectors, TreeSet, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeSet, Comparator } from '@ylcnfrht/collections';
 
 const list = Stream.of('b', 'a', 'b').collect(Collectors.toList());
 list.add('c');
@@ -72,7 +72,7 @@ order).
 ::: code-group
 
 ```ts [Basic]
-import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors } from '@ylcnfrht/collections';
 
 // word -> its length
 const lengths = Stream.of('map', 'filter', 'reduce').collect(Collectors.toMap((w: string) => w, (w: string) => w.length));
@@ -82,7 +82,7 @@ console.log(lengths.size()); // → 3
 ```
 
 ```ts [Intermediate]
-import { Stream, Collectors, TreeMap } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap } from '@ylcnfrht/collections';
 
 type Line = { sku: string; qty: number };
 const cart: Line[] = [
@@ -121,7 +121,7 @@ console.log(quantities); // → {A-100=2, B-200=4, C-300=1}
 | `toConcurrentMap(…)` | as `toMap` | a map (same three forms; concurrency is moot in JS) |
 
 ```ts
-import { Stream, Collectors, TreeMap, LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, LinkedHashMap } from '@ylcnfrht/collections';
 
 type Emp = { name: string; dept: string; salary: number };
 const staff: Emp[] = [
@@ -166,7 +166,7 @@ an empty stream gives `prefix + suffix`.
 ::: code-group
 
 ```ts [Basic]
-import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors } from '@ylcnfrht/collections';
 
 console.log(Stream.of('a', 'b', 'c').collect(Collectors.joining())); // → abc
 console.log(Stream.of('a', 'b', 'c').collect(Collectors.joining(', '))); // → a, b, c
@@ -176,7 +176,7 @@ console.log(Stream.of(1, 2, 3).map(String).collect(Collectors.joining('-'))); //
 ```
 
 ```ts [Intermediate]
-import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors } from '@ylcnfrht/collections';
 
 type User = { name: string; active: boolean };
 const users: User[] = [
@@ -213,7 +213,7 @@ They are most useful as downstream collectors of [`groupingBy`](#groupingby). Se
 [number streams](number-streams.md#summary-statistics) for the statistics objects.
 
 ```ts
-import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors } from '@ylcnfrht/collections';
 
 type Emp = { name: string; salary: number };
 const staff: Emp[] = [
@@ -244,7 +244,7 @@ form of `stream.reduce`, mostly useful as a downstream:
 | `reducing(identity, mapper, op)` | `U` — maps each element first |
 
 ```ts
-import { Stream, Collectors, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, Comparator } from '@ylcnfrht/collections';
 
 type Emp = { name: string; salary: number };
 const staff: Emp[] = [
@@ -268,7 +268,7 @@ downstream collector. The result is a map from each key to its bucket's downstre
 ::: code-group
 
 ```ts [Basic]
-import { Stream, Collectors, TreeMap, List } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, List } from '@ylcnfrht/collections';
 
 // words grouped by their first letter, keys sorted
 const byLetter = Stream.of('apple', 'avocado', 'banana', 'cherry', 'blueberry')
@@ -278,7 +278,7 @@ console.log(byLetter); // → {a=[apple, avocado], b=[banana, blueberry], c=[che
 ```
 
 ```ts [Intermediate]
-import { Stream, Collectors, TreeMap } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap } from '@ylcnfrht/collections';
 
 type Order = { customer: string; amount: number };
 const orders: Order[] = [
@@ -315,7 +315,7 @@ A classifier returning `null` throws `NullPointerException` ("element cannot be 
 keep the encounter order of their elements.
 
 ```ts
-import { Stream, Collectors, TreeMap, Comparator, List } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, Comparator, List } from '@ylcnfrht/collections';
 
 type Emp = { name: string; dept: string; salary: number };
 const staff: Emp[] = [
@@ -364,7 +364,7 @@ try {
 even when empty. The result map prints `false` first. The optional second argument is a downstream collector.
 
 ```ts
-import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors } from '@ylcnfrht/collections';
 
 const parts = Stream.of(1, 2, 3, 4, 5).collect(Collectors.partitioningBy((x: number) => x % 2 === 0));
 console.log(parts); // → {false=[1, 3, 5], true=[2, 4]}
@@ -388,7 +388,7 @@ These wrap another collector. They are the building blocks of `groupingBy` and `
 | `collectingAndThen(downstream, finisher)` | applies `finisher` to the downstream's result |
 
 ```ts
-import { Stream, Collectors, TreeMap, TreeSet, List } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, TreeSet, List } from '@ylcnfrht/collections';
 
 type Emp = { name: string; dept: string; salary: number; skills: string[] };
 const staff: Emp[] = [
@@ -420,7 +420,7 @@ console.log(size); // → 4
 aggregations in one pass.
 
 ```ts
-import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors } from '@ylcnfrht/collections';
 
 const salaries = () => Stream.of(120, 100, 90, 80);
 const mean = salaries().collect(Collectors.teeing(
@@ -466,7 +466,7 @@ the characteristics given. They are available as `Collector.Characteristics.UNOR
 literals.
 
 ```ts
-import { Stream, Collector, LinkedList } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collector, LinkedList } from '@ylcnfrht/collections';
 
 // container = result: a LinkedList built in reverse
 const reversed = Collector.of(
@@ -505,7 +505,7 @@ console.log(median.characteristics()); // → [UNORDERED]
 Count occurrences, then rank the most frequent first:
 
 ```ts
-import { Stream, Collectors, TreeMap, Comparator, MapEntry } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, Comparator, MapEntry } from '@ylcnfrht/collections';
 
 const words = 'the cat and the hat and the bat'.split(' ');
 const freq = Stream.ofArray(words).collect(Collectors.groupingBy((w: string) => w, () => new TreeMap<string, number>(), Collectors.counting()));
@@ -522,7 +522,7 @@ console.log(ranked); // → [the:3, and:2]
 ### Top-N per group
 
 ```ts
-import { Stream, Collectors, TreeMap, Comparator, List } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, Comparator, List } from '@ylcnfrht/collections';
 
 type Sale = { region: string; amount: number };
 const sales: Sale[] = [
@@ -541,7 +541,7 @@ console.log(top2); // → {north=[9, 7], south=[8, 3]}
 ### Statistics per category
 
 ```ts
-import { Stream, Collectors, TreeMap, DoubleSummaryStatistics } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, TreeMap, DoubleSummaryStatistics } from '@ylcnfrht/collections';
 
 type Reading = { sensor: string; value: number };
 const readings: Reading[] = [
@@ -558,7 +558,7 @@ console.log(a.getCount(), a.getMin(), a.getMax(), a.getAverage()); // → 2 1.5 
 On duplicate keys the last element wins; keys keep their encounter order.
 
 ```ts
-import { Stream, Collectors, LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Collectors, LinkedHashMap } from '@ylcnfrht/collections';
 
 type User = { id: number; name: string };
 const users: User[] = [{ id: 2, name: 'old' }, { id: 1, name: 'one' }, { id: 2, name: 'two' }];

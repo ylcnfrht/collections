@@ -6,7 +6,7 @@ import { ref } from 'vue';
 const examples = [
   {
     name: 'ArrayList',
-    code: `import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+    code: `import { ArrayList } from '@ylcnfrht/collections';
 
 const fruits = new ArrayList<string>();
 fruits.add('pear');
@@ -20,7 +20,7 @@ fruits.subList(0, 2);        // → [apple, fig]`,
   },
   {
     name: 'LinkedList',
-    code: `import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
+    code: `import { LinkedList } from '@ylcnfrht/collections';
 
 // a list and a double-ended queue in one
 const deque = new LinkedList<number>();
@@ -34,7 +34,7 @@ deque.toString();            // → '[1, 2]'`,
   },
   {
     name: 'HashMap',
-    code: `import { HashMap } from '@ylcnfrht/typescript-collection-framework';
+    code: `import { HashMap } from '@ylcnfrht/collections';
 
 const ages = new HashMap<string, number>();
 ages.put('ada', 36);
@@ -46,7 +46,7 @@ ages.toString();             // → '{ada=37, bob=3}'`,
   },
   {
     name: 'HashSet',
-    code: `import { HashSet, List } from '@ylcnfrht/typescript-collection-framework';
+    code: `import { HashSet, List } from '@ylcnfrht/collections';
 
 // elements compare by value, not by reference
 const seen = new HashSet<List<number>>();
@@ -58,7 +58,7 @@ seen.size();                     // → 1`,
   },
   {
     name: 'TreeMap',
-    code: `import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
+    code: `import { TreeMap } from '@ylcnfrht/collections';
 
 // sorted by key, with navigation and range views
 const plans = new TreeMap<number, string>();
@@ -72,7 +72,7 @@ plans.headMap(25);           // → {10=basic}`,
   },
   {
     name: 'Stream',
-    code: `import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+    code: `import { ArrayList } from '@ylcnfrht/collections';
 
 const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
 // with new: new ArrayList<string>(), then add() each word

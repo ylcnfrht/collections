@@ -11,7 +11,7 @@ type Comparator<T> = (a: T, b: T) => number; // < 0: a first, 0: tie, > 0: b fir
 A comparator is the same kind of function that `Array.prototype.sort` accepts, so you can pass a lambda wherever the library expects one. The Java API puts methods on the comparator, such as `c.reversed()` or `c.thenComparing(d)`. Here those methods are functions that take the comparator as their first argument: `Comparator.reversed(c)` and `Comparator.thenComparing(c, d)`.
 
 ```ts
-import { ArrayList, Comparator, TreeSet } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator, TreeSet } from '@ylcnfrht/collections';
 
 const byLength = (a: string, b: string) => a.length - b.length;
 const words = ArrayList.of('banana', 'fig', 'apple');
@@ -32,7 +32,7 @@ console.log(set); // → [banana, apple, fig]
 > A sorted collection decides equality with its comparator, not with `equals`. Two elements that compare as `0` count as the same element, so a `TreeSet` ordered by length keeps one word per length.
 
 ```ts
-import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
+import { TreeSet } from '@ylcnfrht/collections';
 
 const byLen = new TreeSet<string>((a, b) => a.length - b.length);
 byLen.add('cat');
@@ -55,7 +55,7 @@ console.log(byLen.add('dog'), byLen.size()); // → false 1
 | anything else, or two different types | throws `ClassCastException` |
 
 ```ts
-import { ArrayList, naturalCompare } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, naturalCompare } from '@ylcnfrht/collections';
 
 console.log(naturalCompare(1, 2)); // → -1
 console.log(naturalCompare('B', 'a')); // → -1
@@ -85,7 +85,7 @@ Plain objects have no natural order: give them a `compareTo` method or pass a co
 Strings are compared by UTF-16 code units, the same order `Array.prototype.sort()` uses by default. This order is fast and deterministic, but it is not the alphabetical order of any language. For user-facing sorting, pass a collator:
 
 ```ts
-import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList } from '@ylcnfrht/collections';
 
 const names = ArrayList.of('émile', 'Zoe', 'adam');
 names.sort(null);
@@ -107,8 +107,8 @@ interface Comparable<T> {
 When a class has `compareTo`, its instances get a natural ordering. They then work in `TreeSet`, `TreeMap`, `PriorityQueue`, `Collections.sort`, `Collections.max` and `Stream.sorted()` with no comparator. Make `compareTo` consistent with `equals`: return `0` exactly when `equals` returns `true`.
 
 ```ts
-import { PriorityQueue, TreeSet } from '@ylcnfrht/typescript-collection-framework';
-import type { Comparable } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, TreeSet } from '@ylcnfrht/collections';
+import type { Comparable } from '@ylcnfrht/collections';
 
 class Version implements Comparable<Version> {
   constructor(readonly major: number, readonly minor: number) {}
@@ -157,7 +157,7 @@ console.log(String(pq.poll())); // → 1.5
 ### naturalOrder, reverseOrder, reversed
 
 ```ts
-import { ArrayList, Comparator, naturalCompare } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator, naturalCompare } from '@ylcnfrht/collections';
 
 const l = ArrayList.of(2, 3, 1);
 l.sort(Comparator.reverseOrder());
@@ -175,7 +175,7 @@ console.log(Comparator.reversed(r) === naturalCompare); // → true
 `comparing(key)` extracts a key from each element and compares the keys by natural ordering. Pass a second argument to compare the keys some other way. The numeric variants skip the type dispatch of natural ordering. Like natural ordering, they put `NaN` last and treat `-0` as equal to `0`.
 
 ```ts
-import { ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator } from '@ylcnfrht/collections';
 
 interface Person {
   name: string;
@@ -211,7 +211,7 @@ In the `comparingInt` sort, `carol` and `bob` are both 31 and keep their previou
 The first comparator decides the order. Each later comparator is used only when everything before it returned `0`.
 
 ```ts
-import { ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator } from '@ylcnfrht/collections';
 
 interface Emp {
   dept: string;
@@ -259,7 +259,7 @@ Natural ordering rejects `null` and `undefined`. Wrap a comparator to accept the
 - With an explicit `null` argument, all non-null values compare as equal, so a stable sort keeps their order.
 
 ```ts
-import { ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator } from '@ylcnfrht/collections';
 
 const xs = ArrayList.of<number | null>(3, null, 1);
 xs.sort(Comparator.nullsFirst());
@@ -279,7 +279,7 @@ When you compose null-friendly comparators, they stay null-friendly. This matche
 - `thenComparing(nullsFirst(c), d)` keeps the nulls first and breaks ties among the other values with `d`. `d` is never called with `null`.
 
 ```ts
-import { ArrayList, Comparator, naturalCompare } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator, naturalCompare } from '@ylcnfrht/collections';
 
 const ys = ArrayList.of<string | null>('b', null, 'a');
 ys.sort(Comparator.reversed(Comparator.nullsFirst<string>()));
@@ -297,7 +297,7 @@ console.log(zs); // → [null, a, ab, bb]
 To sort objects by a key that may be missing, wrap the key comparator:
 
 ```ts
-import { ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator } from '@ylcnfrht/collections';
 
 interface Task {
   title: string;
@@ -317,7 +317,7 @@ console.log(tasks.stream().map((t) => t.title).toList()); // → [a, b, later]
 `Comparator.max(c, a, b)` and `Comparator.min(c, a, b)` return the greater or lesser of two values. On a tie they return `a`. These two do not exist in the Java API version this library was checked against.
 
 ```ts
-import { Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { Comparator } from '@ylcnfrht/collections';
 
 const byLen = Comparator.comparing((s: string) => s.length);
 console.log(Comparator.max(byLen, 'ab', 'xyz')); // → xyz
@@ -327,7 +327,7 @@ console.log(Comparator.min(byLen, 'ab', 'cd')); // → ab
 ### Recipes
 
 ```ts
-import { ArrayList, Collectors, Comparator, List, Stream, TreeMap } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Collectors, Comparator, List, Stream, TreeMap } from '@ylcnfrht/collections';
 
 interface Item {
   sku: string;
@@ -391,7 +391,7 @@ console.log(grouped); // → {10=[B2, D4], 20=[A1, C3]}
 ### equals, hash, hashCode, identityHashCode
 
 ```ts
-import { Objects } from '@ylcnfrht/typescript-collection-framework';
+import { Objects } from '@ylcnfrht/collections';
 
 console.log(Objects.equals(NaN, NaN)); // → true
 console.log(Objects.equals(-0, 0)); // → true
@@ -427,7 +427,7 @@ Arrays and plain objects have no `equals` method, so they compare by reference. 
 | any other object, function or symbol | identity hash: assigned on first use, stable for the object's lifetime | `{}`, arrays |
 
 ```ts
-import { ArrayList, Objects } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Objects } from '@ylcnfrht/collections';
 
 console.log(Objects.hashCode(42), Objects.hashCode(-0), Objects.hashCode(2 ** 31)); // → 42 0 1105199104
 console.log(Objects.hashCode(true), Objects.hashCode(false)); // → 1231 1237
@@ -443,7 +443,7 @@ Identity hashes are kept in a `WeakMap`, so hashing an object does not keep it a
 `requireNonNull(o, message?)` returns `o` with its type narrowed to non-null, so you can validate and assign in one line. Pass the message as a function when building it is costly. The function is only called if the check fails.
 
 ```ts
-import { Objects } from '@ylcnfrht/typescript-collection-framework';
+import { Objects } from '@ylcnfrht/collections';
 
 function greet(name: string | null | undefined): string {
   const n = Objects.requireNonNull(name, () => 'name is required');
@@ -471,7 +471,7 @@ try {
 Each check returns its first argument on success. On failure it throws `IndexOutOfBoundsException` with a message in the reference format. An index that is not an integer, such as `1.5` or `NaN`, also fails.
 
 ```ts
-import { Objects } from '@ylcnfrht/typescript-collection-framework';
+import { Objects } from '@ylcnfrht/collections';
 
 console.log(Objects.checkIndex(2, 3)); // → 2
 console.log(Objects.checkFromToIndex(1, 3, 3)); // → 1
@@ -495,7 +495,7 @@ These checks are the ones to use when you [implement your own list](../advanced/
 ### toString, compare, deepEquals, toIdentityString
 
 ```ts
-import { ArrayList, Objects, naturalCompare } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Objects, naturalCompare } from '@ylcnfrht/collections';
 
 console.log(Objects.toString(null)); // → null
 console.log(Objects.toString(undefined, 'n/a')); // → n/a
@@ -527,7 +527,7 @@ Collections rely on three methods of your element types:
 | `TreeMap`, `TreeSet`, `PriorityQueue`, `sort(null)` | `compareTo(o): number` | a total order, ideally `0` exactly when `equals` |
 
 ```ts
-import { HashMap, HashSet, Objects } from '@ylcnfrht/typescript-collection-framework';
+import { HashMap, HashSet, Objects } from '@ylcnfrht/collections';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}

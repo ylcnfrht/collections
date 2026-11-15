@@ -15,7 +15,7 @@ case is then visible in the type and handled with `orElse`, `map` or `ifPresent`
 | `Optional.empty()` | the empty optional (a shared instance) |
 
 ```ts
-import { Optional } from '@ylcnfrht/typescript-collection-framework';
+import { Optional } from '@ylcnfrht/collections';
 
 console.log(Optional.of('ts')); // → Optional[ts]
 console.log(Optional.ofNullable(null)); // → Optional.empty
@@ -39,7 +39,7 @@ try {
 | `isPresent()` / `isEmpty()` | `true` / `false` | `false` / `true` |
 
 ```ts
-import { Optional, IllegalArgumentException } from '@ylcnfrht/typescript-collection-framework';
+import { Optional, IllegalArgumentException } from '@ylcnfrht/collections';
 
 const some = Optional.of(5);
 const none = Optional.empty<number>();
@@ -74,7 +74,7 @@ try {
 | `or(supplier)` | itself | `supplier()` (another optional) |
 
 ```ts
-import { Optional } from '@ylcnfrht/typescript-collection-framework';
+import { Optional } from '@ylcnfrht/collections';
 
 type User = { name: string; email?: string; manager?: User };
 const ann: User = { name: 'Ann', email: 'ann@example.com' };
@@ -96,7 +96,7 @@ console.log(Optional.empty<string>().or(() => Optional.of('fallback'))); // → 
 calls `emptyAction()` when the optional is empty.
 
 ```ts
-import { Optional } from '@ylcnfrht/typescript-collection-framework';
+import { Optional } from '@ylcnfrht/collections';
 
 const log: string[] = [];
 Optional.of('saved').ifPresent((v) => log.push(v));
@@ -111,7 +111,7 @@ console.log(log); // → [ 'saved', 'nothing to save' ]
 of optionals:
 
 ```ts
-import { Stream, Optional } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Optional } from '@ylcnfrht/collections';
 
 console.log(Optional.of('x').stream().map((s) => s + '!').toList()); // → [x!]
 
@@ -126,7 +126,7 @@ lists are equal). `hashCode()` is the value's hash code, `0` when empty. `toStri
 `Optional.empty`.
 
 ```ts
-import { Optional, List } from '@ylcnfrht/typescript-collection-framework';
+import { Optional, List } from '@ylcnfrht/collections';
 
 console.log(Optional.of(List.of(1)).equals(Optional.of(List.of(1)))); // → true
 console.log(Optional.empty().equals(Optional.empty())); // → true
@@ -144,7 +144,7 @@ console.log(Optional.of(List.of(1, 2)).toString()); // → Optional[[1, 2]]
 `Optional<number>`, box the stream first with `boxed()`.
 
 ```ts
-import { IntStream, OptionalInt, OptionalLong, OptionalDouble } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, OptionalInt, OptionalLong, OptionalDouble } from '@ylcnfrht/collections';
 
 const max = IntStream.of(3, 9, 4).max();
 console.log(max, max.getAsInt()); // → OptionalInt[9] 9
@@ -182,7 +182,7 @@ try {
   (`Stream.of(null).findFirst()`). Filter out nulls first.
 
 ```ts
-import { Optional, Stream } from '@ylcnfrht/typescript-collection-framework';
+import { Optional, Stream } from '@ylcnfrht/collections';
 
 console.log(Optional.of(1).map(() => null).isPresent()); // → false
 console.log(Optional.empty<string | null>().orElse(null)); // → null
@@ -197,7 +197,7 @@ console.log(Stream.of(null, 'a').filter((x) => x !== null).findFirst()); // → 
 ## Idioms: replacing null checks
 
 ```ts
-import { Optional, Stream, HashMap } from '@ylcnfrht/typescript-collection-framework';
+import { Optional, Stream, HashMap } from '@ylcnfrht/collections';
 
 type Config = { db?: { host?: string; port?: number } };
 const config: Config = { db: { host: 'localhost' } };

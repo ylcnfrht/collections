@@ -40,7 +40,7 @@ All built-ins are sequential.
 | `Gatherers.mapConcurrent(max, f)` | `f(e)` in encounter order | like `map` |
 
 ```ts
-import { Stream, Gatherers } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherers } from '@ylcnfrht/collections';
 
 console.log(Stream.of('a', 'b', 'c').gather(Gatherers.fold(() => '', (acc: string, s: string) => acc + s)).findFirst()); // → Optional[abc]
 console.log(Stream.empty<number>().gather(Gatherers.fold(() => 0, (acc: number, x: number) => acc + x)).toList()); // → [0]
@@ -74,7 +74,7 @@ in one, with the original as its `cause`.
 > not awaited: for real concurrency, map to promises and pass the result to `Promise.all`.
 
 ```ts
-import { Stream, Gatherers } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherers } from '@ylcnfrht/collections';
 
 console.log(Stream.of(1, 2, 3).gather(Gatherers.mapConcurrent(4, (x: number) => x * 2)).toList()); // → [2, 4, 6]
 try {
@@ -98,7 +98,7 @@ stop by itself.
 Keep the first element for each key:
 
 ```ts
-import { Stream, Gatherer, Integrator, HashSet, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, HashSet, Downstream } from '@ylcnfrht/collections';
 
 function distinctBy<T, K>(key: (t: T) => K) {
   return Gatherer.ofSequential(
@@ -116,7 +116,7 @@ console.log(fruit.gather(distinctBy((s: string) => s[0])).toList()); // → [app
 One output per input:
 
 ```ts
-import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/collections';
 
 const runningAverage = () =>
   Gatherer.ofSequential(
@@ -136,7 +136,7 @@ console.log(Stream.of(2, 4, 6, 8).gather(runningAverage()).toList()); // → [2,
 Group consecutive elements while a condition holds. The finisher emits the last chunk:
 
 ```ts
-import { Stream, Gatherer, Integrator, Downstream, List } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, Downstream, List } from '@ylcnfrht/collections';
 
 function chunkWhile<T>(together: (prev: T, next: T) => boolean) {
   type State = { chunk: T[] };
@@ -166,7 +166,7 @@ console.log(runs.toList()); // → [[1, 2], [4, 5, 6], [9]]
 Drop repeats of a key that arrive within a time window:
 
 ```ts
-import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/collections';
 
 type Event = { key: string; at: number };
 
@@ -193,7 +193,7 @@ console.log(Stream.ofArray(events).gather(throttle(100)).map((e) => `${e.key}@${
 A gatherer can also be a plain object with an `integrator()` method. Missing members take their defaults:
 
 ```ts
-import { Stream, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Downstream } from '@ylcnfrht/collections';
 
 const tag = { integrator: () => (_state: unknown, e: number, down: Downstream<string>) => down.push(`#${e}`) };
 console.log(Stream.of(1, 2).gather(tag).toList()); // → [#1, #2]
@@ -205,7 +205,7 @@ An integrator that returns `false` stops the upstream: no more elements are read
 This lets gatherers work on infinite streams.
 
 ```ts
-import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/collections';
 
 // emit elements up to and including the first one matching the predicate
 const takeUntil = <T>(stop: (t: T) => boolean) =>
@@ -225,7 +225,7 @@ console.log(result, read.length); // → [1, 2, 3, 4] 4
 finishers before pushing leftovers (as `chunkWhile` above does):
 
 ```ts
-import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/collections';
 
 let calls = 0;
 const expensive = Gatherer.ofSequential(
@@ -244,7 +244,7 @@ console.log(Stream.of(1, 2, 3, 4).gather(expensive).limit(2).toList(), calls); /
 `stream.gather(a).gather(b)` and packages a reusable pipeline as one value.
 
 ```ts
-import { Stream, Gatherers, List } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherers, List } from '@ylcnfrht/collections';
 
 const pairSums = Gatherers.windowFixed<number>(2).andThen(
   Gatherers.scan(() => 0, (acc: number, w: List<number>) => acc + w.stream().mapToInt((x) => x).sum()),
@@ -265,7 +265,7 @@ parallel-safe (its combiner must then merge two states correctly). The default p
 `UnsupportedOperationException`.
 
 ```ts
-import { Stream, Gatherer, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Downstream } from '@ylcnfrht/collections';
 
 const sum = Gatherer.of(
   () => [0],
@@ -289,7 +289,7 @@ declared parameter count (`fn.length`). A function that declares no parameters, 
 initializer. Otherwise it is an integrator.
 
 ```ts
-import { Stream, Gatherer, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Downstream } from '@ylcnfrht/collections';
 
 // () => … has no parameters: (initializer, integrator)
 const withState = Gatherer.ofSequential(

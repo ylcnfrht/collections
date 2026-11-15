@@ -22,4 +22,4 @@ First release.
   `headMap`, `reversed()` and others).
 - ESM and CommonJS builds with type definitions, and no runtime dependencies.
 
-[1.0.0]: https://github.com/ylcnfrht/typescript-collection-framework/releases/tag/v1.0.0
+[1.0.0]: https://github.com/ylcnfrht/collections/releases/tag/v1.0.0

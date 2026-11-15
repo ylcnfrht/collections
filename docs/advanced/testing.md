@@ -121,10 +121,10 @@ It covers stream basics and laziness (evaluation order, short-circuiting, which 
 `tests/docs.test.ts` extracts every ` ```ts ` block from `README.md` and `docs/**/*.md` (except the generated `COMPATIBILITY.md`) and checks two things:
 
 1. **It runs and prints what it claims.** The block runs against the library. Every `console.log(...)` that carries a `// → expected` comment must print exactly `expected`, in order. Strings print as-is, library collections via `toString()` (`[1, 2]`, `{a=1}`), and JS values via `util.inspect` (`[ 1, 2 ]`).
-2. **It type-checks.** All blocks are compiled together under `strict` mode, with `'@ylcnfrht/typescript-collection-framework'` mapped to `src/index.ts`.
+2. **It type-checks.** All blocks are compiled together under `strict` mode, with `'@ylcnfrht/collections'` mapped to `src/index.ts`.
 
 ```ts
-import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList } from '@ylcnfrht/collections';
 
 const l = ArrayList.of(3, 1, 2);
 // with new:
@@ -137,7 +137,7 @@ console.log(l); // → [1, 2, 3]
 console.log(l.toArray()); // → [ 1, 2, 3 ]
 ```
 
-Blocks fenced as ` ```ts nocheck ` (signatures, pseudo-code, test excerpts) are skipped. Examples may import only from `'@ylcnfrht/typescript-collection-framework'`. When you change behaviour, `npx jest tests/docs` tells you which documentation went stale.
+Blocks fenced as ` ```ts nocheck ` (signatures, pseudo-code, test excerpts) are skipped. Examples may import only from `'@ylcnfrht/collections'`. When you change behaviour, `npx jest tests/docs` tells you which documentation went stale.
 
 ### Coverage
 

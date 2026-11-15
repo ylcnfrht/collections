@@ -6,11 +6,11 @@ iteration, typing, and runtime and bundler support.
 ## Install
 
 ```sh
-npm install @ylcnfrht/typescript-collection-framework
+npm install @ylcnfrht/collections
 # or
-yarn add @ylcnfrht/typescript-collection-framework
+yarn add @ylcnfrht/collections
 # or
-pnpm add @ylcnfrht/typescript-collection-framework
+pnpm add @ylcnfrht/collections
 ```
 
 The package has no runtime dependencies and ships its own type definitions.
@@ -22,7 +22,7 @@ definitions (`.d.ts` or `.d.mts`).
 
 ```ts
 // ESM / TypeScript
-import { ArrayList, HashMap, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, HashMap, Collectors } from '@ylcnfrht/collections';
 
 const names = new ArrayList<string>();
 names.add('Ada');
@@ -31,7 +31,7 @@ console.log(names.toString()); // → [Ada]
 
 ```js
 // CommonJS
-const { ArrayList, HashMap, Collectors } = require('@ylcnfrht/typescript-collection-framework');
+const { ArrayList, HashMap, Collectors } = require('@ylcnfrht/collections');
 ```
 
 Everything is a named export of the package root. There are no deep imports.
@@ -44,7 +44,7 @@ Everything is a named export of the package root. There are no deep imports.
 > import, or reach the built-ins through `globalThis`.
 
 ```ts
-import { Map as CMap, HashMap } from '@ylcnfrht/typescript-collection-framework';
+import { Map as CMap, HashMap } from '@ylcnfrht/collections';
 
 const ours: CMap<string, number> = new HashMap<string, number>();
 const native = new globalThis.Map<string, number>();
@@ -56,7 +56,7 @@ console.log(ours.size(), native.size); // → 0 0
 ### Lists
 
 ```ts
-import { ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, List } from '@ylcnfrht/collections';
 
 const list = new ArrayList<string>();
 list.add('b');
@@ -79,7 +79,7 @@ console.log(fixed.contains(2)); // → true
 ### Sets
 
 ```ts
-import { HashSet, TreeSet, LinkedHashSet } from '@ylcnfrht/typescript-collection-framework';
+import { HashSet, TreeSet, LinkedHashSet } from '@ylcnfrht/collections';
 
 const seen = new HashSet<string>();
 console.log(seen.add('x'));  // → true
@@ -103,7 +103,7 @@ console.log(ordered.toString());    // → [z, a, m]
 ### Maps
 
 ```ts
-import { HashMap, TreeMap } from '@ylcnfrht/typescript-collection-framework';
+import { HashMap, TreeMap } from '@ylcnfrht/collections';
 
 const ages = new HashMap<string, number>();
 ages.put('ada', 36);
@@ -126,7 +126,7 @@ Missing keys return `null`, not `undefined`. See [Null and undefined](./core-con
 Streams are lazy pipelines over a collection, array or iterable. Collectors reduce a stream to a result.
 
 ```ts
-import { List, Stream, IntStream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { List, Stream, IntStream, Collectors } from '@ylcnfrht/collections';
 
 const words = List.of('apple', 'fig', 'banana', 'kiwi', 'cherry');
 
@@ -151,7 +151,7 @@ See [Streams overview](../streams/overview.md) and [Collectors](../streams/colle
 Every collection is a JS iterable. Maps iterate as `[key, value]` pairs.
 
 ```ts
-import { ArrayList, LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, LinkedHashMap } from '@ylcnfrht/collections';
 
 const list = ArrayList.of(1, 2, 3);
 // with new:
@@ -195,7 +195,7 @@ Declare variables and parameters with the interfaces (`List`, `Set`, `Map`, `Deq
 the implementation at construction time.
 
 ```ts
-import { ArrayList, LinkedList, List, Deque, NavigableMap, TreeMap, Collection } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, LinkedList, List, Deque, NavigableMap, TreeMap, Collection } from '@ylcnfrht/collections';
 
 const todo: List<string> = new ArrayList<string>();
 const queue: Deque<number> = new LinkedList<number>();
@@ -221,7 +221,7 @@ explicitly to empty constructors (`new HashMap<string, number>()`); otherwise Ty
 Comparators are plain functions `(a, b) => number` and type-check like any callback:
 
 ```ts
-import { TreeSet, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { TreeSet, Comparator } from '@ylcnfrht/collections';
 
 interface User { name: string; age: number }
 const byAge = new TreeSet<User>(Comparator.comparing((u: User) => u.age));

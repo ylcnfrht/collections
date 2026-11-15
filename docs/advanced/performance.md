@@ -136,7 +136,7 @@ A pipeline is a linked list of stages. When the terminal operation runs, every s
 A JS iterator has to return a `{ value, done }` result for every element and check for concurrent modification. The collection's own `forEach` is a plain loop with one check at the end. In the benchmarks, `ArrayList.forEach` beats native `Array.forEach`, while `for..of` over an `ArrayList` runs at about a third of native speed. The same holds for maps: `map.forEach((k, v) => ...)` was 1.5× faster than `for (const [k, v] of map)`.
 
 ```ts
-import { ArrayList, HashMap } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, HashMap } from '@ylcnfrht/collections';
 
 const list = ArrayList.of(1, 2, 3);
 // with new:
@@ -170,7 +170,7 @@ Both are O(1) at the ends, but `LinkedList` allocates a node per element and sca
 JS numbers are never boxed, so the gain does not come from avoiding allocation as it would in the JDK. It comes from specialised operations: `sum()`, `average()`, `summaryStatistics()`, typed-array `sorted()` and number `distinct()`. In the `distinct + sorted` benchmark, `IntStream` was 2.3× faster than `Stream<number>`. Switch with `mapToInt` and back with `boxed()` or `mapToObj`:
 
 ```ts
-import { IntStream, List } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, List } from '@ylcnfrht/collections';
 
 const orders = List.of({ qty: 3 }, { qty: 5 }, { qty: 3 });
 console.log(orders.stream().mapToInt((o) => o.qty).sum()); // → 11
@@ -183,7 +183,7 @@ console.log(IntStream.range(0, 1000).filter((i) => i % 7 === 0).count()); // →
 When the size is known from the source, `count()` returns it without traversing, so side effects in `peek` or `map` never run. This matches the JDK. Do not rely on `peek` for side effects.
 
 ```ts
-import { List } from '@ylcnfrht/typescript-collection-framework';
+import { List } from '@ylcnfrht/collections';
 
 let peeked = 0;
 const n = List.of(1, 2, 3).stream().peek(() => peeked++).map((x) => x * 2).count();
@@ -220,7 +220,7 @@ Every workload of the isolated comparison runs on your device when you press a b
 | Implementation | add/get calls/s | runs/s | ±% | vs native Array |
 | --- | ---: | ---: | ---: | ---: |
 | native Array | 130,200,756 | 651 | 8.4 | 1.00× |
-| **@ylcnfrht/typescript-collection-framework ArrayList** | 112,004,838 | 560 | 7.8 | 0.86× |
+| **@ylcnfrht/collections ArrayList** | 112,004,838 | 560 | 7.8 | 0.86× |
 | js-sdsl Vector | 104,838,337 | 524 | 7.2 | 0.81× |
 
 One run performs 200,000 add/get calls.
@@ -230,7 +230,7 @@ One run performs 200,000 add/get calls.
 | Implementation | elements/s | runs/s | ±% | vs native Array |
 | --- | ---: | ---: | ---: | ---: |
 | js-sdsl Vector | 4,761,193 | 48 | 2.1 | 1.11× |
-| **@ylcnfrht/typescript-collection-framework ArrayList** | 4,591,039 | 46 | 3.0 | 1.07× |
+| **@ylcnfrht/collections ArrayList** | 4,591,039 | 46 | 3.0 | 1.07× |
 | native Array | 4,308,037 | 43 | 5.7 | 1.00× |
 
 One run performs 100,000 elements.
@@ -240,7 +240,7 @@ One run performs 100,000 elements.
 | Implementation | offer/poll calls/s | runs/s | ±% | vs native Array push + shift |
 | --- | ---: | ---: | ---: | ---: |
 | mnemonist CircularBuffer (fixed capacity) | 473,410,176 | 2,367 | 0.6 | 10.68× |
-| **@ylcnfrht/typescript-collection-framework ArrayDeque** | 356,157,173 | 1,781 | 1.1 | 8.03× |
+| **@ylcnfrht/collections ArrayDeque** | 356,157,173 | 1,781 | 1.1 | 8.03× |
 | js-sdsl Deque | 296,660,231 | 1,483 | 1.6 | 6.69× |
 | collections.js Deque | 215,586,726 | 1,078 | 0.4 | 4.86× |
 | native Array push + shift | 44,333,778 | 222 | 0.7 | 1.00× |
@@ -251,7 +251,7 @@ One run performs 200,000 offer/poll calls.
 
 | Implementation | offer/poll calls/s | runs/s | ±% | vs native Array push + shift |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework LinkedList** | 378,341,657 | 1,892 | 2.3 | 9.22× |
+| **@ylcnfrht/collections LinkedList** | 378,341,657 | 1,892 | 2.3 | 9.22× |
 | js-sdsl LinkList | 313,269,686 | 1,566 | 3.1 | 7.64× |
 | collections.js List | 164,580,519 | 823 | 1.2 | 4.01× |
 | native Array push + shift | 41,025,264 | 205 | 2.8 | 1.00× |
@@ -265,8 +265,8 @@ One run performs 200,000 offer/poll calls.
 | native Array push + pop | 134,905,094 | 675 | 7.7 | 1.00× |
 | js-sdsl Stack | 121,692,068 | 608 | 7.4 | 0.90× |
 | mnemonist Stack | 117,847,424 | 589 | 7.6 | 0.87× |
-| **@ylcnfrht/typescript-collection-framework ArrayDeque** | 113,176,372 | 566 | 7.3 | 0.84× |
-| **@ylcnfrht/typescript-collection-framework Stack** | 107,075,519 | 535 | 7.0 | 0.79× |
+| **@ylcnfrht/collections ArrayDeque** | 113,176,372 | 566 | 7.3 | 0.84× |
+| **@ylcnfrht/collections Stack** | 107,075,519 | 535 | 7.0 | 0.79× |
 
 One run performs 200,000 push/pop calls.
 
@@ -275,7 +275,7 @@ One run performs 200,000 push/pop calls.
 | Implementation | offer/poll calls/s | runs/s | ±% | vs sorted array |
 | --- | ---: | ---: | ---: | ---: |
 | js-sdsl PriorityQueue | 59,880,686 | 299 | 1.5 | 1.07× |
-| **@ylcnfrht/typescript-collection-framework PriorityQueue** | 58,911,542 | 295 | 1.6 | 1.05× |
+| **@ylcnfrht/collections PriorityQueue** | 58,911,542 | 295 | 1.6 | 1.05× |
 | mnemonist Heap | 57,245,759 | 286 | 0.4 | 1.02× |
 | sorted array | 56,175,659 | 281 | 0.8 | 1.00× |
 | collections.js Heap | 20,376,169 | 102 | 0.6 | 0.36× |
@@ -287,7 +287,7 @@ One run performs 200,000 offer/poll calls.
 
 | Implementation | add/has calls/s | runs/s | ±% | vs native Set |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework HashSet** | 87,477,463 | 437 | 7.2 | 4.25× |
+| **@ylcnfrht/collections HashSet** | 87,477,463 | 437 | 7.2 | 4.25× |
 | native Set | 20,561,628 | 103 | 12.2 | 1.00× |
 | js-sdsl HashSet | 19,752,692 | 99 | 13.7 | 0.96× |
 | collections.js FastSet | 7,035,142 | 35 | 8.9 | 0.34× |
@@ -298,7 +298,7 @@ One run performs 200,000 add/has calls.
 
 | Implementation | add/has calls/s | runs/s | ±% | vs native Set |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework LinkedHashSet** | 70,101,442 | 351 | 16.5 | 3.20× |
+| **@ylcnfrht/collections LinkedHashSet** | 70,101,442 | 351 | 16.5 | 3.20× |
 | native Set | 21,924,666 | 110 | 11.6 | 1.00× |
 
 One run performs 200,000 add/has calls.
@@ -307,7 +307,7 @@ One run performs 200,000 add/has calls.
 
 | Implementation | add/contains calls/s | runs/s | ±% | vs js-sdsl OrderedSet |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework TreeSet** | 3,584,814 | 18 | 8.8 | 1.14× |
+| **@ylcnfrht/collections TreeSet** | 3,584,814 | 18 | 8.8 | 1.14× |
 | js-sdsl OrderedSet | 3,151,988 | 16 | 7.3 | 1.00× |
 | collections.js SortedSet | 515,718 | 3 | 4.2 | 0.16× |
 
@@ -317,7 +317,7 @@ One run performs 200,000 add/contains calls.
 
 | Implementation | get calls/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework HashMap** | 167,333,439 | 1,673 | 0.6 | 3.48× |
+| **@ylcnfrht/collections HashMap** | 167,333,439 | 1,673 | 0.6 | 3.48× |
 | js-sdsl HashMap | 143,983,554 | 1,440 | 0.5 | 2.99× |
 | native Map | 48,121,175 | 481 | 1.7 | 1.00× |
 | collections.js FastMap | 11,080,756 | 111 | 0.5 | 0.23× |
@@ -329,7 +329,7 @@ One run performs 100,000 get calls.
 | Implementation | put calls/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
 | native Map | 10,146,634 | 101 | 11.6 | 1.00× |
-| **@ylcnfrht/typescript-collection-framework HashMap** | 7,659,198 | 77 | 13.6 | 0.75× |
+| **@ylcnfrht/collections HashMap** | 7,659,198 | 77 | 13.6 | 0.75× |
 | js-sdsl HashMap | 6,171,878 | 62 | 16.8 | 0.61× |
 | collections.js FastMap | 1,691,274 | 17 | 10.7 | 0.17× |
 
@@ -339,7 +339,7 @@ One run performs 100,000 put calls.
 
 | Implementation | put/get calls/s | runs/s | ±% | vs native Map with string keys |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework HashMap** | 10,179,703 | 509 | 1.9 | 1.19× |
+| **@ylcnfrht/collections HashMap** | 10,179,703 | 509 | 1.9 | 1.19× |
 | native Map with string keys | 8,570,940 | 429 | 2.4 | 1.00× |
 | collections.js FastMap | 3,662,150 | 183 | 3.0 | 0.43× |
 
@@ -349,7 +349,7 @@ One run performs 20,000 put/get calls.
 
 | Implementation | puts and visited entries/s | runs/s | ±% | vs native Map |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework LinkedHashMap** | 59,794,647 | 299 | 15.0 | 2.74× |
+| **@ylcnfrht/collections LinkedHashMap** | 59,794,647 | 299 | 15.0 | 2.74× |
 | native Map | 21,842,667 | 109 | 10.9 | 1.00× |
 
 One run performs 200,000 puts and visited entries.
@@ -358,7 +358,7 @@ One run performs 200,000 puts and visited entries.
 
 | Implementation | get-or-put calls/s | runs/s | ±% | vs native Map delete + set |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework LinkedHashMap.lru** | 28,223,450 | 282 | 0.7 | 4.86× |
+| **@ylcnfrht/collections LinkedHashMap.lru** | 28,223,450 | 282 | 0.7 | 4.86× |
 | mnemonist LRUMap | 18,171,958 | 182 | 0.6 | 3.13× |
 | native Map delete + set | 5,813,243 | 58 | 0.7 | 1.00× |
 | collections.js LruMap | 715,041 | 7 | 1.9 | 0.12× |
@@ -370,7 +370,7 @@ One run performs 100,000 get-or-put calls.
 | Implementation | put calls/s | runs/s | ±% | vs js-sdsl OrderedMap |
 | --- | ---: | ---: | ---: | ---: |
 | js-sdsl OrderedMap | 4,490,276 | 45 | 7.1 | 1.00× |
-| **@ylcnfrht/typescript-collection-framework TreeMap** | 4,201,360 | 42 | 5.4 | 0.94× |
+| **@ylcnfrht/collections TreeMap** | 4,201,360 | 42 | 5.4 | 0.94× |
 | collections.js SortedMap | 255,774 | 3 | 6.0 | 0.06× |
 
 One run performs 100,000 put calls.
@@ -379,7 +379,7 @@ One run performs 100,000 put calls.
 
 | Implementation | floor/ceiling calls/s | runs/s | ±% | vs js-sdsl OrderedMap |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework TreeMap** | 5,409,975 | 27 | 6.1 | 2.62× |
+| **@ylcnfrht/collections TreeMap** | 5,409,975 | 27 | 6.1 | 2.62× |
 | js-sdsl OrderedMap | 2,065,374 | 10 | 7.3 | 1.00× |
 | collections.js SortedSet | 788,266 | 4 | 5.8 | 0.38× |
 
@@ -389,8 +389,8 @@ One run performs 200,000 floor/ceiling calls.
 
 | Implementation | elements/s | runs/s | ±% | vs native Array filter/map/reduce |
 | --- | ---: | ---: | ---: | ---: |
-| **@ylcnfrht/typescript-collection-framework Stream** | 685,926,258 | 6,859 | 0.3 | 15.29× |
-| **@ylcnfrht/typescript-collection-framework IntStream** | 677,719,459 | 6,777 | 0.4 | 15.10× |
+| **@ylcnfrht/collections Stream** | 685,926,258 | 6,859 | 0.3 | 15.29× |
+| **@ylcnfrht/collections IntStream** | 677,719,459 | 6,777 | 0.4 | 15.10× |
 | native Array filter/map/reduce | 44,870,170 | 449 | 5.4 | 1.00× |
 | native Iterator helpers | 36,207,973 | 362 | 1.2 | 0.81× |
 
@@ -404,7 +404,7 @@ The in-process suite covers many more cases than the [isolated comparison](#isol
 | --- | --- |
 | Machine | Apple M1 Pro, 16 GB, macOS 14 |
 | Runtime | Node.js v24.12.0 |
-| Library | `@ylcnfrht/typescript-collection-framework` 1.0.0 before release (commit `5f67687`) |
+| Library | `@ylcnfrht/collections` 1.0.0 before release (commit `5f67687`) |
 | Harness | `tinybench` 6.2.0, 300 ms per case after 100 ms warm-up |
 | Competitors | `js-sdsl` 4.4.2, `mnemonist` 0.40.5, `@datastructures-js/priority-queue` 6.4.0 |
 

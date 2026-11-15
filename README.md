@@ -1,6 +1,6 @@
-# @ylcnfrht/typescript-collection-framework
+# @ylcnfrht/collections
 
-[![npm](https://img.shields.io/npm/v/@ylcnfrht/typescript-collection-framework.svg)](https://www.npmjs.com/package/@ylcnfrht/typescript-collection-framework)
+[![npm](https://img.shields.io/npm/v/@ylcnfrht/collections.svg)](https://www.npmjs.com/package/@ylcnfrht/collections)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![TypeScript](https://img.shields.io/badge/types-TypeScript-3178c6.svg)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)
@@ -12,7 +12,7 @@ Framework.**
 Lists, queues, sets, maps and lazy streams with one consistent API: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`,
 `PriorityQueue`, `Stream`, `Collectors` and the rest, following the same interfaces and documented behaviour.
 
-**Documentation: [ylcnfrht.github.io/typescript-collection-framework](https://ylcnfrht.github.io/typescript-collection-framework/)**
+**Documentation: [ylcnfrht.github.io/collections](https://ylcnfrht.github.io/collections/)**
 
 ## Why
 
@@ -20,7 +20,7 @@ JavaScript ships with `Array`, `Map` and `Set`. They compare object keys by refe
 sorted collections, no navigation, no priority queue and no lazy streams. npm fills the gaps one data structure per
 package, each with its own API and semantics.
 
-`@ylcnfrht/typescript-collection-framework` is one coherent framework instead:
+`@ylcnfrht/collections` is one coherent framework instead:
 
 - **Value equality:** collections compare elements with `equals()`/`hashCode()`, so a list, or any object that defines
   `equals()`, works as a map key.
@@ -32,7 +32,7 @@ package, each with its own API and semantics.
 ## Installation
 
 ```sh
-npm install @ylcnfrht/typescript-collection-framework
+npm install @ylcnfrht/collections
 ```
 
 Zero dependencies, ESM and CommonJS builds, and full type definitions.
@@ -40,7 +40,7 @@ Zero dependencies, ESM and CommonJS builds, and full type definitions.
 ## Quick start
 
 ```ts
-import { ArrayList, HashMap, TreeMap, LinkedHashMap, Collectors, List } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, HashMap, TreeMap, LinkedHashMap, Collectors, List } from '@ylcnfrht/collections';
 
 // Value equality: two lists with the same elements are equal, so they work as map keys
 const routes = new HashMap<List<number>, string>();
@@ -113,7 +113,7 @@ The full list is in [Differences from the Java API](docs/advanced/compatibility.
 - [Data structures primer](docs/guide/data-structures.md): what each structure is and how it stores data
 - [Choosing a collection](docs/guide/choosing-a-collection.md)
 - [Coming from JS](docs/guide/coming-from-js.md): `Array`/`Map`/`Set` side by side
-- [All documentation](docs/README.md) and the [API reference](https://ylcnfrht.github.io/typescript-collection-framework/api/)
+- [All documentation](docs/README.md) and the [API reference](https://ylcnfrht.github.io/collections/api/)
 
 ## Contributing
 

@@ -15,7 +15,7 @@ Both kinds throw `UnsupportedOperationException` from mutators such as `add`, bu
 | Use it to | expose internal state read-only | hand out a snapshot, a constant or a defensive copy |
 
 ```ts
-import { ArrayList, Collections, List } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Collections, List } from '@ylcnfrht/collections';
 
 const source = ArrayList.of('a', 'b');
 // with new:
@@ -39,7 +39,7 @@ try {
 A class typically exposes a view of its private state:
 
 ```ts
-import { ArrayList, Collections, List } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Collections, List } from '@ylcnfrht/collections';
 
 class Playlist {
   private readonly tracks = new ArrayList<string>();
@@ -76,7 +76,7 @@ Views of views do not stack: wrapping an unmodifiable list again returns the sam
 | `Map.entry(k, v)` | immutable entry | `setValue` throws |
 
 ```ts
-import { List, Set, Map, ArrayList, HashSet, HashMap } from '@ylcnfrht/typescript-collection-framework';
+import { List, Set, Map, ArrayList, HashSet, HashMap } from '@ylcnfrht/collections';
 
 const primes = List.of(2, 3, 5, 7);
 console.log(primes.get(2), primes.size());       // → 5 4
@@ -108,7 +108,7 @@ These collections report mistakes at construction time:
 - **No duplicates** in `Set.of` or in the keys of `Map.of` and `Map.ofEntries` (`IllegalArgumentException`).
 
 ```ts
-import { List, Set, Map } from '@ylcnfrht/typescript-collection-framework';
+import { List, Set, Map } from '@ylcnfrht/collections';
 
 const nameOf = (f: () => unknown): string => {
   try {
@@ -135,7 +135,7 @@ console.log(nameOf(() => Map.of('a', 1, 'a', 2)));       // → IllegalArgumentE
 `List.of` keeps argument order. `Set.of` and `Map.of` promise no order; treat it like a `HashSet`'s. To get an order, sort, or copy into a `LinkedHashSet`, `TreeSet` or `TreeMap`:
 
 ```ts
-import { Set, Map, TreeSet, TreeMap } from '@ylcnfrht/typescript-collection-framework';
+import { Set, Map, TreeSet, TreeMap } from '@ylcnfrht/collections';
 
 const s = Set.of('pear', 'apple', 'fig');
 console.log(new TreeSet(s).toString()); // → [apple, fig, pear]
@@ -160,7 +160,7 @@ console.log(new TreeMap(m).toString()); // → {a=1, b=2}
 Reading a whole lazy collection (`toString`, `equals`, iteration, `size()` of a lazy set) computes everything it needs. A function that throws or returns `null` makes that slot fail with `NoSuchElementException`, then and on every later access, without calling the function again. Later changes to the candidates or keys collection are not seen.
 
 ```ts
-import { List, Map, Set, TreeSet } from '@ylcnfrht/typescript-collection-framework';
+import { List, Map, Set, TreeSet } from '@ylcnfrht/collections';
 
 let calls = 0;
 const squares = List.ofLazy(5, (i) => {
@@ -207,7 +207,7 @@ console.log(attempt()); // → NoSuchElementException
 | `Collections.EMPTY_LIST`, `EMPTY_SET`, `EMPTY_MAP` | the shared empties as constants |
 
 ```ts
-import { Collections, ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { Collections, ArrayList } from '@ylcnfrht/collections';
 
 console.log(Collections.emptyList<number>().toString());   // → []
 console.log(Collections.singletonMap('k', 1).toString());  // → {k=1}
@@ -251,7 +251,7 @@ All wrappers are views: they forward to the collection they wrap, which remains 
 | `checkedMap(m, keyType, valueType)`, `checkedSortedMap(…)`, `checkedNavigableMap(…)` | keys and values |
 
 ```ts
-import { ArrayList, HashMap, Collections } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, HashMap, Collections } from '@ylcnfrht/collections';
 
 const isString = (x: unknown): boolean => typeof x === 'string';
 const names = Collections.checkedList(new ArrayList<unknown>(), isString);
@@ -282,7 +282,7 @@ console.log(scores.get('ada')); // → 10
 `Collections.synchronizedCollection`, `synchronizedList`, `synchronizedSet`, `synchronizedSortedSet`, `synchronizedNavigableSet`, `synchronizedMap`, `synchronizedSortedMap` and `synchronizedNavigableMap` exist so that code ported from the Java Collections Framework keeps working. JS runs your code on a single thread, and workers do not share these objects, so there is nothing to lock: the wrappers are plain delegating views. They add no safety and no measurable cost. New code uses the collection directly.
 
 ```ts
-import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Collections } from '@ylcnfrht/collections';
 
 const list = ArrayList.of(1);
 const sync = Collections.synchronizedList(list);
@@ -295,7 +295,7 @@ console.log(list.toString()); // → [1, 2]
 `Collections.newSetFromMap(map)` turns an empty map into a set: `add(e)` is `map.put(e, true)`, and every other operation goes through `map.keySet()`. The set inherits the map's key semantics, which is the reason to use it: pair it with `IdentityHashMap` for an identity set, or with an access-ordered `LinkedHashMap`. `Collections.newSequencedSetFromMap(map)` does the same for a `SequencedMap` and adds `addFirst`, `addLast` and `reversed`. A non-empty map throws `IllegalArgumentException`.
 
 ```ts
-import { Collections, IdentityHashMap, LinkedHashMap, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
+import { Collections, IdentityHashMap, LinkedHashMap, ArrayList, List } from '@ylcnfrht/collections';
 
 // a set that tells equal-but-distinct objects apart
 const seen = Collections.newSetFromMap(new IdentityHashMap<List<number>, boolean>());
@@ -331,7 +331,7 @@ An unmodifiable collection throws `UnsupportedOperationException` from its mutat
 | `Map.entry`, `SimpleImmutableEntry`, navigation entries of `TreeMap` | `setValue` throws | — |
 
 ```ts
-import { List, Map, Collections, ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { List, Map, Collections, ArrayList } from '@ylcnfrht/collections';
 
 const nameOf = (f: () => unknown): string => {
   try {

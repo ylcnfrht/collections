@@ -19,7 +19,7 @@ consistent `hashCode` (see the contract below). The library's own collections an
 `List` can be a map key and two lists with the same elements are equal regardless of their class.
 
 ```ts
-import { ArrayList, LinkedList, HashSet, HashMap, List, Objects } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, LinkedList, HashSet, HashMap, List, Objects } from '@ylcnfrht/collections';
 
 // collections compare by content, across implementations
 console.log(ArrayList.of(1, 2).equals(LinkedList.of(1, 2))); // → true
@@ -50,7 +50,7 @@ hashes as `s[0]*31^(n-1) + … + s[n-1]`, a list as `31 * h + hash(e)` over its 
 element hashes, and so on.
 
 ```ts
-import { Objects, List } from '@ylcnfrht/typescript-collection-framework';
+import { Objects, List } from '@ylcnfrht/collections';
 
 console.log(Objects.hashCode('ab'));      // → 3105
 console.log(List.of(1, 2).hashCode());    // → 994
@@ -79,7 +79,7 @@ hashes with the classic formula; `Objects.equals` compares fields null-safely. T
 implement `Comparable<T>` (`compareTo(o: T): number`).
 
 ```ts
-import { HashSet, HashMap, TreeSet, Objects, Comparable } from '@ylcnfrht/typescript-collection-framework';
+import { HashSet, HashMap, TreeSet, Objects, Comparable } from '@ylcnfrht/collections';
 
 class Point implements Comparable<Point> {
   constructor(readonly x: number, readonly y: number) {}
@@ -137,7 +137,7 @@ A **comparator** is a function `(a, b) => number` (negative, zero, positive). Th
 classic helpers as functions that take and return comparators:
 
 ```ts
-import { ArrayList, Comparator, TreeSet, PriorityQueue } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, Comparator, TreeSet, PriorityQueue } from '@ylcnfrht/collections';
 
 interface Person { name: string; age: number | null }
 const people = ArrayList.of<Person>(
@@ -176,7 +176,7 @@ Main helpers: `naturalOrder`, `reverseOrder`, `reversed(c)`, `comparing(key, key
 [Comparator and Objects](../utilities/comparator-and-objects.md).
 
 ```ts
-import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
+import { TreeSet } from '@ylcnfrht/collections';
 
 const bad = new TreeSet<object>();
 try {
@@ -198,7 +198,7 @@ The library has one notion of "nothing": **`null`**.
   `undefined` as given, but you should not rely on telling the two apart.
 
 ```ts
-import { HashMap, ArrayDeque, TreeSet } from '@ylcnfrht/typescript-collection-framework';
+import { HashMap, ArrayDeque, TreeSet } from '@ylcnfrht/collections';
 
 const m = new HashMap<string, number>();
 console.log(m.get('missing'));        // → null
@@ -257,7 +257,7 @@ Exceptions that signal a programming error, such as `ConcurrentModificationExcep
 `UnsupportedOperationException`, have no non-throwing form.
 
 ```ts
-import { ArrayDeque, TreeMap, ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque, TreeMap, ArrayList } from '@ylcnfrht/collections';
 
 const queue = new ArrayDeque<string>();
 console.log(queue.poll()); // → null
@@ -284,7 +284,7 @@ console.log(list.isEmpty() ? null : list.getFirst()); // → null
 | `Collections.unmodifiable*` wrappers (whatever the backing collection accepts) | `List.of`, `Set.of`, `Map.of`, `copyOf` — elements, keys, values, and even `contains(null)` |
 
 ```ts
-import { ArrayList, ArrayDeque, List } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, ArrayDeque, List } from '@ylcnfrht/collections';
 
 const ok = new ArrayList<string | null>();
 ok.add(null);
@@ -310,7 +310,7 @@ step throws `ConcurrentModificationException` instead of silently skipping or re
 `for..of`, spread, `iterator()`, `forEach`, streams and views.
 
 ```ts
-import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList } from '@ylcnfrht/collections';
 
 const list = ArrayList.of('a', 'b', 'c');
 try {
@@ -345,7 +345,7 @@ reads from and writes to the backing collection, so changes go both ways and no 
 | `Collections.unmodifiable*`, `synchronized*`, `checked*` | any collection |
 
 ```ts
-import { ArrayList, TreeMap } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, TreeMap } from '@ylcnfrht/collections';
 
 const list = ArrayList.of('a', 'b', 'c', 'd');
 const middle = list.subList(1, 3);
@@ -401,7 +401,7 @@ copy of the library is loaded (see [Browsers and bundlers](./getting-started.md#
 ```ts
 import {
   ArrayList, Stack, Vector, RuntimeException, IndexOutOfBoundsException, ArrayIndexOutOfBoundsException,
-} from '@ylcnfrht/typescript-collection-framework';
+} from '@ylcnfrht/collections';
 
 try {
   new ArrayList<number>().get(0);
@@ -431,7 +431,7 @@ by throwing `UnsupportedOperationException`. Two kinds of collection refuse them
 | Use it to | share fixed data, constants, map keys | hand out read-only access to state you still own |
 
 ```ts
-import { ArrayList, List, Collections } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, List, Collections } from '@ylcnfrht/collections';
 
 const source = ArrayList.of(1, 2);
 const readOnly = Collections.unmodifiableList(source);
@@ -463,7 +463,7 @@ Collections with a defined encounter order implement `SequencedCollection` (list
 | `reversed()` (a live view) | `reversed()`, `sequencedKeySet()`, `sequencedValues()`, `sequencedEntrySet()` |
 
 ```ts
-import { ArrayList, LinkedHashSet, LinkedHashMap, TreeSet, SequencedCollection } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, LinkedHashSet, LinkedHashMap, TreeSet, SequencedCollection } from '@ylcnfrht/collections';
 
 function ends<E>(c: SequencedCollection<E>): string {
   return `${c.getFirst()}..${c.getLast()}`;
@@ -501,7 +501,7 @@ the `RandomAccess` marker. `LinkedList` does not: its `get(i)` walks the list. G
 can do the same with `isRandomAccess`:
 
 ```ts
-import { ArrayList, LinkedList, List, isRandomAccess } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList, LinkedList, List, isRandomAccess } from '@ylcnfrht/collections';
 
 function middle<E>(list: List<E>): E {
   if (isRandomAccess(list)) return list.get(list.size() >> 1); // O(1)

@@ -59,8 +59,8 @@ function run(block: Block): string[] {
   const printed: string[] = [];
   // same realm as the library, so arrays/Maps created in examples are the ones the library expects
   const requireLib = (id: string) => {
-    if (id === '@ylcnfrht/typescript-collection-framework') return lib;
-    throw new Error(`docs may only import '@ylcnfrht/typescript-collection-framework' (got ${id})`);
+    if (id === '@ylcnfrht/collections') return lib;
+    throw new Error(`docs may only import '@ylcnfrht/collections' (got ${id})`);
   };
   const log = { log: (...a: unknown[]) => printed.push(a.map(show).join(' ')) };
   const fn = new Function('require', 'exports', 'module', 'console', js + `\n//# sourceURL=${relative(ROOT, block.file)}:${block.line}`);
@@ -102,7 +102,7 @@ describe('docs examples type-check', () => {
       skipLibCheck: true,
       types: [],
       baseUrl: ROOT,
-      paths: { '@ylcnfrht/typescript-collection-framework': ['src/index.ts'] },
+      paths: { '@ylcnfrht/collections': ['src/index.ts'] },
     };
     const host = ts.createCompilerHost(options);
     const read = host.readFile.bind(host);

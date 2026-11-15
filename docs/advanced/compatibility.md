@@ -20,7 +20,7 @@ The library follows the Java Collections Framework: the same method names, resul
 A sorted source keeps its comparator, even when passed where a plain `Map` is expected:
 
 ```ts
-import { TreeMap, Map } from '@ylcnfrht/typescript-collection-framework';
+import { TreeMap, Map } from '@ylcnfrht/collections';
 
 const desc = new TreeMap<number, string>((a, b) => b - a);
 desc.put(1, 'one');
@@ -35,7 +35,7 @@ console.log(copy.comparator() !== null); // → true
 `Gatherer.ofSequential` with the two shapes:
 
 ```ts
-import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/typescript-collection-framework';
+import { Stream, Gatherer, Integrator, Downstream } from '@ylcnfrht/collections';
 
 // () => state: an initializer, so this is ofSequential(initializer, integrator)
 const runningSum = Gatherer.ofSequential(
@@ -55,7 +55,7 @@ console.log(Stream.of('a', 'b').gather(withEnd).toList().toString()); // → [a,
 Streams close with `using`:
 
 ```ts
-import { List } from '@ylcnfrht/typescript-collection-framework';
+import { List } from '@ylcnfrht/collections';
 
 let closed = false;
 {
@@ -90,7 +90,7 @@ stay removed. These calls differ from the reference:
 | `iterator()`/`spliterator()` over `flatMap` | buffers the whole mapped stream | pulls it one element at a time (an infinite inner stream still yields); an upstream `peek` may observe fewer elements |
 
 ```ts
-import { List, LongStream, IntStream, DoubleStream, Stream } from '@ylcnfrht/typescript-collection-framework';
+import { List, LongStream, IntStream, DoubleStream, Stream } from '@ylcnfrht/collections';
 
 console.log(List.of(1, 2).parallelStream().isParallel());          // → true
 console.log(IntStream.of(2147483647, 1).sum());                    // → 2147483648
@@ -112,7 +112,7 @@ contract. In each case this library follows the documentation:
 | `reversed()` of an unmodifiable or synchronized sorted set/map uses a generic view: `add` of an element already present returns `true`, and `compute`/`merge` may run before the unsupported write is refused | ours refuses the write with `UnsupportedOperationException` up front and keeps set semantics |
 
 ```ts
-import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList } from '@ylcnfrht/collections';
 
 const it = ArrayList.of('a').reversed().listIterator(1);
 it.add('bb');
@@ -138,7 +138,7 @@ differential comparison:
 | `Comparator.max(c, a, b)`, `Comparator.min(c, a, b)` | the larger/smaller of two values under a comparator |
 
 ```ts
-import { List, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { List, Comparator } from '@ylcnfrht/collections';
 
 let calls = 0;
 const squares = List.ofLazy(5, (i) => { calls++; return i * i; });

@@ -18,7 +18,7 @@ A `Queue<E>` holds elements waiting to be processed and hands them out from its 
 Use `poll` and `peek` where an empty queue is a normal condition, such as a processing loop. Use `remove` and `element` where an empty queue indicates a bug.
 
 ```ts
-import { ArrayDeque, Queue } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque, Queue } from '@ylcnfrht/collections';
 
 const q: Queue<string> = new ArrayDeque<string>();
 q.offer('first');
@@ -67,7 +67,7 @@ The `Queue` methods map onto the tail for insertion and the head for removal, so
 `removeFirstOccurrence(o)` and `removeLastOccurrence(o)` remove one element equal to `o`, scanning from the head or from the tail.
 
 ```ts
-import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque } from '@ylcnfrht/collections';
 
 const d = new ArrayDeque<number>();
 d.offerLast(2);
@@ -91,7 +91,7 @@ console.log(d.toString());         // → [2]
 The head of the deque is the top of the stack, so iteration and `toString()` go top first.
 
 ```ts
-import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque } from '@ylcnfrht/collections';
 
 const stack = new ArrayDeque<string>();
 stack.push('a');
@@ -130,7 +130,7 @@ The backing array's length is always a power of two, at least 8 and 16 by defaul
 ::: code-group
 
 ```ts [Basic]
-import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque } from '@ylcnfrht/collections';
 
 const queue = new ArrayDeque<string>();
 queue.offer('a');
@@ -143,7 +143,7 @@ console.log([...queue]);           // → [ 'b', 'c' ]
 ```
 
 ```ts [Intermediate]
-import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque } from '@ylcnfrht/collections';
 
 // undo history: push each edit, pop to revert the latest one
 class Editor {
@@ -184,7 +184,7 @@ Ordering rules are described in [priority ordering](#priority-ordering).
 ::: code-group
 
 ```ts [Basic]
-import { PriorityQueue } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue } from '@ylcnfrht/collections';
 
 const pq = new PriorityQueue<number>();
 pq.offer(5);
@@ -198,7 +198,7 @@ console.log(pq.poll());            // → 5
 ```
 
 ```ts [Intermediate]
-import { PriorityQueue, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, Comparator } from '@ylcnfrht/collections';
 
 // k smallest: a max-heap of size k evicts the largest candidate
 function smallestK(values: number[], k: number): number[] {
@@ -230,7 +230,7 @@ Otherwise `ArrayDeque` is lighter: it allocates no node object per element.
 ::: code-group
 
 ```ts [Basic]
-import { LinkedList, Queue } from '@ylcnfrht/typescript-collection-framework';
+import { LinkedList, Queue } from '@ylcnfrht/collections';
 
 const q: Queue<string> = new LinkedList<string>();
 q.offer('a');
@@ -245,7 +245,7 @@ console.log(withNull.isEmpty());   // → true
 ```
 
 ```ts [Intermediate]
-import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
+import { LinkedList } from '@ylcnfrht/collections';
 
 // FIFO job queue where a pending job can be cancelled by value
 const jobs = new LinkedList<string>();
@@ -270,7 +270,7 @@ console.log(done);                 // → [ 'resize-1', 'upload-1', 'resize-3' ]
 `Collections.asLifoQueue(deque)` returns a `Queue` view of a deque whose `add` and `offer` push onto the front. Code that takes a `Queue` and calls `add`/`poll` then processes items last-in-first-out. This turns a breadth-first algorithm into a depth-first one without changing it.
 
 ```ts
-import { ArrayDeque, Collections } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque, Collections } from '@ylcnfrht/collections';
 
 const backing = new ArrayDeque<number>();
 const lifo = Collections.asLifoQueue(backing);
@@ -298,7 +298,7 @@ The view is live, and its `equals` and `hashCode` use identity. Other adapters a
 | `q.clone()` | independent shallow copy (`ArrayDeque`) |
 
 ```ts
-import { ArrayDeque, ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque, ArrayList } from '@ylcnfrht/collections';
 
 const a = new ArrayDeque<number>();            // 16 slots
 const b = new ArrayDeque<number>(1000);        // room for 1000 without growing
@@ -318,7 +318,7 @@ console.log(c.toString(), d.toString(), e.toString()); // → [1, 2, 3] [x, y] [
 `new PriorityQueue(collection)` builds the heap bottom-up in O(n), which is cheaper than n separate `offer` calls (O(n log n)). If the source is a `PriorityQueue` or a sorted collection such as a `TreeSet`, its comparator is inherited.
 
 ```ts
-import { PriorityQueue, ArrayList, TreeSet, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, ArrayList, TreeSet, Comparator } from '@ylcnfrht/collections';
 
 const pq = new PriorityQueue(ArrayList.of(5, 1, 4));
 console.log(pq.peek());                        // → 1
@@ -334,7 +334,7 @@ console.log(fromTree.poll());                  // → 3
 Without a comparator, a `PriorityQueue` uses natural ordering: numbers numerically, strings by UTF-16 code unit, and objects through their `compareTo()` method (see [ordering](../guide/core-concepts.md#ordering-natural-order-and-comparators)). Adding an object with no natural ordering throws `ClassCastException`. Pass a comparator for max-heaps, objects and multi-key priorities. `comparator()` returns the comparator in use, or `null` for natural ordering.
 
 ```ts
-import { PriorityQueue, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, Comparator } from '@ylcnfrht/collections';
 
 // max-heap
 const max = new PriorityQueue<number>(Comparator.reverseOrder<number>());
@@ -365,7 +365,7 @@ try {
 `descendingIterator()` walks a deque from tail to head. `reversed()` returns a [live](../guide/core-concepts.md#live-views), reverse-ordered `Deque` view: its first element is the original's last, and writes go through to the original. Both are O(1) to create.
 
 ```ts
-import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque } from '@ylcnfrht/collections';
 
 const d = ArrayDeque.of(1, 2, 3);
 
@@ -390,7 +390,7 @@ A deque iterates from head to tail. Iterators over `ArrayDeque`, `PriorityQueue`
 > A `PriorityQueue` does not iterate in priority order. Iteration, `toString()`, `toArray()` and streams walk the heap array, which only guarantees that the first element is the minimum. To get elements in priority order, `poll()` them out.
 
 ```ts
-import { PriorityQueue } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue } from '@ylcnfrht/collections';
 
 const pq = PriorityQueue.of(5, 1, 4, 2, 3);
 // with new:
@@ -415,7 +415,7 @@ To get a sorted copy without draining, copy and sort (`const l = new ArrayList(p
 The deque holds the frontier. `poll()` returning `null` ends the loop.
 
 ```ts
-import { ArrayDeque, HashMap, HashSet, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque, HashMap, HashSet, ArrayList, List } from '@ylcnfrht/collections';
 
 const graph = new HashMap<string, List<string>>();
 graph.put('a', ArrayList.of('b', 'c'));
@@ -449,7 +449,7 @@ Replace `offer`/`poll` with `push`/`pop`, or wrap the deque in `Collections.asLi
 Keep a deque of indexes whose values are decreasing. The front is the maximum of the current window. Drop it when it leaves the window, and drop smaller values from the back when a larger one arrives. Each index enters and leaves once, so the pass is O(n).
 
 ```ts
-import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque } from '@ylcnfrht/collections';
 
 function windowMax(values: number[], k: number): number[] {
   const idx = new ArrayDeque<number>();
@@ -471,7 +471,7 @@ console.log(windowMax([1, 3, -1, -3, 5, 3, 6, 7], 3)); // → [ 3, 3, 5, 5, 6, 7
 Order tasks by due time, then priority, then insertion sequence. The sequence number makes the order deterministic, because the heap is not stable.
 
 ```ts
-import { PriorityQueue, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, Comparator } from '@ylcnfrht/collections';
 
 interface Task { name: string; due: number; priority: number; seq: number }
 
@@ -503,7 +503,7 @@ console.log(ran); // → [ '10:report', '10:email', '10:cleanup', '30:backup' ]
 Keep a min-heap of at most `k` elements, and evict the smallest whenever it grows past `k`. The remaining elements are the `k` largest, found in O(n log k) time and O(k) memory.
 
 ```ts
-import { PriorityQueue, ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, ArrayList } from '@ylcnfrht/collections';
 
 function topK(values: Iterable<number>, k: number): number[] {
   const heap = new PriorityQueue<number>();
@@ -526,7 +526,7 @@ For the k smallest, use a max-heap (`Comparator.reverseOrder()`) the same way.
 Put the head of each sorted input in a priority queue, together with the iterator it came from. Repeatedly take the smallest, then offer the next element from the same input. Merging `k` lists with `n` elements in total costs O(n log k).
 
 ```ts
-import { PriorityQueue, Comparator, ArrayList, Iterator, List } from '@ylcnfrht/typescript-collection-framework';
+import { PriorityQueue, Comparator, ArrayList, Iterator, List } from '@ylcnfrht/collections';
 
 function merge(lists: List<number>[]): List<number> {
   type Head = { value: number; rest: Iterator<number> };

@@ -20,7 +20,7 @@ its own rules, such as compensated summation for doubles.
 | from objects: `stream.mapToInt/Long/Double(f)` | yes | yes | yes |
 
 ```ts
-import { IntStream, LongStream, DoubleStream, Stream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, LongStream, DoubleStream, Stream } from '@ylcnfrht/collections';
 
 console.log(IntStream.range(0, 4).toArray()); // → [ 0, 1, 2, 3 ]
 console.log(IntStream.rangeClosed(1, 4).toArray()); // → [ 1, 2, 3, 4 ]
@@ -36,7 +36,7 @@ console.log(Stream.of('a', 'bb', 'ccc').mapToInt((s) => s.length).toArray()); //
 `range` replaces counted loops:
 
 ```ts
-import { IntStream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream } from '@ylcnfrht/collections';
 
 const table = IntStream.rangeClosed(1, 3)
   .mapToObj((i) => IntStream.rangeClosed(1, 3).map((j) => i * j).toArray().join(' '))
@@ -55,7 +55,7 @@ console.log(table); // → [1 2 3, 2 4 6, 3 6 9]
 | `reduce(identity, op)` / `reduce(op)` | `number` / number optional | identity / empty |
 
 ```ts
-import { IntStream, DoubleStream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, DoubleStream } from '@ylcnfrht/collections';
 
 const scores = () => IntStream.of(70, 85, 90);
 console.log(scores().sum()); // → 245
@@ -78,7 +78,7 @@ They can also be used on their own: `accept(value)` adds a value and `combine(ot
 object.
 
 ```ts
-import { IntStream, LongStream, DoubleStream, IntSummaryStatistics } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, LongStream, DoubleStream, IntSummaryStatistics } from '@ylcnfrht/collections';
 
 const st = IntStream.of(4, 8, 15, 16, 23, 42).summaryStatistics();
 console.log(st.getCount(), st.getSum(), st.getMin(), st.getMax()); // → 6 108 4 42
@@ -101,7 +101,7 @@ console.log(manual.toString()); // → IntSummaryStatistics{count=3, sum=33, min
 statistics report the identity values of min and max:
 
 ```ts
-import { IntSummaryStatistics, DoubleSummaryStatistics } from '@ylcnfrht/typescript-collection-framework';
+import { IntSummaryStatistics, DoubleSummaryStatistics } from '@ylcnfrht/collections';
 
 console.log(new IntSummaryStatistics().toString()); // → IntSummaryStatistics{count=0, sum=0, min=2147483647, average=0.000000, max=-2147483648}
 console.log(new DoubleSummaryStatistics().toString()); // → DoubleSummaryStatistics{count=0, sum=0.000000, min=Infinity, average=0.000000, max=-Infinity}
@@ -111,7 +111,7 @@ The four-argument constructor `new IntSummaryStatistics(count, min, max, sum)` r
 values; it throws `IllegalArgumentException` when `count < 0` or `min > max`.
 
 ```ts
-import { IntSummaryStatistics } from '@ylcnfrht/typescript-collection-framework';
+import { IntSummaryStatistics } from '@ylcnfrht/collections';
 
 console.log(new IntSummaryStatistics(2, 1, 5, 6).getAverage()); // → 3
 try {
@@ -137,7 +137,7 @@ try {
 > use a `Collector`.
 
 ```ts
-import { IntStream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, Collectors } from '@ylcnfrht/collections';
 
 console.log(IntStream.range(0, 3).mapToObj((i) => 'abc'[i]).toList()); // → [a, b, c]
 console.log(IntStream.of(1, 2).boxed().collect(Collectors.toList())); // → [1, 2]
@@ -158,7 +158,7 @@ A number stream's `iterator()` returns a primitive iterator: besides `hasNext()`
 (IntStream), `nextLong()` (LongStream) or `nextDouble()` (DoubleStream).
 
 ```ts
-import { IntStream, LongStream, DoubleStream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, LongStream, DoubleStream } from '@ylcnfrht/collections';
 
 const it = IntStream.range(0, 3).iterator();
 console.log(it.nextInt(), it.next(), it.hasNext()); // → 0 1 true
@@ -173,7 +173,7 @@ Adding floating-point numbers one by one accumulates rounding error. `DoubleStre
 summation, which tracks the lost low-order bits and adds them back.
 
 ```ts
-import { DoubleStream, Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
+import { DoubleStream, Stream, Collectors } from '@ylcnfrht/collections';
 
 const tenths = Array.from({ length: 10 }, () => 0.1);
 
@@ -205,7 +205,7 @@ for their semantics. The differences:
 | Terminal | `forEach`, `forEachOrdered`, `toArray`, `reduce`, `collect(supplier, acc, combiner)`, `sum`, `average`, `min`, `max`, `count`, `summaryStatistics`, `anyMatch`, `allMatch`, `noneMatch`, `findFirst`, `findAny`, `iterator`, `spliterator` |
 
 ```ts
-import { IntStream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream } from '@ylcnfrht/collections';
 
 const evensSquared = IntStream.rangeClosed(1, 10)
   .filter((i) => i % 2 === 0)
@@ -228,7 +228,7 @@ console.log(IntStream.of(5, 6).findFirst()); // → OptionalInt[5]
 | `Stream<number>.distinct()` | — | `-0` equals `0` (value equality), `NaN` equals `NaN` |
 
 ```ts
-import { IntStream, LongStream, DoubleStream, Stream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream, LongStream, DoubleStream, Stream } from '@ylcnfrht/collections';
 
 // no 32-bit wrap
 console.log(IntStream.of(2147483647, 1).sum()); // → 2147483648

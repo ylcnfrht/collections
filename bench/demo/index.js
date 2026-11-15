@@ -18,7 +18,7 @@ function makeMap(name) {
   if (name === 'ours') {
     const { HashMap } = require('../../dist/index.js');
     const m = new HashMap();
-    return { label: '@ylcnfrht/typescript-collection-framework HashMap', put: (k, v) => m.put(k, v), get: (k) => m.get(k) };
+    return { label: '@ylcnfrht/collections HashMap', put: (k, v) => m.put(k, v), get: (k) => m.get(k) };
   }
   const m = new Map();
   return { label: 'native Map', put: (k, v) => m.set(k, v), get: (k) => m.get(k) };

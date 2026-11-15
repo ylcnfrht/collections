@@ -9,7 +9,7 @@
   ],
   "out": "docs/api",
   "docsRoot": "docs",
-  "name": "@ylcnfrht/typescript-collection-framework",
+  "name": "@ylcnfrht/collections",
   "readme": "none",
   "gitRevision": "main",
   "excludeInternal": true,

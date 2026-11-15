@@ -23,7 +23,7 @@ one collection and slower on another.
 | `getComparator()` | the source's comparator when `SORTED` (`null` = natural order); throws `IllegalStateException` otherwise |
 
 ```ts
-import { IntStream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream } from '@ylcnfrht/collections';
 
 const sp = IntStream.range(0, 3).spliterator();
 const got: number[] = [];
@@ -42,7 +42,7 @@ the suffix; together the pieces cover the source exactly once, in order. Array-b
 split in half: a range `0..8` splits into `0..4` (returned) and `4..8` (kept).
 
 ```ts
-import { IntStream } from '@ylcnfrht/typescript-collection-framework';
+import { IntStream } from '@ylcnfrht/collections';
 
 const rest = IntStream.range(0, 8).spliterator();
 const prefix = rest.trySplit()!;
@@ -80,7 +80,7 @@ and `count()` and `toArray()` on a `SIZED` pipeline need no counting pass.
 > Report only flags that are true. The engine trusts them, so a wrong flag gives wrong results.
 
 ```ts
-import { Spliterator, TreeSet, List } from '@ylcnfrht/typescript-collection-framework';
+import { Spliterator, TreeSet, List } from '@ylcnfrht/collections';
 
 const flags = (c: number) =>
   (Object.keys(Spliterator) as (keyof typeof Spliterator)[]).filter((k) => (c & Spliterator[k]) !== 0).join(' | ');
@@ -120,7 +120,7 @@ changes made after `stream()` but before the terminal operation are seen. Struct
 throw `ConcurrentModificationException`.
 
 ```ts
-import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayList } from '@ylcnfrht/collections';
 
 const list = new ArrayList<number>();
 list.add(1);
@@ -154,7 +154,7 @@ try {
 The iterator arguments are the library's `Iterator` (`hasNext()`/`next()`), as returned by `collection.iterator()`.
 
 ```ts
-import { Spliterators, Spliterator, List } from '@ylcnfrht/typescript-collection-framework';
+import { Spliterators, Spliterator, List } from '@ylcnfrht/collections';
 
 const arr = Spliterators.spliterator([10, 20, 30, 40], Spliterator.ORDERED);
 console.log(arr.getExactSizeIfKnown()); // → 4
@@ -191,7 +191,7 @@ characteristics)`; pass `Infinity` when the size is unknown (`SIZED` implies `SU
 array-backed spliterator.
 
 ```ts
-import { Spliterators, Spliterator, StreamSupport } from '@ylcnfrht/typescript-collection-framework';
+import { Spliterators, Spliterator, StreamSupport } from '@ylcnfrht/collections';
 
 class Countdown extends Spliterators.AbstractSpliterator<number> {
   constructor(private n: number) {
@@ -230,7 +230,7 @@ console.log(StreamSupport.longStream(new Fibonacci(), false).limit(10).boxed().t
 [overview](overview.md#parallel)).
 
 ```ts
-import { StreamSupport, Spliterators, Spliterator } from '@ylcnfrht/typescript-collection-framework';
+import { StreamSupport, Spliterators, Spliterator } from '@ylcnfrht/collections';
 
 const words = StreamSupport.stream(Spliterators.spliterator(['a', 'b'], Spliterator.ORDERED), false);
 console.log(words.map((w) => w.toUpperCase()).toList()); // → [A, B]
@@ -247,7 +247,7 @@ late, for example a mutable structure that may still change between building the
 `characteristics` must match what the supplied spliterator will report.
 
 ```ts
-import { StreamSupport, Spliterator, ArrayList } from '@ylcnfrht/typescript-collection-framework';
+import { StreamSupport, Spliterator, ArrayList } from '@ylcnfrht/collections';
 
 const buffer = new ArrayList<string>();
 buffer.add('first');
@@ -261,7 +261,7 @@ console.log(s.toList()); // → [first, second]
 A stream over the lines of a string, read lazily:
 
 ```ts
-import { Spliterators, Spliterator, StreamSupport } from '@ylcnfrht/typescript-collection-framework';
+import { Spliterators, Spliterator, StreamSupport } from '@ylcnfrht/collections';
 
 class LineSpliterator extends Spliterators.AbstractSpliterator<string> {
   private pos = 0;

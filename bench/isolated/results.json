@@ -31,7 +31,7 @@
           "vsBaseline": 1
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework ArrayList",
+          "impl": "@ylcnfrht/collections ArrayList",
           "opsPerSec": 560.0241879052589,
           "rme": 7.808123279627926,
           "runs": [
@@ -83,7 +83,7 @@
           "vsBaseline": 1.1051885561788248
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework ArrayList",
+          "impl": "@ylcnfrht/collections ArrayList",
           "opsPerSec": 45.91038968342809,
           "rme": 2.956549179870523,
           "runs": [
@@ -131,7 +131,7 @@
           "vsBaseline": 10.678317998594814
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework ArrayDeque",
+          "impl": "@ylcnfrht/collections ArrayDeque",
           "opsPerSec": 1780.7858657654117,
           "rme": 1.0896638781824775,
           "runs": [
@@ -191,7 +191,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework LinkedList",
+          "impl": "@ylcnfrht/collections LinkedList",
           "opsPerSec": 1891.708286097047,
           "rme": 2.344364324012467,
           "runs": [
@@ -293,7 +293,7 @@
           "vsBaseline": 0.8735579988980818
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework ArrayDeque",
+          "impl": "@ylcnfrht/collections ArrayDeque",
           "opsPerSec": 565.8818612878162,
           "rme": 7.266406134269763,
           "runs": [
@@ -307,7 +307,7 @@
           "vsBaseline": 0.8389332728196819
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework Stack",
+          "impl": "@ylcnfrht/collections Stack",
           "opsPerSec": 535.3775945146997,
           "rme": 6.985081383148856,
           "runs": [
@@ -345,7 +345,7 @@
           "vsBaseline": 1.0659543206126967
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework PriorityQueue",
+          "impl": "@ylcnfrht/collections PriorityQueue",
           "opsPerSec": 294.5577103485848,
           "rme": 1.551931316505681,
           "runs": [
@@ -417,7 +417,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework HashSet",
+          "impl": "@ylcnfrht/collections HashSet",
           "opsPerSec": 437.38731740970314,
           "rme": 7.229515459624768,
           "runs": [
@@ -477,7 +477,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework LinkedHashSet",
+          "impl": "@ylcnfrht/collections LinkedHashSet",
           "opsPerSec": 350.50721233641553,
           "rme": 16.49136587107149,
           "runs": [
@@ -513,7 +513,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework TreeSet",
+          "impl": "@ylcnfrht/collections TreeSet",
           "opsPerSec": 17.92406915661959,
           "rme": 8.801653895813669,
           "runs": [
@@ -561,7 +561,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework HashMap",
+          "impl": "@ylcnfrht/collections HashMap",
           "opsPerSec": 1673.3343935532807,
           "rme": 0.6453859100754076,
           "runs": [
@@ -643,7 +643,7 @@
           "vsBaseline": 1
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework HashMap",
+          "impl": "@ylcnfrht/collections HashMap",
           "opsPerSec": 76.59198020429322,
           "rme": 13.60145169160965,
           "runs": [
@@ -697,7 +697,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework HashMap",
+          "impl": "@ylcnfrht/collections HashMap",
           "opsPerSec": 508.98513208562866,
           "rme": 1.8758187347580162,
           "runs": [
@@ -751,7 +751,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework LinkedHashMap",
+          "impl": "@ylcnfrht/collections LinkedHashMap",
           "opsPerSec": 298.9732374975873,
           "rme": 14.990076815252017,
           "runs": [
@@ -791,7 +791,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework LinkedHashMap.lru",
+          "impl": "@ylcnfrht/collections LinkedHashMap.lru",
           "opsPerSec": 282.23449817033503,
           "rme": 0.6576470223604469,
           "runs": [
@@ -871,7 +871,7 @@
           "vsBaseline": 1
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework TreeMap",
+          "impl": "@ylcnfrht/collections TreeMap",
           "opsPerSec": 42.01360230504644,
           "rme": 5.41538475985668,
           "runs": [
@@ -907,7 +907,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework TreeMap",
+          "impl": "@ylcnfrht/collections TreeMap",
           "opsPerSec": 27.049876830558244,
           "rme": 6.108798916416837,
           "runs": [
@@ -955,7 +955,7 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/typescript-collection-framework Stream",
+          "impl": "@ylcnfrht/collections Stream",
           "opsPerSec": 6859.262578435116,
           "rme": 0.30558205572080116,
           "runs": [
@@ -967,7 +967,7 @@
           "vsBaseline": 15.286910282858518
         },
         {
-          "impl": "@ylcnfrht/typescript-collection-framework IntStream",
+          "impl": "@ylcnfrht/collections IntStream",
           "opsPerSec": 6777.194592810628,
           "rme": 0.35908031037213356,
           "runs": [

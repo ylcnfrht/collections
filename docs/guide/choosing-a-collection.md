@@ -116,7 +116,7 @@ Measured numbers and tuning tips are in [Performance](../advanced/performance.md
 ## Common picks in code
 
 ```ts
-import { ArrayDeque, PriorityQueue, LinkedHashMap, TreeMap, LinkedHashSet, Comparator } from '@ylcnfrht/typescript-collection-framework';
+import { ArrayDeque, PriorityQueue, LinkedHashMap, TreeMap, LinkedHashSet, Comparator } from '@ylcnfrht/collections';
 
 // FIFO queue
 const jobs = new ArrayDeque<string>();
