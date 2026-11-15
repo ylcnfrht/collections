@@ -1,0 +1,664 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const u = (path: string) => base + path;
+
+// Every result in a comment below is what the library returns (checked by running each snippet).
+const heroCode = `import { HashSet, List, TreeMap } from '@ylcnfrht/collections';
+
+// elements compare by value: two equal lists are one element
+const seen = new HashSet<List<number>>();
+seen.add(List.of(1, 2));        // → true
+seen.add(List.of(1, 2));        // → false, already there
+
+// sorted by key, with navigation and range views
+const plans = new TreeMap<number, string>();
+plans.put(10, 'basic');
+plans.put(25, 'pro');
+plans.put(50, 'team');
+plans.floorKey(30);             // → 25
+plans.headMap(25);              // → {10=basic}`;
+
+const bento = [
+  {
+    tag: 'Equality',
+    title: 'Compare by value, not by reference.',
+    body: 'HashMap and HashSet use equals() and hashCode(), so a list, a date or your own class works as a key. Plain strings and numbers take a fast path.',
+    href: '/concepts/equality/',
+    wide: true,
+    code: `const seen = new HashSet<List<number>>();
+seen.add(List.of(1, 2));      // → true
+seen.add(List.of(1, 2));      // → false
+seen.size();                  // → 1`,
+  },
+  {
+    tag: 'Sorted',
+    title: 'Sorted maps that navigate.',
+    body: 'TreeMap and TreeSet are red-black trees with floor, ceiling, range views and descending order.',
+    href: '/collections/maps/',
+    code: `prices.floorKey(30);          // → 25
+prices.ceilingKey(30);        // → 50
+prices.headMap(25);           // → {10=basic}`,
+  },
+  {
+    tag: 'Views',
+    title: 'Live views, no copies.',
+    body: 'subList, keySet, headMap and reversed() read and write through to the collection behind them.',
+    href: '/concepts/iteration-and-views/',
+    code: `const list = ArrayList.of(1, 2, 3, 4, 5);
+list.subList(1, 4).clear();
+list.toString();              // → [1, 5]`,
+  },
+  {
+    tag: 'Iteration',
+    title: 'Fail fast, never skip.',
+    body: 'Changing a collection while iterating it throws at once, instead of silently skipping or repeating elements.',
+    href: '/concepts/iteration-and-views/',
+    code: `for (const x of list) list.add(x);
+// → ConcurrentModificationException`,
+  },
+  {
+    tag: 'Streams',
+    title: 'Lazy streams that stop early.',
+    body: 'Stream, IntStream, Collectors and Gatherers run each element through the whole pipeline and stop as soon as the result is known.',
+    href: '/streams/overview/',
+    code: `IntStream.iterate(1, (n) => n * 2)
+  .filter((n) => n > 100)
+  .findFirst();               // → OptionalInt[128]`,
+  },
+  {
+    tag: 'Verified',
+    wide: true,
+    title: 'Checked against the JDK, operation by operation.',
+    body: '200,000 random operation scripts run on a real JDK and on this library, and every return value, exception and resulting state is compared.',
+    href: '/reference/compatibility/',
+    code: `Scripts                  200,000
+Operations compared      1,692,438
+Comparable API covered   1602 / 1602 (100%)`,
+    lang: 'text',
+  },
+];
+
+const toolbox = [
+  {
+    title: 'Lists',
+    items: [
+      ['ArrayList', 'Resizable array, O(1) get'],
+      ['LinkedList', 'List and deque in one'],
+      ['List.of · List.copyOf', 'Immutable lists'],
+      ['Vector · Stack', 'Legacy, kept for parity'],
+    ],
+  },
+  {
+    title: 'Queues',
+    items: [
+      ['ArrayDeque', 'Ring buffer, both ends O(1)'],
+      ['PriorityQueue', 'Binary heap, any comparator'],
+      ['Deque', 'push, pop, peek at either end'],
+      ['Collections.asLifoQueue', 'A stack view of a deque'],
+    ],
+  },
+  {
+    title: 'Sets & maps',
+    items: [
+      ['HashSet · HashMap', 'Value equality'],
+      ['LinkedHashSet · LinkedHashMap', 'Insertion or access order, LRU'],
+      ['TreeSet · TreeMap', 'Sorted, navigable'],
+      ['IdentityHashMap', 'Compare by reference'],
+    ],
+  },
+  {
+    title: 'Streams & utilities',
+    items: [
+      ['Stream · IntStream', 'Lazy, short-circuiting'],
+      ['Collectors · Gatherers', 'groupingBy, windows, folds'],
+      ['Optional', 'A value that may be absent'],
+      ['Collections · Comparator', 'Sort, search, compose'],
+    ],
+  },
+];
+
+const inCode = {
+  ArrayList: `import { ArrayList } from '@ylcnfrht/collections';
+
+const fruits = new ArrayList<string>();
+fruits.add('pear');
+fruits.add('apple');
+fruits.add('fig');
+fruits.sort(null);           // natural order
+
+fruits.get(0);               // → 'apple'
+fruits.indexOf('fig');       // → 1
+fruits.subList(0, 2);        // → [apple, fig]`,
+  LinkedList: `import { LinkedList } from '@ylcnfrht/collections';
+
+// a list and a double-ended queue in one
+const deque = new LinkedList<number>();
+deque.addLast(2);
+deque.addFirst(1);
+deque.addLast(3);
+
+deque.peekFirst();           // → 1
+deque.pollLast();            // → 3
+deque.toString();            // → '[1, 2]'`,
+  HashMap: `import { HashMap } from '@ylcnfrht/collections';
+
+const ages = new HashMap<string, number>();
+ages.put('ada', 36);
+
+ages.merge('ada', 1, (a, b) => a + b);         // → 37
+ages.getOrDefault('bob', 0);                   // → 0
+ages.computeIfAbsent('bob', (k) => k.length);  // → 3
+ages.toString();                               // → '{ada=37, bob=3}'`,
+  Stream: `import { ArrayList } from '@ylcnfrht/collections';
+
+const words = ArrayList.of('pear', 'apple', 'fig', 'apple');
+
+// lazy: each element passes through every stage in turn
+words.stream()
+  .distinct()
+  .filter((w) => w.length > 3)
+  .map((w) => w.toUpperCase())
+  .toList();                 // → [PEAR, APPLE]`,
+};
+---
+
+<StarlightPage frontmatter={{ title: '@ylcnfrht/collections', description: 'Lists, queues, sets, maps and lazy streams for TypeScript, with value equality, sorted maps and fail-fast iterators.', template: 'splash', pagefind: false }}>
+  <div class="rp-landing not-content">
+    <section class="hero">
+      <div class="hero-inner">
+        <a class="badge" href={u('/start/introduction/')}><span class="dot"></span>Zero dependencies · Node, Deno, Bun, browsers</a>
+        <h1>Lists, sets, maps and streams.<br /><span>The way they should work.</span></h1>
+        <p class="lede">
+          Inspired by the Java Collections Framework: ArrayList, HashMap, TreeMap, PriorityQueue, Stream and more, typed for TypeScript. Value equality, sorted navigation, live views and fail-fast iterators.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href={u('/start/quick-start/')}>Get started</a>
+          <a class="btn ghost" href={u('/benchmarks/')}>See the benchmarks</a>
+        </div>
+        <button class="install" type="button" data-copy="npm i @ylcnfrht/collections">
+          <span class="prompt">$</span> npm i @ylcnfrht/collections <span class="copy">copy</span>
+        </button>
+      </div>
+      <div class="hero-code">
+        <Code code={heroCode} lang="ts" title="example.ts" />
+      </div>
+    </section>
+
+    <section class="stats" aria-label="At a glance">
+      <div><strong>0</strong><span>dependencies</span></div>
+      <div><strong>1.69M</strong><span>operations checked vs the JDK</span></div>
+      <div><strong>10,000+</strong><span>tests</span></div>
+      <div><strong>~99%</strong><span>line coverage</span></div>
+      <div><strong>ESM + CJS</strong><span>typed, tree-shakeable</span></div>
+    </section>
+
+    <section class="section">
+      <p class="rp-eyebrow">What it does</p>
+      <h2>Collections with the guarantees arrays and Map don't give you.</h2>
+      <div class="bento">
+        {bento.map((b) => (
+          <article class:list={['card', { wide: b.wide }]}>
+            <div class="card-body">
+              <span class="tag">{b.tag}</span>
+              <h3>{b.title}</h3>
+              <p>{b.body}</p>
+              <a class="more" href={u(b.href)}>Read more <span aria-hidden="true">→</span></a>
+            </div>
+            <div class="card-code"><Code code={b.code} lang={b.lang ?? 'ts'} /></div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="section">
+      <p class="rp-eyebrow">The toolbox</p>
+      <h2>Every collection you reach for, one API.</h2>
+      <div class="toolbox">
+        {toolbox.map((group) => (
+          <div>
+            <h3>{group.title}</h3>
+            <ul>
+              {group.items.map(([api, desc]) => (
+                <li><code>{api}</code><span>{desc}</span></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="section">
+      <p class="rp-eyebrow">In code</p>
+      <h2>The classes you know, a few lines each.</h2>
+      <div class="incode">
+        <Tabs>
+          {Object.entries(inCode).map(([label, code]) => (
+            <TabItem label={label}><Code code={code} lang="ts" /></TabItem>
+          ))}
+        </Tabs>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="cta-inner">
+        <p class="rp-eyebrow">Get started</p>
+        <h2>Install it. Import a class. Done.</h2>
+        <p class="lede">Start with an ArrayList or a HashMap. Reach for TreeMap, PriorityQueue and streams when the problem asks for them.</p>
+        <div class="actions">
+          <a class="btn primary" href={u('/start/quick-start/')}>Read the quick start</a>
+          <a class="btn ghost" href={u('/start/choosing-a-collection/')}>Choose a collection</a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>@ylcnfrht/collections · MIT licensed</span>
+      <nav aria-label="Footer">
+        <a href={u('/start/introduction/')}>Docs</a>
+        <a href="https://github.com/ylcnfrht/collections/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/ylcnfrht/collections">GitHub</a>
+        <a href="https://www.npmjs.com/package/@ylcnfrht/collections">npm</a>
+      </nav>
+    </footer>
+  </div>
+</StarlightPage>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    button.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(button.dataset.copy!);
+      const label = button.querySelector('.copy');
+      if (!label) return;
+      label.textContent = 'copied';
+      setTimeout(() => (label.textContent = 'copy'), 1400);
+    });
+  }
+</script>
+
+<style>
+  /* The splash template still renders the page title and constrains width: hide one, break out of the other. */
+  :global(main:has(.rp-landing) .content-panel:first-of-type) {
+    display: none;
+  }
+  :global(main:has(.rp-landing) .content-panel) {
+    padding: 0;
+  }
+  :global(main:has(.rp-landing) .sl-container) {
+    max-width: none;
+  }
+  .rp-landing {
+    --max: 72rem;
+    color: var(--rp-text);
+  }
+  .section,
+  .stats,
+  .foot {
+    max-width: var(--max);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 6.5rem 1.5rem 0;
+    border-bottom: 1px solid var(--rp-hairline);
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 0%, color-mix(in oklab, var(--rp-accent) 9%, transparent), transparent),
+      radial-gradient(ellipse 50% 45% at 75% 10%, color-mix(in oklab, var(--rp-accent-2) 6%, transparent), transparent);
+  }
+  .hero-inner {
+    position: relative;
+    max-width: 46rem;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.3rem 0.8rem 0.3rem 0.55rem;
+    border: 1px solid var(--rp-hairline-strong);
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--rp-surface) 80%, transparent);
+    backdrop-filter: blur(8px);
+    font-family: var(--rp-mono);
+    font-size: 0.72rem;
+    color: var(--rp-text-muted);
+    text-decoration: none;
+  }
+  .badge .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rp-accent);
+    box-shadow: 0 0 10px var(--rp-accent);
+  }
+  .hero h1 {
+    margin: 1.6rem 0 0;
+    font-size: clamp(2.4rem, 1.6rem + 3.6vw, 4.3rem);
+    line-height: 1.04;
+    font-weight: 650;
+    letter-spacing: -0.045em;
+    color: var(--sl-color-white);
+  }
+  .hero h1 span {
+    color: color-mix(in oklab, var(--sl-color-white) 55%, var(--rp-text-faint));
+  }
+  .lede {
+    margin: 1.4rem auto 0;
+    max-width: 38rem;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    color: var(--rp-text-muted);
+  }
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    height: 2.6rem;
+    padding: 0 1.15rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 550;
+    text-decoration: none;
+    transition: transform 0.15s, background 0.15s, border-color 0.15s;
+  }
+  .btn.primary {
+    background: var(--sl-color-white);
+    color: var(--rp-bg);
+  }
+  .btn.primary:hover {
+    transform: translateY(-1px);
+  }
+  .btn.ghost {
+    border: 1px solid var(--rp-hairline-strong);
+    color: var(--sl-color-white);
+    background: color-mix(in oklab, var(--rp-surface) 70%, transparent);
+  }
+  .btn.ghost:hover {
+    border-color: color-mix(in oklab, var(--rp-accent) 50%, transparent);
+  }
+  .install {
+    margin-top: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.6rem 0.45rem 0.9rem;
+    border: 1px solid var(--rp-hairline);
+    border-radius: 10px;
+    background: color-mix(in oklab, var(--rp-surface) 85%, transparent);
+    font-family: var(--rp-mono);
+    font-size: 0.82rem;
+    color: var(--rp-text);
+    cursor: pointer;
+  }
+  .install .prompt {
+    color: var(--rp-accent);
+  }
+  .install .copy {
+    font-size: 0.68rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 6px;
+    background: var(--rp-surface-2);
+    color: var(--rp-text-faint);
+  }
+  .hero-code {
+    position: relative;
+    max-width: 50rem;
+    margin: 3.5rem auto -1px;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -30px 80px -20px color-mix(in oklab, var(--rp-accent) 18%, transparent);
+  }
+  .hero-code :global(.expressive-code .frame) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  /* Stats strip */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-inline: 1px solid var(--rp-hairline);
+    padding: 0;
+  }
+  .stats div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1.6rem 1.4rem;
+    border-inline-end: 1px solid var(--rp-hairline);
+  }
+  .stats div:last-child {
+    border-inline-end: none;
+  }
+  .stats strong {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--sl-color-white);
+  }
+  .stats span {
+    font-family: var(--rp-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    color: var(--rp-text-faint);
+    text-transform: uppercase;
+  }
+
+  /* Sections */
+  .section {
+    padding-top: 6.5rem;
+  }
+  .section h2,
+  .cta h2 {
+    margin: 0.7rem 0 2.2rem;
+    font-size: clamp(1.7rem, 1.3rem + 1.4vw, 2.5rem);
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+    font-weight: 620;
+    color: var(--sl-color-white);
+    max-width: 36rem;
+  }
+
+  /* Bento */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rp-hairline);
+    border-radius: 18px;
+    background: linear-gradient(180deg, var(--rp-surface), color-mix(in oklab, var(--rp-surface) 60%, var(--rp-bg)));
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card:hover {
+    border-color: var(--rp-hairline-strong);
+  }
+  .card.wide {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    align-items: center;
+  }
+  .card.wide .card-code {
+    margin: 1.25rem;
+    padding-top: 0;
+  }
+  .card-body {
+    padding: 1.6rem 1.5rem 0.4rem;
+  }
+  .card.wide .card-body {
+    padding-bottom: 1.6rem;
+  }
+  .tag {
+    font-family: var(--rp-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--rp-text-faint);
+    border: 1px solid var(--rp-hairline);
+    padding: 0.15rem 0.45rem;
+    border-radius: 6px;
+  }
+  .card h3 {
+    margin: 0.9rem 0 0.5rem;
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--sl-color-white);
+  }
+  .card p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--rp-text-muted);
+  }
+  .more {
+    display: inline-block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    font-weight: 550;
+    color: var(--sl-color-white);
+    text-decoration: none;
+  }
+  .more:hover span {
+    color: var(--rp-accent);
+  }
+  .card-code {
+    margin: 1rem 1.25rem 1.25rem;
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+  .card-code :global(pre) {
+    font-size: 0.78rem !important;
+  }
+
+  /* Toolbox */
+  .toolbox {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--rp-hairline);
+  }
+  .toolbox > div {
+    padding: 1.5rem 1.25rem 0 0;
+  }
+  .toolbox h3 {
+    margin: 0 0 1rem;
+    font-family: var(--rp-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--rp-text-faint);
+  }
+  .toolbox ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.95rem;
+  }
+  .toolbox code {
+    display: block;
+    font-family: var(--rp-mono);
+    font-size: 0.82rem;
+    color: var(--sl-color-white);
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .toolbox span {
+    font-size: 0.82rem;
+    color: var(--rp-text-faint);
+  }
+
+  /* In code */
+  .incode {
+    border: 1px solid var(--rp-hairline);
+    border-radius: 16px;
+    padding: 0.5rem 1.25rem 1.25rem;
+    background: var(--rp-surface);
+  }
+
+  /* CTA */
+  .cta {
+    position: relative;
+    overflow: hidden;
+    margin-top: 7rem;
+    padding: 7rem 1.5rem;
+    border-block: 1px solid var(--rp-hairline);
+    text-align: center;
+    background: radial-gradient(ellipse 50% 60% at 50% 100%, color-mix(in oklab, var(--rp-accent) 7%, transparent), transparent);
+  }
+  .cta-inner {
+    position: relative;
+  }
+  .cta h2 {
+    margin-inline: auto;
+  }
+
+  /* Footer */
+  .foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 2.5rem;
+    font-size: 0.82rem;
+    color: var(--rp-text-faint);
+  }
+  .foot nav {
+    display: flex;
+    gap: 1.25rem;
+  }
+  .foot a {
+    color: var(--rp-text-faint);
+    text-decoration: none;
+  }
+  .foot a:hover {
+    color: var(--sl-color-white);
+  }
+
+  @media (max-width: 60rem) {
+    .bento {
+      grid-template-columns: 1fr;
+    }
+    .card.wide {
+      display: flex;
+    }
+    .toolbox {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .stats div {
+      border-bottom: 1px solid var(--rp-hairline);
+    }
+  }
+  @media (max-width: 34rem) {
+    .hero {
+      padding-top: 4rem;
+    }
+    .toolbox {
+      grid-template-columns: 1fr;
+    }
+    .foot {
+      flex-direction: column;
+    }
+  }
+</style>

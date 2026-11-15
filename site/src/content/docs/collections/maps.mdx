@@ -1,0 +1,476 @@
+---
+title: Maps
+description: HashMap, LinkedHashMap, TreeMap and IdentityHashMap, compute and merge, LRU caches, entries, navigation and views.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+import ClassInfo from '../../../components/ClassInfo.astro';
+
+A map associates each key with at most one value. Keys are looked up with `equals()`/`hashCode()` (a comparator for
+`TreeMap`), not by reference; see [equality](/collections/concepts/equality/). `WeakHashMap`, `EnumMap`, `Hashtable` and
+concurrent maps are [not included](/collections/reference/compatibility/).
+
+| Class | Iteration order | `get` / `put` / `remove` | Use it for |
+| --- | --- | --- | --- |
+| `HashMap` | unspecified | O(1) average | the default map |
+| `LinkedHashMap` | insertion or access order | O(1) average | predictable order, LRU caches |
+| `TreeMap` | sorted by key | O(log n) | sorted keys, nearest-key queries, ranges |
+| `IdentityHashMap` | unspecified | O(1) average | keys compared by reference |
+
+Rules every map follows:
+
+- `put(k, v)` returns the value it replaced, or `null` if the key was new.
+- `get(k)` returns `null` for a missing key, never `undefined`. Use `containsKey` to tell "absent" from "mapped to
+  `null`" ([null handling](/collections/concepts/null-and-errors/)).
+- Two maps are equal when they have the same key-value pairs, whatever their class or order.
+- Every map is iterable as `[key, value]` pairs, like a native `Map`.
+
+`HashMap`, `LinkedHashMap` and `IdentityHashMap` accept `null` and `undefined` keys and values. `LinkedHashMap` and
+`TreeMap` are `SequencedMap`s; `TreeMap` is also a `NavigableMap`.
+
+## HashMap
+
+<ClassInfo name="HashMap" />
+
+The default map. Like `HashSet`, it routes each key to the cheapest store: small non-negative integer keys to a dense
+array (while it stays at least about a quarter full), primitives and objects without `equals()` to a native `Map`
+(SameValueZero), and keys with `equals()`/`hashCode()` and `Date`s to hash buckets. The split is not observable.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { HashMap } from '@ylcnfrht/collections';
+
+const ages = new HashMap<string, number>();
+console.log(ages.put('ada', 36));      // → null
+console.log(ages.put('ada', 37));      // → 36
+ages.put('alan', 41);
+console.log(ages.get('ada'));          // → 37
+console.log(ages.get('bob'));          // → null
+console.log(ages.remove('alan'));      // → 41
+for (const [name, age] of ages) console.log(name, age); // → ada 37
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { HashMap, List } from '@ylcnfrht/collections';
+
+// clicks per grid cell: List keys compare by value
+const clicks = new HashMap<List<number>, number>();
+const events = [[1, 2], [3, 4], [1, 2], [1, 2]];
+for (const [x, y] of events) clicks.merge(List.of(x, y), 1, (a, b) => a + b);
+console.log(clicks.get(List.of(1, 2)));              // → 3
+console.log(clicks.getOrDefault(List.of(0, 0), 0)); // → 0
+```
+
+</TabItem>
+</Tabs>
+
+## LinkedHashMap
+
+<ClassInfo name="LinkedHashMap" />
+
+A `HashMap` with a predictable order and the [sequenced operations](#sequenced-operations). Two orders exist:
+
+- **Insertion order** (default). Putting an existing key again changes the value but keeps the position.
+- **Access order** (`new LinkedHashMap(capacity, loadFactor, true)`). Every `get`, `put`, `getOrDefault`,
+  `putIfAbsent`, `replace`, `compute*` or `merge` that hits a key moves it to the tail, so the head is the least
+  recently used entry. In this mode `get` is a structural change for open iterators.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { LinkedHashMap } from '@ylcnfrht/collections';
+
+const insertion = new LinkedHashMap<string, number>();
+insertion.put('a', 1);
+insertion.put('b', 2);
+insertion.put('a', 10); // existing key: value changes, position stays
+console.log(insertion.toString()); // → {a=10, b=2}
+
+const access = new LinkedHashMap<string, number>(16, 0.75, true);
+access.put('a', 1);
+access.put('b', 2);
+access.get('a'); // a becomes the most recently used
+console.log(access.toString()); // → {b=2, a=1}
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { LinkedHashMap } from '@ylcnfrht/collections';
+
+// an LRU cache that loads missing values on demand
+const cache = LinkedHashMap.lru<string, number>(3);
+const load = (key: string): number => cache.computeIfAbsent(key, (k) => k.length)!; // k.length stands in for slow work
+
+['alpha', 'be', 'gamma', 'alpha', 'delta'].forEach(load);
+// 'be' was the least recently used when 'delta' arrived
+console.log(cache.keySet().toString()); // → [gamma, alpha, delta]
+```
+
+</TabItem>
+</Tabs>
+
+### LRU caches
+
+`LinkedHashMap.lru(maxSize)` builds an access-ordered map that evicts its head once it holds more than `maxSize`
+entries. For other eviction rules, subclass `LinkedHashMap` and override `removeEldestEntry(eldest)`: the map calls it
+after every insertion with the head entry, and evicts it when it returns `true`.
+
+```ts
+import { LinkedHashMap, MapEntry } from '@ylcnfrht/collections';
+
+class BoundedCache<K, V> extends LinkedHashMap<K, V> {
+  readonly evicted: K[] = [];
+  constructor(private readonly max: number) {
+    super(16, 0.75, true); // access order
+  }
+  protected override removeEldestEntry(eldest: MapEntry<K, V>): boolean {
+    if (this.size() <= this.max) return false;
+    this.evicted.push(eldest.getKey());
+    return true;
+  }
+}
+
+const c = new BoundedCache<string, number>(2);
+c.put('a', 1);
+c.put('b', 2);
+c.put('c', 3);
+console.log(c.toString(), c.evicted); // → {b=2, c=3} [ 'a' ]
+```
+
+## TreeMap
+
+<ClassInfo name="TreeMap" />
+
+A red-black tree keyed by [natural ordering](/collections/concepts/ordering/) or a comparator. `get`, `put`, `remove` and
+every navigation method are O(log n), and iteration is in key order. As with `TreeSet`, the comparator decides which
+keys are equal: keys that compare as 0 are one key, whatever `equals()` says. `null` keys are rejected under natural
+ordering.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { TreeMap, Comparator } from '@ylcnfrht/collections';
+
+const scores = new TreeMap<string, number>();
+scores.put('carol', 72);
+scores.put('ada', 95);
+scores.put('bob', 88);
+console.log(scores.toString());          // → {ada=95, bob=88, carol=72}
+console.log(scores.firstKey());          // → ada
+
+const desc = new TreeMap<string, number>(Comparator.reverseOrder<string>());
+desc.putAll(scores);
+console.log(desc.toString());            // → {carol=72, bob=88, ada=95}
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { TreeMap } from '@ylcnfrht/collections';
+
+// ISO dates sort chronologically: a time series
+const price = new TreeMap<string, number>();
+price.put('2024-01-01', 100);
+price.put('2024-01-05', 104);
+price.put('2024-01-09', 98);
+price.put('2024-01-15', 110);
+
+// value as of a date: the latest entry at or before it
+console.log(price.floorEntry('2024-01-07')?.getValue()); // → 104
+
+// the first ten days, both ends inclusive
+console.log(price.subMap('2024-01-01', true, '2024-01-10', true).toString()); // → {2024-01-01=100, 2024-01-05=104, 2024-01-09=98}
+
+// drop history before a cutoff: the view writes through
+price.headMap('2024-01-09').clear();
+console.log(price.toString()); // → {2024-01-09=98, 2024-01-15=110}
+```
+
+</TabItem>
+</Tabs>
+
+### Navigation
+
+Each method finds the nearest key to a probe, which need not be in the map. `…Key` methods return a key or `null`,
+`…Entry` methods an entry or `null`.
+
+| Method | Returns |
+| --- | --- |
+| `firstKey()` / `lastKey()` | smallest / largest key; `NoSuchElementException` when empty |
+| `firstEntry()` / `lastEntry()` | smallest / largest entry, or `null` |
+| `lowerKey(k)` / `lowerEntry(k)` | greatest key `< k` |
+| `floorKey(k)` / `floorEntry(k)` | greatest key `<= k` |
+| `ceilingKey(k)` / `ceilingEntry(k)` | least key `>= k` |
+| `higherKey(k)` / `higherEntry(k)` | least key `> k` |
+| `pollFirstEntry()` / `pollLastEntry()` | removes and returns the smallest / largest entry |
+| `headMap(to, inclusive = false)`, `tailMap(from, inclusive = true)`, `subMap(from, to)`, `subMap(from, fromInc, to, toInc)` | live range views |
+| `descendingMap()`, `navigableKeySet()`, `descendingKeySet()` | live reverse and key views |
+
+Entries returned by navigation methods are immutable snapshots (`setValue` throws `UnsupportedOperationException`);
+entries reached by iterating `entrySet()` are live. Range views follow the rules of
+[`TreeSet` range views](/collections/collections/sets/#range-views): writes go through, and putting a key outside the range throws
+`IllegalArgumentException`.
+
+```ts
+import { TreeMap } from '@ylcnfrht/collections';
+
+const grades = new TreeMap<number, string>();
+grades.put(90, 'A');
+grades.put(80, 'B');
+grades.put(70, 'C');
+grades.put(0, 'F');
+
+const gradeOf = (score: number) => grades.floorEntry(score)!.getValue();
+console.log(gradeOf(85), gradeOf(90), gradeOf(42)); // → B A F
+console.log(grades.lowerKey(80), grades.ceilingKey(91)); // → 70 null
+
+const low = grades.headMap(80);
+try {
+  low.put(85, 'B+');                // outside [.., 80)
+} catch (e) {
+  console.log((e as Error).name);   // → IllegalArgumentException
+}
+```
+
+## IdentityHashMap
+
+<ClassInfo name="IdentityHashMap" />
+
+Compares keys and values by reference (`===`, with `NaN` equal to itself) and ignores `equals()`/`hashCode()`. Use
+it when the object itself matters: visited nodes in a graph walk or deep copy, metadata attached to mutable objects,
+or keys whose `hashCode()` changes.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { IdentityHashMap } from '@ylcnfrht/collections';
+
+const a = { id: 1 };
+const b = { id: 1 }; // same contents, different object
+const tags = new IdentityHashMap<object, string>();
+tags.put(a, 'first');
+tags.put(b, 'second');
+console.log(tags.get(a));                 // → first
+console.log(tags.containsKey({ id: 1 })); // → false
+console.log(tags.size());                 // → 2
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { IdentityHashMap, HashMap, ArrayList, List } from '@ylcnfrht/collections';
+
+const a = ArrayList.of(1, 2);
+// with new:
+// const a = new ArrayList<number>();
+// a.add(1);
+// a.add(2);
+const b = ArrayList.of(1, 2); // equal to a, but a different object
+
+const byValue = new HashMap<List<number>, string>();
+byValue.put(a, 'first');
+byValue.put(b, 'second'); // replaces: a.equals(b)
+console.log(byValue.size()); // → 1
+
+const byIdentity = new IdentityHashMap<List<number>, string>();
+byIdentity.put(a, 'first');
+byIdentity.put(b, 'second');
+console.log(byIdentity.size()); // → 2
+a.add(3);                       // mutating a key is harmless here
+console.log(byIdentity.get(a)); // → first
+```
+
+</TabItem>
+</Tabs>
+
+## Creating a map
+
+| Form | Result |
+| --- | --- |
+| `new HashMap<K, V>()`, `new LinkedHashMap<K, V>()` | empty map |
+| `new HashMap<K, V>(initialCapacity, loadFactor?)` | empty map; validated sizing hints |
+| `new LinkedHashMap<K, V>(initialCapacity, loadFactor, accessOrder)` | `accessOrder: true` selects access order |
+| `new HashMap<K, V>(map)`, `new LinkedHashMap<K, V>(map)` | copy of any `Map` |
+| `HashMap.of([k1, v1], [k2, v2])`, `LinkedHashMap.of(…)` | map of the pairs |
+| `HashMap.newHashMap<K, V>(n)`, `LinkedHashMap.newLinkedHashMap<K, V>(n)` | empty map for `n` mappings; a hint, a negative `n` throws `IllegalArgumentException` |
+| `LinkedHashMap.lru<K, V>(maxSize)` | access-ordered map that evicts beyond `maxSize` |
+| `new TreeMap<K, V>(comparator?)` | empty sorted map |
+| `new TreeMap<K, V>(map)` | copy; keeps the comparator if the source is a sorted map |
+| `new IdentityHashMap<K, V>()`, `(expectedMaxSize)`, `(map)` | empty, sized, or copy |
+| `m.clone()` | shallow copy of the same class |
+
+```ts
+import { HashMap } from '@ylcnfrht/collections';
+
+const ports = HashMap.of<string, number>(['http', 80], ['https', 443]);
+// with new:
+// const ports = new HashMap<string, number>();
+// ports.put('http', 80);
+// ports.put('https', 443);
+console.log(ports.get('https')); // → 443
+```
+
+## Map methods
+
+Besides `get`, `put`, `remove(k)`, `containsKey`, `containsValue` (O(n)), `putAll`, `size`, `isEmpty` and `clear`,
+every map has these. A callback that returns `null` or `undefined` means "no mapping": the key is removed, or not
+added.
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `getOrDefault(k, d)` | `V` | value of `k`, or `d` if `k` is absent (a key mapped to `null` returns `null`) |
+| `putIfAbsent(k, v)` | `V \| null` | puts `v` if `k` is absent or mapped to `null`; returns the current value |
+| `computeIfAbsent(k, f)` | `V \| null` | if `k` is absent or `null`, stores `f(k)`; returns the value now in the map |
+| `computeIfPresent(k, f)` | `V \| null` | if `k` has a non-null value, replaces it with `f(k, v)` |
+| `compute(k, f)` | `V \| null` | stores `f(k, currentOrNull)` |
+| `merge(k, v, f)` | `V \| null` | puts `v` if `k` is absent or `null`, else stores `f(old, v)` |
+| `replace(k, v)` | `V \| null` | replaces only if `k` is present; returns the old value |
+| `replace(k, old, new)` / `remove(k, v)` | `boolean` | replaces / removes only if `k` is mapped to the given value |
+| `replaceAll(f)` / `forEach(f)` | `void` | `f(k, v)` for every mapping |
+
+`computeIfAbsent` is typed `V | null`, hence the `!` in the grouping idiom below.
+
+```ts
+import { TreeMap, ArrayList, List } from '@ylcnfrht/collections';
+
+// counting: insert 1 for a new key, add 1 to an existing one
+const counts = new TreeMap<string, number>();
+for (const ch of 'mississippi') counts.merge(ch, 1, (a, b) => a + b);
+console.log(counts.toString()); // → {i=4, m=1, p=2, s=4}
+
+// decrement and delete: a null result removes the key
+counts.merge('m', 1, (a, b) => (a - b === 0 ? null : a - b));
+console.log(counts.containsKey('m')); // → false
+
+// grouping: get the bucket, creating it if needed, then add to it
+const byLetter = new TreeMap<string, List<string>>();
+for (const w of ['apple', 'avocado', 'banana']) byLetter.computeIfAbsent(w[0], () => new ArrayList<string>())!.add(w);
+console.log(byLetter.toString()); // → {a=[apple, avocado], b=[banana]}
+
+console.log(counts.putIfAbsent('i', 0), counts.replace('x', 1)); // → 4 null
+```
+
+<Aside type="caution">
+The callback of `computeIfAbsent`, `computeIfPresent`, `compute` or `merge` must not add or remove keys of the same
+map. If it does, the method throws `ConcurrentModificationException`, and the callback's change is not rolled back.
+A recursive memoized function is the usual trap: compute the value first, then `put` it. `IdentityHashMap` does not
+detect this, as in the JDK, but the rule still applies.
+</Aside>
+
+```ts
+import { HashMap } from '@ylcnfrht/collections';
+
+const memo = new HashMap<number, number>();
+const fib = (n: number): number =>
+  n < 2 ? n : memo.computeIfAbsent(n, () => fib(n - 1) + fib(n - 2))!; // recursive: modifies memo
+
+try {
+  fib(10);
+} catch (e) {
+  console.log((e as Error).name); // → ConcurrentModificationException
+}
+```
+
+## Sequenced operations
+
+`LinkedHashMap` and `TreeMap`:
+
+| Method | Description |
+| --- | --- |
+| `firstEntry()` / `lastEntry()` | first / last entry as an immutable snapshot, or `null` |
+| `pollFirstEntry()` / `pollLastEntry()` | remove and return the first / last entry |
+| `putFirst(k, v)` / `putLast(k, v)` | put and move the key to the front / back; `UnsupportedOperationException` on a `TreeMap` |
+| `reversed()` | live reverse-ordered view |
+| `sequencedKeySet()`, `sequencedValues()`, `sequencedEntrySet()` | views with `getFirst`, `reversed()`, … |
+
+```ts
+import { LinkedHashMap } from '@ylcnfrht/collections';
+
+const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
+m.putFirst('b', 20);
+m.putLast('c', 3);
+console.log(m.toString());            // → {b=20, a=1, c=3}
+console.log(m.reversed().toString()); // → {c=3, a=1, b=20}
+console.log(m.pollFirstEntry()?.toString(), m.toString()); // → b=20 {a=1, c=3}
+```
+
+## Entries
+
+A `MapEntry<K, V>` has `getKey()`, `getValue()`, `setValue(v)`, value-based `equals`/`hashCode`, and `toString()` as
+`key=value`.
+
+| Factory | Mutable | Nulls |
+| --- | --- | --- |
+| `Map.entry(k, v)` | no | rejected (`NullPointerException`) |
+| `Map.Entry.copyOf(e)` | no; returns `e` itself if it already is such an entry | rejected |
+| `new SimpleEntry(k, v)` / `new SimpleEntry(entry)` | yes | allowed |
+| `new SimpleImmutableEntry(k, v)` | no | allowed |
+
+`Map.Entry.comparingByKey(cmp?)` and `Map.Entry.comparingByValue(cmp?)` build comparators for sorting entries.
+
+```ts
+import { Map, HashMap, ArrayList, Comparator } from '@ylcnfrht/collections';
+
+const scores = HashMap.of<string, number>(['ann', 12], ['bob', 30], ['cid', 21]);
+const entries = new ArrayList(scores.entrySet());
+entries.sort(Map.Entry.comparingByValue<string, number>(Comparator.reverseOrder<number>()));
+console.log(entries.toString()); // → [bob=30, cid=21, ann=12]
+```
+
+## Views and iteration
+
+`keySet()`, `values()` and `entrySet()` are [live views](/collections/concepts/iteration-and-views/), created in O(1).
+Removal through them writes through (`remove`, `removeIf`, `retainAll`, `clear`, `iterator().remove()`), and so does
+`entry.setValue(v)` on an iterated entry. Adding throws `UnsupportedOperationException`: a view cannot supply the
+missing half of a mapping. Iteration and views are fail-fast.
+
+```ts
+import { LinkedHashMap } from '@ylcnfrht/collections';
+
+const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2], ['c', 3]);
+m.values().removeIf((v) => v % 2 === 0);
+for (const e of m.entrySet()) e.setValue(e.getValue() * 10);
+console.log(m.toString());                 // → {a=10, c=30}
+
+// to and from native structures
+console.log(Object.fromEntries(m));        // → { a: 10, c: 30 }
+console.log(new globalThis.Map(m).get('c')); // → 30
+const back = new LinkedHashMap<string, number>();
+for (const [k, v] of Object.entries({ x: 9 })) back.put(k, v);
+console.log(back.toString());              // → {x=9}
+```
+
+## Complexity
+
+| Operation | `HashMap` | `LinkedHashMap` | `TreeMap` | `IdentityHashMap` |
+| --- | --- | --- | --- | --- |
+| `get`, `put`, `remove`, `containsKey` | O(1) avg | O(1) avg | O(log n) | O(1) avg |
+| `containsValue` | O(n) | O(n) | O(n) | O(n) |
+| `size` | O(1) | O(1) | O(1); O(r) on a range view of r entries | O(1) |
+| first/last entry, `pollFirstEntry`/`pollLastEntry` | — | O(1) | O(log n) | — |
+| `putFirst`/`putLast` | — | O(1) | unsupported | — |
+| navigation | — | — | O(log n) | — |
+| creating a view | O(1) | O(1) | O(1) | O(1) |
+
+## Pitfalls
+
+- **Do not mutate a key's `equals`/`hashCode` fields while it is in a hash map.** See the
+  [set pitfall](/collections/collections/sets/#pitfalls); `IdentityHashMap` is not affected.
+- **The package's `Map` shadows the native `Map`.** Use `globalThis.Map` or an import alias in that module, as the
+  iteration example does.
+
+For grouping and counting with streams, see [Collectors](/collections/streams/collectors/).

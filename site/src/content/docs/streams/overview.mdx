@@ -1,0 +1,272 @@
+---
+title: Streams overview
+description: How streams work in @ylcnfrht/collections - sources, laziness, short-circuiting, the single-use rule and closing.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+A stream is a lazy pipeline over a source: zero or more intermediate operations (`filter`, `map`, `sorted`, …) and
+one terminal operation (`toList`, `reduce`, `collect`, `count`, …) that runs it. The other pages in this section
+cover [operations](/collections/streams/operations/), [number streams](/collections/streams/number-streams/), [collectors](/collections/streams/collectors/),
+[gatherers](/collections/streams/gatherers/), [Optional](/collections/streams/optional/) and [spliterators](/collections/streams/spliterators/).
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { List, Collectors } from '@ylcnfrht/collections';
+
+const words = List.of('stream', 'map', 'filter', 'reduce', 'sorted', 'limit');
+
+const longWords = words
+  .stream()
+  .filter((w) => w.length > 5)                  // intermediate
+  .map((w) => w.toUpperCase())                  // intermediate
+  .collect(Collectors.joining(', ', '<', '>')); // terminal
+
+console.log(longWords); // → <STREAM, FILTER, REDUCE, SORTED>
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { List, Collectors } from '@ylcnfrht/collections';
+
+type Order = { product: string; qty: number };
+const orders = List.of<Order>(
+  { product: 'pen', qty: 5 },
+  { product: 'ink', qty: 2 },
+  { product: 'pad', qty: 4 },
+  { product: 'pen', qty: 3 },
+  { product: 'cap', qty: 1 },
+);
+
+// units sold per product, then the three best sellers
+const top3 = orders
+  .stream()
+  .collect(Collectors.groupingBy((o: Order) => o.product, Collectors.summingInt((o: Order) => o.qty)))
+  .entrySet()
+  .stream()
+  .sorted((a, b) => b.getValue() - a.getValue())
+  .limit(3)
+  .map((e) => `${e.getKey()}=${e.getValue()}`)
+  .toList();
+
+console.log(top3); // → [pen=8, pad=4, ink=2]
+```
+
+</TabItem>
+</Tabs>
+
+## Sources
+
+| Factory | Produces |
+|---|---|
+| `collection.stream()`, `parallelStream()` | the collection's elements, in its iteration order |
+| `Stream.of(a, b, …)`, `Stream.empty()` | the given values / nothing |
+| `Stream.ofNullable(x)` | one element, or empty when `x` is `null`/`undefined` |
+| `Stream.iterate(seed, f)` | `seed, f(seed), f(f(seed)), …`, infinite |
+| `Stream.iterate(seed, hasNext, next)` | like a `for` loop |
+| `Stream.generate(supplier)` | `supplier()` per element, infinite |
+| `Stream.concat(a, b)` | all of `a`, then all of `b` (lazy) |
+| `Stream.builder()` | `add(…)` elements, then `build()` |
+| `Stream.from(iterable)` | any JS iterable; a generator stopped early (`findFirst`, `limit`, a throw, `break`, `close()`) is closed, so its `finally` runs |
+| `Stream.ofArray(array)` | the array without copying: the range is fixed at creation, elements are read when the terminal runs |
+| `IntStream.range(a, b)`, `rangeClosed(a, b)` | `a … b-1` / `a … b`; see [number streams](/collections/streams/number-streams/) |
+| `optional.stream()` | zero or one element |
+| `StreamSupport.stream(spliterator, parallel)` | a custom source; see [spliterators](/collections/streams/spliterators/) |
+
+```ts
+import { Stream, IntStream, List } from '@ylcnfrht/collections';
+
+console.log(List.of(1, 2, 3).stream().toList()); // → [1, 2, 3]
+console.log(Stream.ofNullable(null).count()); // → 0
+console.log(Stream.iterate(1, (x) => x * 2).limit(5).toList()); // → [1, 2, 4, 8, 16]
+console.log(Stream.iterate(1, (x) => x < 20, (x) => x * 3).toList()); // → [1, 3, 9]
+console.log(Stream.concat(Stream.of(1, 2), Stream.of(3)).toList()); // → [1, 2, 3]
+console.log(Stream.builder<string>().add('x').add('y').build().toList()); // → [x, y]
+console.log(Stream.from(new globalThis.Set(['js', 'set'])).toList()); // → [js, set]
+console.log(IntStream.rangeClosed(1, 3).sum()); // → 6
+
+const data = [1, 2];
+const s = Stream.ofArray(data);
+data[0] = 100; // seen: elements are read late
+data.push(3);  // not seen: outside the range
+console.log(s.toList()); // → [100, 2]
+```
+
+<Aside type="caution">
+`Stream.concat` nests its inputs. Chaining it in a loop over thousands of streams is quadratic and eventually
+overflows the call stack. Flatten instead: `Stream.of(...parts).flatMap((p) => p)`.
+</Aside>
+
+## Laziness
+
+Intermediate operations only add a stage. Nothing runs until the terminal operation; then each element passes
+through every stage before the next one is read, without intermediate arrays, and reading stops as soon as the
+result is known:
+
+```ts
+import { Stream } from '@ylcnfrht/collections';
+
+const log: string[] = [];
+const pipeline = Stream.of(5, 3, 8, 1, 9, 2)
+  .peek((x) => log.push(`read ${x}`))
+  .filter((x) => x > 2)
+  .map((x) => x * 10)
+  .limit(2);
+console.log(log.length); // → 0
+
+console.log(pipeline.toList()); // → [50, 30]
+console.log(log.join(', ')); // → read 5, read 3
+```
+
+## Short-circuiting and infinite streams
+
+`limit`, `takeWhile`, `findFirst`, `findAny`, `anyMatch`, `allMatch`, `noneMatch` and gatherers that stop can finish
+without reading every element, so they work on infinite sources:
+
+```ts
+import { Stream, IntStream } from '@ylcnfrht/collections';
+
+console.log(IntStream.iterate(1, (i) => i + 1).map((i) => i * i).filter((sq) => sq > 1000).findFirst().getAsInt()); // → 1024
+
+const isPrime = (n: number) => n > 1 && IntStream.rangeClosed(2, Math.floor(Math.sqrt(n))).noneMatch((d) => n % d === 0);
+console.log(Stream.iterate(2, (n) => n + 1).filter(isPrime).limit(6).toList()); // → [2, 3, 5, 7, 11, 13]
+```
+
+A terminal that does not short-circuit (`count`, `toList`, `forEach`, `collect`, …) never returns on an infinite
+stream. Neither does `sorted()` before `limit`: put the `limit` first. `distinct()` before `limit` works as long as
+the source keeps producing new values.
+
+## Stateless and stateful operations
+
+| Kind | Operations | Memory |
+|---|---|---|
+| Stateless | `filter`, `map`, `mapToX`, `flatMap`, `mapMulti`, `peek` | none |
+| Stateful, streaming | `limit`, `skip`, `takeWhile`, `dropWhile`, `distinct` | a counter, flag or seen-set; elements still flow one at a time |
+| Barrier | `sorted` | buffers all elements; nothing passes until the upstream is exhausted |
+
+A short-circuit after `sorted()` stops the downstream early, but the upstream has already been read in full:
+
+```ts
+import { Stream } from '@ylcnfrht/collections';
+
+const log: string[] = [];
+const first = Stream.of(3, 1, 2)
+  .peek((x) => log.push(`a${x}`))
+  .sorted()
+  .peek((x) => log.push(`b${x}`))
+  .findFirst();
+
+console.log(first); // → Optional[1]
+console.log(log.join(' ')); // → a3 a1 a2 b1
+```
+
+## Single use
+
+Once any operation (intermediate or terminal) has been called on a stream object, a further operation on that
+object throws `IllegalStateException`. Only `close()`, `isParallel()`, `parallel()` and `sequential()` are exempt.
+To traverse twice, create a new stream each time:
+
+```ts
+import { Stream, List } from '@ylcnfrht/collections';
+
+const s = Stream.of(1, 2, 3);
+s.map((x) => x * 2); // `s` is now linked to the new stage
+try {
+  s.count();
+} catch (e) {
+  console.log((e as Error).name, (e as Error).message); // → IllegalStateException stream has already been operated upon or closed
+}
+
+const nums = List.of(1, 2, 3);
+const evens = () => nums.stream().filter((x) => x % 2 === 0);
+console.log(evens().count(), evens().toList()); // → 1 [2]
+```
+
+## Order and parallel
+
+A stream has an encounter order when its source does (lists, arrays, `LinkedHashSet`, `TreeSet`, ranges,
+`iterate`); hash-based sources (`HashSet`, `HashMap` views) have none. Operations keep the order of an ordered
+stream. `unordered()` drops the ordering constraint so an operation may choose a cheaper strategy; results still
+come out in source order today, but do not rely on it.
+
+`parallel()`, `sequential()` and `parallelStream()` only set the flag that `isParallel()` reports. Evaluation is
+always sequential on one thread. Code written for parallel streams (associative reducers, combiners, `findAny`)
+works unchanged and gives the same results.
+
+```ts
+import { List } from '@ylcnfrht/collections';
+
+const s = List.of(4, 5, 6).parallelStream();
+console.log(s.isParallel()); // → true
+console.log(s.findAny()); // → Optional[4]
+```
+
+## Closing
+
+In-memory streams need no cleanup. When a stream owns a resource, register cleanup with `onClose(handler)`.
+`close()` runs the handlers once, in registration order; if one throws, the rest still run and the first error is
+rethrown with later ones added as suppressed. Streams implement `Symbol.dispose`, so `using` closes them.
+`Stream.concat` closes both inputs when closed, and `flatMap` closes each inner stream once consumed.
+
+<Aside type="caution">
+A terminal operation does not close the stream. Iterating it from JS does (see below); otherwise call `close()` or
+use `using`.
+</Aside>
+
+```ts
+import { Stream } from '@ylcnfrht/collections';
+
+const events: string[] = [];
+const open = () => Stream.of('line 1', 'line 2').onClose(() => events.push('closed'));
+
+{
+  using lines = open();
+  events.push(`counted ${lines.count()}`);
+} // `lines` is closed here
+console.log(events); // → [ 'counted 2', 'closed' ]
+
+const s = open();
+s.close();
+s.close(); // runs the handlers only once
+console.log(events.length); // → 3
+```
+
+## Iterating a stream from JS
+
+Streams are JS iterables. `for…of`, spread and destructuring are terminal operations, and they close the stream
+when iteration ends, whether by exhaustion, `break` or a throw (running `onClose` handlers and closing a
+`Stream.from` generator). `iterator()` returns the library's `Iterator` (`hasNext()`/`next()`), which closes
+nothing: after a stage throws, the source stays open, so close it yourself.
+
+```ts
+import { Stream } from '@ylcnfrht/collections';
+
+console.log([...Stream.of(1, 2, 3).map((x) => x * x)]); // → [ 1, 4, 9 ]
+const [first, second] = Stream.iterate(10, (x) => x + 1); // only two elements are produced
+console.log(first, second); // → 10 11
+
+const it = Stream.of('x', 'y').iterator();
+const out: string[] = [];
+while (it.hasNext()) out.push(it.next());
+console.log(out); // → [ 'x', 'y' ]
+```
+
+## Streams, array methods or iterator helpers
+
+| | Array methods | Iterator helpers | Streams |
+|---|---|---|---|
+| Evaluation | eager, one array per stage | lazy | lazy |
+| Short-circuit over infinite sources | no | yes (`take`, `find`, `some`) | yes |
+| Sorting, distinct, grouping | `sort` (in place), manual | none | `sorted`, `distinct`, collectors, gatherers |
+| Number aggregates | manual `reduce` | manual | `sum`, `average`, `summaryStatistics` |
+| Reusable result | yes | single use | single use |
+
+Use array methods for short transformations of small arrays, iterator helpers for simple lazy chains, and streams
+for this library's collections, grouping, statistics, sorting, windows, `Optional` results or large and infinite
+sources. Measurements are on the [benchmarks](/collections/benchmarks/) page.

@@ -1,0 +1,318 @@
+---
+title: Queues and deques
+description: The Queue and Deque interfaces, ArrayDeque, PriorityQueue, LinkedList as a queue, and Collections.asLifoQueue.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+import ClassInfo from '../../../components/ClassInfo.astro';
+
+A `Queue<E>` hands out elements from its head. A `Deque<E>` adds and removes at both ends, so it serves as a FIFO
+queue and as a LIFO stack. Concurrent and blocking queues are [not included](/collections/reference/compatibility/).
+
+| Need | Use |
+| --- | --- |
+| FIFO queue, stack, or both ends | `ArrayDeque`: O(1) at both ends, one array |
+| Always take the smallest or highest-priority item | `PriorityQueue`: O(log n) insert and remove |
+| A queue that is also a `List`, or holds `null` | [`LinkedList`](#linkedlist-as-a-queue) |
+| Pass a stack to code that expects a `Queue` | [`Collections.asLifoQueue(deque)`](#lifo-view-of-a-deque) |
+| Sorted iteration, not only sorted removal | [`TreeSet`](/collections/collections/sets/#treeset) / [`TreeMap`](/collections/collections/maps/#treemap) |
+
+## Queue and Deque methods
+
+Each operation comes in two forms: one throws when it cannot do its job, the other returns a special value. Use
+`poll`/`peek` where an empty queue is normal (a processing loop), `remove`/`element` where it is a bug. See
+[throwing and non-throwing pairs](/collections/concepts/null-and-errors/).
+
+| Operation | `Queue`, throws | `Queue`, special value | `Deque` head | `Deque` tail |
+| --- | --- | --- | --- | --- |
+| insert | `add(e)` | `offer(e)`: `false` if rejected | `addFirst` / `offerFirst` | `addLast` / `offerLast` |
+| remove | `remove()` | `poll()`: `null` if empty | `removeFirst` / `pollFirst` | `removeLast` / `pollLast` |
+| examine | `element()` | `peek()`: `null` if empty | `getFirst` / `peekFirst` | `getLast` / `peekLast` |
+
+The throwing forms raise `NoSuchElementException` on an empty queue. Through `Queue`, a deque is FIFO: `add`/`offer`
+work on the tail, `remove`/`poll`/`peek` on the head. `remove(o)` with an argument is the ordinary
+`Collection.remove`; `removeFirstOccurrence(o)` and `removeLastOccurrence(o)` scan from the head or the tail.
+
+<Aside type="caution">
+Because `poll()` and `peek()` use `null` to mean "empty", `ArrayDeque` and `PriorityQueue` reject `null` and
+`undefined` elements with `NullPointerException`. `LinkedList` accepts them, which makes `poll()` ambiguous.
+</Aside>
+
+### Using a deque as a stack
+
+`push(e)` is `addFirst(e)`, `pop()` is `removeFirst()` and `peek()` is `peekFirst()`. The head is the top of the
+stack, so iteration and `toString()` go top first. This is the recommended stack, rather than the legacy
+[`Stack`](/collections/collections/lists/#stack). Note that `push` and `add` work on opposite ends: mixing stack and queue methods on one
+deque reorders it.
+
+```ts
+import { ArrayDeque } from '@ylcnfrht/collections';
+
+const stack = new ArrayDeque<string>();
+stack.push('a');
+stack.push('b');
+stack.push('c');
+console.log(stack.toString());     // → [c, b, a]
+console.log(stack.pop());          // → c
+console.log(stack.peek());         // → b
+```
+
+## ArrayDeque
+
+<ClassInfo name="ArrayDeque" />
+
+A resizable circular array: every end operation is O(1) and there is no per-element allocation. The backing array is
+a power of two, 16 slots by default; it doubles when full and never shrinks (`clear()` keeps the capacity). There is
+no indexed access; use `ArrayList` for that.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { ArrayDeque } from '@ylcnfrht/collections';
+
+const queue = new ArrayDeque<string>();
+queue.offer('a');
+queue.offer('b');
+queue.offer('c');
+console.log(queue.peek());         // → a
+console.log(queue.poll());         // → a
+console.log([...queue]);           // → [ 'b', 'c' ]
+console.log(queue.pollLast());     // → c
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { ArrayDeque, HashMap, HashSet, ArrayList, List } from '@ylcnfrht/collections';
+
+// breadth-first search: the deque holds the frontier, poll() returning null ends the loop
+const graph = HashMap.of<string, List<string>>(
+  ['a', ArrayList.of('b', 'c')],
+  ['b', ArrayList.of('d')],
+  ['c', ArrayList.of('d', 'e')],
+);
+
+function bfs(start: string): string[] {
+  const order: string[] = [];
+  const seen = HashSet.of(start);
+  const frontier = ArrayDeque.of(start);
+  let node: string | null;
+  while ((node = frontier.poll()) !== null) {
+    order.push(node);
+    for (const next of graph.getOrDefault(node, List.of())) {
+      if (seen.add(next)) frontier.offer(next);   // add() is false if already seen
+    }
+  }
+  return order;
+}
+
+console.log(bfs('a'));             // → [ 'a', 'b', 'c', 'd', 'e' ]
+```
+
+</TabItem>
+</Tabs>
+
+Replace `offer`/`poll` with `push`/`pop`, or wrap the deque in `Collections.asLifoQueue`, and the same loop is a
+depth-first search.
+
+## PriorityQueue
+
+<ClassInfo name="PriorityQueue" />
+
+An unbounded binary min-heap: the head is always the least element, by natural ordering or by a comparator. `offer`
+and `poll` are O(log n), `peek` is O(1).
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { PriorityQueue } from '@ylcnfrht/collections';
+
+const pq = new PriorityQueue<number>();
+pq.offer(5);
+pq.offer(1);
+pq.offer(3);
+console.log(pq.peek());            // → 1
+console.log(pq.poll(), pq.poll(), pq.poll()); // → 1 3 5
+console.log(pq.poll());            // → null
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { PriorityQueue, Comparator } from '@ylcnfrht/collections';
+
+// due time, then priority, then submission order: the heap is not stable,
+// so the sequence number makes ties deterministic
+interface Task { name: string; due: number; priority: number; seq: number }
+
+const schedule = new PriorityQueue<Task>(
+  Comparator.thenComparing(
+    Comparator.comparing((t: Task) => t.due),
+    Comparator.comparing((t: Task) => t.priority),
+    Comparator.comparing((t: Task) => t.seq),
+  ),
+);
+
+let seq = 0;
+const submit = (name: string, due: number, priority: number) =>
+  schedule.offer({ name, due, priority, seq: seq++ });
+
+submit('backup', 30, 2);
+submit('email', 10, 1);
+submit('report', 10, 0);
+submit('cleanup', 10, 1);
+
+const ran: string[] = [];
+let t: Task | null;
+while ((t = schedule.poll()) !== null) ran.push(t.name);
+console.log(ran); // → [ 'report', 'email', 'cleanup', 'backup' ]
+```
+
+</TabItem>
+</Tabs>
+
+### Priority ordering
+
+Without a comparator, natural ordering applies (see [ordering](/collections/concepts/ordering/)); adding an object with no
+natural ordering throws `ClassCastException`. Pass `Comparator.reverseOrder()` for a max-heap, or a key comparator
+for objects. `comparator()` returns the comparator, or `null` for natural ordering. Ties come out in arbitrary order.
+
+<Aside type="caution">
+A `PriorityQueue` does not iterate in priority order. Iteration, `toString()`, `toArray()` and streams walk the heap
+array, which only guarantees that the first element is the minimum. To get sorted output, `poll()` the elements out,
+or copy and sort (`const l = new ArrayList(pq); l.sort(null)`).
+</Aside>
+
+```ts
+import { PriorityQueue, Comparator } from '@ylcnfrht/collections';
+
+const pq = PriorityQueue.of(5, 1, 4, 2, 3);
+// with new:
+// const pq = new PriorityQueue<number>();
+// for (const n of [5, 1, 4, 2, 3]) pq.add(n);
+console.log(pq.toString());        // → [1, 2, 4, 5, 3]
+
+// k largest: a min-heap of size k evicts the smallest, O(n log k)
+const top3 = new PriorityQueue<number>();
+for (const v of [5, 1, 9, 3, 7, 8, 2]) {
+  top3.offer(v);
+  if (top3.size() > 3) top3.poll();
+}
+console.log(top3.peek());          // → 7
+
+const max = new PriorityQueue<number>(Comparator.reverseOrder<number>());
+[3, 9, 1].forEach((n) => max.offer(n));
+console.log(max.poll());           // → 9
+
+try {
+  new PriorityQueue<object>().add({});
+} catch (e) {
+  console.log((e as Error).name);  // → ClassCastException
+}
+```
+
+## LinkedList as a queue
+
+[`LinkedList`](/collections/collections/lists/#linkedlist) implements `Deque` with O(1) end operations. Choose it over `ArrayDeque` only
+when you also need the `List` API on the same object, or must store `null` (then check `isEmpty()` rather than
+trusting `poll()`).
+
+```ts
+import { LinkedList } from '@ylcnfrht/collections';
+
+const jobs = LinkedList.of('resize-1', 'resize-2', 'upload-1');
+// cancel a pending job by value
+console.log(jobs.remove('resize-2')); // → true
+console.log(jobs.poll());             // → resize-1
+
+const withNull = new LinkedList<string | null>();
+withNull.add(null);
+console.log(withNull.poll(), withNull.isEmpty()); // → null true
+```
+
+## LIFO view of a deque
+
+`Collections.asLifoQueue(deque)` returns a live `Queue` view whose `add` and `offer` push onto the front, so code that
+takes a `Queue` processes items last-in-first-out. Its `equals` and `hashCode` use identity.
+
+```ts
+import { ArrayDeque, Collections } from '@ylcnfrht/collections';
+
+const backing = new ArrayDeque<number>();
+const lifo = Collections.asLifoQueue(backing);
+lifo.add(1);
+lifo.add(2);
+lifo.add(3);
+console.log(lifo.poll());          // → 3
+console.log(backing.toString());   // → [2, 1]
+```
+
+## Creating a queue
+
+| Form | Result |
+| --- | --- |
+| `new ArrayDeque<E>()` | empty deque with 16 slots |
+| `new ArrayDeque<E>(n)` | empty deque sized for `n` elements (a hint, rounded up to a power of two) |
+| `new ArrayDeque<E>(collection)`, `ArrayDeque.of(a, b, c)` | deque of the elements, head first |
+| `new PriorityQueue<E>(comparator?)` | empty queue; no comparator or `null` means natural ordering |
+| `new PriorityQueue<E>(initialCapacity, comparator?)` | the same, with a capacity hint |
+| `new PriorityQueue<E>(collection)`, `PriorityQueue.of(a, b, c)` | heap built bottom-up in O(n); a `PriorityQueue` or sorted-set source passes on its comparator |
+| `deque.clone()` | independent shallow copy of an `ArrayDeque` |
+
+```ts
+import { ArrayDeque, PriorityQueue, TreeSet, Comparator } from '@ylcnfrht/collections';
+
+const c = ArrayDeque.of(1, 2, 3);
+// with new:
+// const c = new ArrayDeque<number>();
+// c.add(1);
+// c.add(2);
+// c.add(3);
+const e = c.clone();
+e.addLast(4);
+console.log(c.toString(), e.toString());       // → [1, 2, 3] [1, 2, 3, 4]
+
+const desc = new TreeSet<number>(Comparator.reverseOrder<number>());
+desc.add(1);
+desc.add(3);
+console.log(new PriorityQueue(desc).poll());   // → 3
+```
+
+## Views and iteration
+
+A deque iterates head to tail. `descendingIterator()` walks tail to head, and `reversed()` returns a
+[live](/collections/concepts/iteration-and-views/) reverse-ordered `Deque` whose writes go through. Iterators of all three
+classes are fail-fast.
+
+```ts
+import { ArrayDeque } from '@ylcnfrht/collections';
+
+const d = ArrayDeque.of(1, 2, 3);
+console.log(d.descendingIterator().next()); // → 3
+const rev = d.reversed();
+rev.addFirst(4);                   // = d.addLast(4)
+console.log(d.toString());         // → [1, 2, 3, 4]
+console.log(rev.peek());           // → 4
+```
+
+## Complexity
+
+For `LinkedList`, see [list complexity](/collections/collections/lists/#complexity).
+
+| Operation | `ArrayDeque` | `PriorityQueue` |
+| --- | --- | --- |
+| insert (`offer`, `add`, `push`, `addFirst`, `addLast`) | O(1) amortized | O(log n) |
+| remove head (`poll`, `remove()`, `pop`) | O(1) | O(log n) |
+| remove tail (`pollLast`, `removeLast`) | O(1) | — |
+| `peek`, `element`, `size`, `isEmpty` | O(1) | O(1) |
+| `contains`, `remove(o)` | O(n) | O(n) |
+| `removeIf`, `removeAll`, `retainAll` | O(n) | O(n), then re-heapify |
+| build from a collection | O(n) | O(n) |
+| `reversed()`, `descendingIterator()` | O(1) | — |
+| drain in order with `poll` | O(n) | O(n log n) |

@@ -1,0 +1,97 @@
+---
+title: Installation
+description: Install @ylcnfrht/collections, import it from ESM or CommonJS, avoid clashes with built-in Map and Set, and check runtime support.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+The package has no runtime dependencies and ships its own type definitions.
+
+<Tabs syncKey="pm">
+<TabItem label="npm">
+
+```sh
+npm install @ylcnfrht/collections
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```sh
+pnpm add @ylcnfrht/collections
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```sh
+yarn add @ylcnfrht/collections
+```
+
+</TabItem>
+<TabItem label="bun">
+
+```sh
+bun add @ylcnfrht/collections
+```
+
+</TabItem>
+</Tabs>
+
+## Importing
+
+The package ships ES module and CommonJS builds; the `exports` map picks the right one and its type definitions.
+Everything is a named export of the package root. There are no deep imports.
+
+```ts
+import { ArrayList } from '@ylcnfrht/collections';
+
+const names = new ArrayList<string>();
+names.add('Ada');
+console.log(names.toString()); // → [Ada]
+```
+
+```js
+const { ArrayList } = require('@ylcnfrht/collections');
+```
+
+## Name clashes with built-ins
+
+The package exports interfaces and factories named `List`, `Set`, `Map` and `Iterator`. Importing `Set` or `Map`
+shadows the JS built-in in that module, and the library's `Set` and `Map` are not constructible. Alias them on import,
+or reach the built-ins through `globalThis`.
+
+```ts
+import { Map as CMap, HashMap } from '@ylcnfrht/collections';
+
+const ours: CMap<string, number> = new HashMap<string, number>();
+const native = new globalThis.Map<string, number>();
+console.log(ours.size(), native.size); // → 0 0
+```
+
+## Browsers and bundlers
+
+- The library is plain ES2020 with no Node-specific APIs. It runs in modern browsers, Deno, Bun, workers and edge
+  runtimes.
+- Bundlers select the ESM build through the `exports` map. The package is a single module, so unused classes are
+  tree-shaken only as far as the bundler can prove them unused. Importing the package registers the stream engine
+  with the collections, which is why `list.stream()` works without importing `Stream`.
+- `using s = list.stream()` works only where the runtime defines `Symbol.dispose`.
+- A bundler or minifier may rename classes (`HashMap2`). Printing and equality are unaffected; only
+  `constructor.name` and class names quoted in some error messages change. Exception `name`s stay the same.
+
+<Aside type="caution">
+Load one copy of the library. If an application loads two (for example the CommonJS build through `require` and the
+ESM build through `import`), collections from both still compare equal and interoperate, but `instanceof` across
+copies is `false`. Check exceptions by `e.name`.
+</Aside>
+
+## Supported runtimes
+
+| Runtime | Support |
+|---|---|
+| Node.js | 18 and newer |
+| Browsers | Evergreen browsers (ES2020) |
+| TypeScript | 5.x recommended |

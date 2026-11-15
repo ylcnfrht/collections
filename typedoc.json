@@ -3,12 +3,6 @@
   "entryPoints": [
     "src/index.ts"
   ],
-  "plugin": [
-    "typedoc-plugin-markdown",
-    "typedoc-vitepress-theme"
-  ],
-  "out": "docs/api",
-  "docsRoot": "docs",
   "name": "@ylcnfrht/collections",
   "readme": "none",
   "gitRevision": "main",
@@ -19,11 +13,6 @@
     "kind",
     "alphabetical"
   ],
-  "hidePageHeader": true,
-  "hideBreadcrumbs": true,
-  "useCodeBlocks": true,
-  "parametersFormat": "table",
-  "typeDeclarationFormat": "table",
   "intentionallyNotExported": [
     "src/interfaces/List.ts:List",
     "src/interfaces/Map.ts:Map",

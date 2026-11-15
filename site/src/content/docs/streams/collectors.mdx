@@ -1,0 +1,337 @@
+---
+title: Collectors
+description: Every Collectors method - to collections and maps, joining, numbers, groupingBy, partitioningBy, adapters, teeing - and custom collectors.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+A collector is a mutable reduction passed to `stream.collect(collector)`. Most `Collectors` methods accept a
+downstream collector, so they compose into one-pass aggregations. The examples print hash-based results through
+`get` or collect into a `TreeMap`, so the output order is deterministic.
+
+## To collections
+
+| Collector | Result | `null` elements |
+|---|---|---|
+| `toList()` | modifiable `ArrayList` | allowed |
+| `toSet()` | modifiable `HashSet` | allowed |
+| `toCollection(factory)` | whatever `factory()` returns | as that collection |
+| `toUnmodifiableList()` | unmodifiable list | `NullPointerException` |
+| `toUnmodifiableSet()` | unmodifiable set, duplicates dropped | `NullPointerException` |
+
+`stream.toList()` is a stream method, not a collector: it returns an unmodifiable list that allows `null`.
+
+```ts
+import { Stream, Collectors, TreeSet, Comparator } from '@ylcnfrht/collections';
+
+const list = Stream.of('b', 'a', 'b').collect(Collectors.toList());
+list.add('c');
+console.log(list); // → [b, a, b, c]
+
+const desc = Stream.of('b', 'c', 'a').collect(Collectors.toCollection(() => new TreeSet<string>(Comparator.reverseOrder())));
+console.log(desc); // → [c, b, a]
+
+try {
+  Stream.of('x', null).collect(Collectors.toUnmodifiableList());
+} catch (e) {
+  console.log((e as Error).name); // → NullPointerException
+}
+```
+
+## toMap
+
+| Form | Duplicate keys | Map |
+|---|---|---|
+| `toMap(k, v)` | `IllegalStateException` | `HashMap` |
+| `toMap(k, v, merge)` | `merge(old, new)` | `HashMap` |
+| `toMap(k, v, merge, factory)` | `merge(old, new)` | `factory()`, for example a `TreeMap` or `LinkedHashMap` |
+| `toUnmodifiableMap(k, v)`, `(k, v, merge)` | as above | unmodifiable, no `null` keys or values |
+| `toConcurrentMap(…)` | as `toMap`, same three forms | a map |
+
+A duplicate key without a merge function throws `IllegalStateException`
+(`Duplicate key K (attempted merging values V1 and V2)`). A `null` value throws `NullPointerException`.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { Stream, Collectors } from '@ylcnfrht/collections';
+
+const lengths = Stream.of('map', 'filter', 'reduce').collect(Collectors.toMap((w: string) => w, (w: string) => w.length));
+console.log(lengths.get('filter')); // → 6
+
+try {
+  Stream.of('ann', 'amy').collect(Collectors.toMap((w: string) => w[0], (w: string) => w));
+} catch (e) {
+  console.log((e as Error).message); // → Duplicate key a (attempted merging values ann and amy)
+}
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { Stream, Collectors, TreeMap } from '@ylcnfrht/collections';
+
+type Line = { sku: string; qty: number };
+const cart: Line[] = [
+  { sku: 'B-200', qty: 1 },
+  { sku: 'A-100', qty: 2 },
+  { sku: 'B-200', qty: 3 },
+  { sku: 'C-300', qty: 1 },
+];
+
+// merge duplicate SKUs by adding quantities; TreeMap sorts by SKU
+const quantities = Stream.ofArray(cart).collect(
+  Collectors.toMap(
+    (l: Line) => l.sku,
+    (l: Line) => l.qty,
+    (a: number, b: number) => a + b,
+    () => new TreeMap<string, number>(),
+  ),
+);
+
+console.log(quantities); // → {A-100=2, B-200=4, C-300=1}
+```
+
+</TabItem>
+</Tabs>
+
+## joining
+
+Concatenates `string` elements (`null` is written as `"null"`), with optional delimiter, prefix and suffix. An empty
+stream gives `prefix + suffix`.
+
+```ts
+import { Stream, Collectors } from '@ylcnfrht/collections';
+
+console.log(Stream.of('a', 'b', 'c').collect(Collectors.joining())); // → abc
+console.log(Stream.of('a', 'b').collect(Collectors.joining(', ', '[', ']'))); // → [a, b]
+console.log(Stream.empty<string>().collect(Collectors.joining(', ', '[', ']'))); // → []
+console.log(Stream.of(1, 2, 3).map(String).collect(Collectors.joining('-'))); // → 1-2-3
+```
+
+## Numbers and reductions
+
+| Collector | Result | Empty stream |
+|---|---|---|
+| `counting()` | `number` | `0` |
+| `summingInt/Long/Double(f)` | `number`; the double variant is [compensated](/collections/streams/number-streams/#compensated-double-sums) | `0` |
+| `averagingInt/Long/Double(f)` | `number` | `0` |
+| `summarizingInt/Long/Double(f)` | [summary statistics](/collections/streams/number-streams/#aggregates) | count 0 |
+| `minBy(cmp)`, `maxBy(cmp)` | `Optional<T>` | empty |
+| `reducing(op)` | `Optional<T>` | empty |
+| `reducing(identity, op)` | `T` | `identity` |
+| `reducing(identity, mapper, op)` | `U`, maps each element first | `identity` |
+
+They are most useful as downstreams of `groupingBy`.
+
+```ts
+import { Stream, Collectors, Comparator } from '@ylcnfrht/collections';
+
+type Emp = { name: string; salary: number };
+const staff: Emp[] = [
+  { name: 'Ann', salary: 120 },
+  { name: 'Bob', salary: 100 },
+  { name: 'Cid', salary: 90 },
+  { name: 'Dee', salary: 80 },
+];
+const s = () => Stream.ofArray(staff);
+
+console.log(s().collect(Collectors.averagingInt((e: Emp) => e.salary))); // → 97.5
+console.log(Stream.empty<Emp>().collect(Collectors.averagingDouble((e: Emp) => e.salary))); // → 0
+console.log(s().collect(Collectors.summarizingInt((e: Emp) => e.salary)).toString()); // → IntSummaryStatistics{count=4, sum=390, min=80, average=97.500000, max=120}
+console.log(s().collect(Collectors.minBy(Comparator.comparing((e: Emp) => e.salary))).map((e) => e.name)); // → Optional[Dee]
+console.log(s().collect(Collectors.reducing(0, (e: Emp) => e.salary, (a: number, b: number) => a + b))); // → 390
+```
+
+## groupingBy
+
+`groupingBy` puts each element in a bucket chosen by a classifier, then reduces each bucket with a downstream
+collector. Buckets keep the encounter order of their elements. A classifier returning `null` throws
+`NullPointerException` ("element cannot be mapped to a null key").
+
+| Form | Map | Downstream |
+|---|---|---|
+| `groupingBy(classifier)` | `HashMap` | `toList()` |
+| `groupingBy(classifier, downstream)` | `HashMap` | given |
+| `groupingBy(classifier, mapFactory, downstream)` | `mapFactory()` | given |
+| `groupingByConcurrent(…)` | the same three forms | |
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { Stream, Collectors, TreeMap, List } from '@ylcnfrht/collections';
+
+// words grouped by their first letter, keys sorted
+const byLetter = Stream.of('apple', 'avocado', 'banana', 'cherry', 'blueberry')
+  .collect(Collectors.groupingBy((w: string) => w[0], () => new TreeMap<string, List<string>>(), Collectors.toList()));
+
+console.log(byLetter); // → {a=[apple, avocado], b=[banana, blueberry], c=[cherry]}
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { Stream, Collectors, TreeMap, Comparator } from '@ylcnfrht/collections';
+
+type Emp = { name: string; dept: string; salary: number };
+const staff: Emp[] = [
+  { name: 'Ann', dept: 'eng', salary: 120 },
+  { name: 'Bob', dept: 'eng', salary: 100 },
+  { name: 'Cid', dept: 'ops', salary: 90 },
+  { name: 'Dee', dept: 'sales', salary: 80 },
+];
+const s = () => Stream.ofArray(staff);
+const dept = (e: Emp) => e.dept;
+
+const headcount = s().collect(Collectors.groupingBy(dept, Collectors.counting()));
+console.log(headcount.get('eng'), headcount.get('ops')); // → 2 1
+
+// best-paid name per department
+const top = s().collect(Collectors.groupingBy(dept, () => new TreeMap<string, string>(),
+  Collectors.collectingAndThen(Collectors.maxBy(Comparator.comparing((e: Emp) => e.salary)), (o) => o.get().name)));
+console.log(top); // → {eng=Ann, ops=Cid, sales=Dee}
+
+// nested: department, then high/low earners
+const nested = s().collect(Collectors.groupingBy(dept, () => new TreeMap<string, TreeMap<boolean, number>>(),
+  Collectors.groupingBy((e: Emp) => e.salary >= 100, () => new TreeMap<boolean, number>(), Collectors.counting())));
+console.log(nested); // → {eng={true=2}, ops={false=1}, sales={false=1}}
+```
+
+</TabItem>
+</Tabs>
+
+## partitioningBy
+
+`partitioningBy(predicate, downstream?)` is `groupingBy` with exactly two keys, `false` and `true`. Both are always
+present, even when empty, and `false` prints first.
+
+```ts
+import { Stream, Collectors } from '@ylcnfrht/collections';
+
+console.log(Stream.of(1, 2, 3, 4, 5).collect(Collectors.partitioningBy((x: number) => x % 2 === 0))); // → {false=[1, 3, 5], true=[2, 4]}
+console.log(Stream.empty<number>().collect(Collectors.partitioningBy((x: number) => x > 0))); // → {false=[], true=[]}
+console.log(Stream.of('kiwi', 'fig', 'banana').collect(Collectors.partitioningBy((s: string) => s.length > 3, Collectors.counting()))); // → {false=1, true=2}
+```
+
+## Adapters and teeing
+
+| Adapter | Does |
+|---|---|
+| `mapping(f, downstream)` | passes `f(e)` to the downstream |
+| `filtering(p, downstream)` | passes only elements matching `p`; unlike a `filter` before `groupingBy`, empty groups are kept |
+| `flatMapping(f, downstream)` | passes every element of the stream `f(e)` returns (`null` = none); each inner stream is closed |
+| `collectingAndThen(downstream, finisher)` | applies `finisher` to the downstream's result |
+| `teeing(c1, c2, merger)` | sends every element to both collectors, then `merger(r1, r2)` |
+
+```ts
+import { Stream, Collectors, TreeMap, TreeSet } from '@ylcnfrht/collections';
+
+type Emp = { name: string; dept: string; salary: number; skills: string[] };
+const staff: Emp[] = [
+  { name: 'Ann', dept: 'eng', salary: 120, skills: ['ts', 'go'] },
+  { name: 'Bob', dept: 'eng', salary: 100, skills: ['ts'] },
+  { name: 'Cid', dept: 'ops', salary: 90, skills: ['bash'] },
+];
+const s = () => Stream.ofArray(staff);
+const dept = (e: Emp) => e.dept;
+
+console.log(s().collect(Collectors.mapping((e: Emp) => e.name, Collectors.joining('|')))); // → Ann|Bob|Cid
+
+const wellPaid = s().collect(Collectors.groupingBy(dept, () => new TreeMap<string, number>(),
+  Collectors.filtering((e: Emp) => e.salary > 95, Collectors.counting())));
+console.log(wellPaid); // → {eng=2, ops=0}
+
+const skills = s().collect(Collectors.groupingBy(dept, () => new TreeMap<string, TreeSet<string>>(),
+  Collectors.flatMapping((e: Emp) => Stream.ofArray(e.skills), Collectors.toCollection(() => new TreeSet<string>()))));
+console.log(skills); // → {eng=[go, ts], ops=[bash]}
+
+const mean = s().collect(Collectors.teeing(
+  Collectors.summingInt((e: Emp) => e.salary),
+  Collectors.counting(),
+  (sum: number, n: number) => sum / n,
+));
+console.log(mean); // → 103.33333333333333
+```
+
+## Custom collectors
+
+`Collector.of` builds a collector from functions; the `Collector` interface returns each through a method of the
+same name (`supplier()`, `accumulator()`, …).
+
+| Function | Signature | Role |
+|---|---|---|
+| supplier | `() => A` | creates a container |
+| accumulator | `(container, e) => void` | adds an element |
+| combiner | `(left, right) => A` | merges two containers; never called (sequential), but must be correct |
+| finisher | `(container) => R` | turns the container into the result |
+
+Characteristics: `IDENTITY_FINISH` (the container is the result), `UNORDERED` (the result does not depend on order),
+`CONCURRENT` (no effect in JS), as `Collector.Characteristics.X` or string literals.
+`Collector.of(supplier, accumulator, combiner, ...characteristics)` has no finisher and always reports
+`IDENTITY_FINISH`; `Collector.of(supplier, accumulator, combiner, finisher, ...characteristics)` reports exactly
+the ones given.
+
+```ts
+import { Stream, Collector } from '@ylcnfrht/collections';
+
+const median = Collector.of(
+  () => [] as number[],
+  (a: number[], x: number) => {
+    a.push(x);
+  },
+  (a: number[], b: number[]) => a.concat(b),
+  (a: number[]) => {
+    const s = [...a].sort((x, y) => x - y);
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  },
+  Collector.Characteristics.UNORDERED,
+);
+console.log(Stream.of(5, 1, 4, 2).collect(median)); // → 3
+console.log(median.characteristics()); // → [UNORDERED]
+```
+
+## Recipes
+
+```ts
+import { Stream, Collectors, TreeMap, LinkedHashMap, Comparator, MapEntry, List } from '@ylcnfrht/collections';
+
+// frequency map, most frequent first
+const words = 'the cat and the hat and the bat'.split(' ');
+const freq = Stream.ofArray(words).collect(Collectors.groupingBy((w: string) => w, () => new TreeMap<string, number>(), Collectors.counting()));
+const ranked = freq.entrySet().stream()
+  .sorted(Comparator.comparing((e: MapEntry<string, number>) => e.getValue(), Comparator.reverseOrder()))
+  .limit(2)
+  .map((e) => `${e.getKey()}:${e.getValue()}`)
+  .toList();
+console.log(ranked); // → [the:3, and:2]
+
+// top 2 per group
+type Sale = { region: string; amount: number };
+const sales: Sale[] = [
+  { region: 'north', amount: 5 }, { region: 'north', amount: 9 }, { region: 'north', amount: 7 },
+  { region: 'south', amount: 3 }, { region: 'south', amount: 8 },
+];
+const top2 = Stream.ofArray(sales).collect(Collectors.groupingBy(
+  (s: Sale) => s.region,
+  () => new TreeMap<string, List<number>>(),
+  Collectors.collectingAndThen(Collectors.toList(), (l: List<Sale>) =>
+    l.stream().map((s) => s.amount).sorted(Comparator.reverseOrder()).limit(2).toList()),
+));
+console.log(top2); // → {north=[9, 7], south=[8, 3]}
+
+// index by id: the last duplicate wins, keys keep encounter order
+type User = { id: number; name: string };
+const users: User[] = [{ id: 2, name: 'old' }, { id: 1, name: 'one' }, { id: 2, name: 'two' }];
+const byId = Stream.ofArray(users).collect(Collectors.toMap(
+  (u: User) => u.id, (u: User) => u, (_old: User, latest: User) => latest, () => new LinkedHashMap<number, User>()));
+console.log(byId.keySet(), byId.get(2)!.name); // → [2, 1] two
+```
+
+The map types are described in [maps](/collections/collections/maps/).

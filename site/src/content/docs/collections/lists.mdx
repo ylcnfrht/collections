@@ -1,0 +1,496 @@
+---
+title: Lists
+description: ArrayList, LinkedList, Vector and Stack, the List API they share, sub-list and reversed views, and ListIterator.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+import ClassInfo from '../../../components/ClassInfo.astro';
+
+A `List<E>` is an ordered collection with positional access: indexes run from `0` to `size() - 1` and duplicates are
+allowed. Two lists are equal when they hold equal elements in the same order, whatever their class. Every list is a
+`SequencedCollection` and a JS `Iterable`, so it works with `for...of`, spread and `Array.from`.
+
+| Class | Storage | Use it for |
+| --- | --- | --- |
+| `ArrayList` | one dense array | the default list: indexed access, appending, sorting |
+| `LinkedList` | doubly linked nodes | inserts and removes at a cursor or at both ends, plus the `Deque` API |
+| `Vector` | `ArrayList` subclass | porting code that uses `elementAt`, `capacity()` or `Enumeration` |
+| `Stack` | `Vector` subclass | porting code that uses `Stack`; new code uses `ArrayDeque` |
+
+For a queue or stack without the list API, use [`ArrayDeque`](/collections/collections/queues-and-deques/#arraydeque). For fixed contents,
+use `List.of(...)` ([immutable collections](/collections/collections/immutable-and-wrappers/)). Concurrent lists such as
+`CopyOnWriteArrayList` are [not included](/collections/reference/compatibility/).
+
+## ArrayList
+
+<ClassInfo name="ArrayList" />
+
+Indexed reads and writes are O(1) and appending is amortized O(1). Inserting or removing at index `i` shifts every
+later element, so front and middle operations are O(n). `ArrayList` carries the `RandomAccess` marker
+(`isRandomAccess(list)` is `true`), which algorithms such as `Collections.binarySearch` use to pick an index-based
+strategy.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { ArrayList } from '@ylcnfrht/collections';
+
+const list = new ArrayList<string>();
+list.add('a');
+list.add('b');
+list.add('c');
+console.log(list.get(1));          // → b
+console.log(list.removeAt(0));     // → a
+console.log([...list]);            // → [ 'b', 'c' ]
+console.log(list.size(), list.toString()); // → 2 [b, c]
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { ArrayList, Comparator } from '@ylcnfrht/collections';
+
+interface Product { name: string; price: number }
+
+const products = ArrayList.of<Product>(
+  { name: 'pen', price: 2 },
+  { name: 'stapler', price: 12 },
+  { name: 'clip', price: 2 },
+  { name: 'tape', price: 3 },
+);
+
+// cheapest first, ties broken by name
+products.sort(Comparator.thenComparingBy(Comparator.comparing((p: Product) => p.price), (p) => p.name));
+
+// pages of two, read through subList views without copying
+const page = (n: number): string[] =>
+  products.subList(n * 2, Math.min(n * 2 + 2, products.size())).toArray().map((p) => p.name);
+console.log(page(0));   // → [ 'clip', 'pen' ]
+console.log(page(1));   // → [ 'tape', 'stapler' ]
+```
+
+</TabItem>
+</Tabs>
+
+## LinkedList
+
+<ClassInfo name="LinkedList" />
+
+A doubly linked list that implements both `List` and `Deque`, so one object serves as a list, a FIFO queue and a
+stack. Adding or removing at either end is O(1); reaching index `i` walks from the nearer end. Pick it when you insert
+or remove at a position you are already at (through a [`ListIterator`](#listiterator)) or need to store `null` in a
+queue. For a pure queue or stack, `ArrayDeque` is faster; for indexed access, `ArrayList` is.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { LinkedList } from '@ylcnfrht/collections';
+
+const list = new LinkedList<string>();
+list.add('b');
+list.add('c');
+list.addFirst('a');                 // O(1)
+list.addLast('d');                  // O(1)
+console.log(list.toString());       // → [a, b, c, d]
+console.log(list.get(2));           // → c
+console.log(list.removeFirst());    // → a
+console.log(list.size());           // → 3
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { LinkedList } from '@ylcnfrht/collections';
+
+// insert a marker after every error line, in place, in O(1) per insert
+const log = LinkedList.of('ok', 'error: disk', 'ok', 'error: net');
+const it = log.listIterator();
+while (it.hasNext()) {
+  if (it.next().startsWith('error')) it.add('retry scheduled');
+}
+console.log(log.size());            // → 6
+console.log(log.get(2));            // → retry scheduled
+```
+
+</TabItem>
+</Tabs>
+
+Queue usage is covered in [LinkedList as a queue](/collections/collections/queues-and-deques/#linkedlist-as-a-queue).
+
+## Vector
+
+<ClassInfo name="Vector" />
+
+The legacy growable array: an `ArrayList` with the old element-style methods, a simulated capacity, and
+`ArrayIndexOutOfBoundsException` (a subclass of `IndexOutOfBoundsException`) for bad indexes. JS is single-threaded,
+so `Vector` has no synchronization cost and no synchronization benefit. See [Vector and Stack](#vector-and-stack).
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { Vector } from '@ylcnfrht/collections';
+
+const v = new Vector<number>();
+v.add(10);
+v.add(20);
+v.add(30);
+console.log(v.get(1));                // → 20
+v.removeAt(0);
+console.log(v.size(), v.toString());  // → 2 [20, 30]
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { Collections, TreeSet, Vector, type Enumeration } from '@ylcnfrht/collections';
+
+// a ported function that reads an Enumeration and returns a Vector
+function upperAll(en: Enumeration<string>): Vector<string> {
+  const out = new Vector<string>();
+  while (en.hasMoreElements()) out.addElement(en.nextElement().toUpperCase());
+  return out;
+}
+
+const tags = Vector.of('red', 'green');
+console.log(upperAll(tags.elements()).toString());                       // → [RED, GREEN]
+// any Collection can supply an Enumeration
+console.log(upperAll(Collections.enumeration(TreeSet.of('b', 'a'))).toString()); // → [A, B]
+```
+
+</TabItem>
+</Tabs>
+
+## Stack
+
+<ClassInfo name="Stack" />
+
+A last-in-first-out stack built on `Vector`. The top is the end of the vector, so `push`, `pop` and `peek` are O(1).
+New code should use [`ArrayDeque`](/collections/collections/queues-and-deques/#using-a-deque-as-a-stack), whose `push`, `pop` and `peek`
+work the same way.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { Stack } from '@ylcnfrht/collections';
+
+const s = new Stack<string>();
+s.push('a');
+s.push('b');
+s.push('c');
+console.log(s.peek());              // → c
+console.log(s.pop());               // → c
+console.log(s.size(), s.empty());   // → 2 false
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { Stack } from '@ylcnfrht/collections';
+
+const openerOf: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+
+function balanced(text: string): boolean {
+  const open = new Stack<string>();
+  for (const ch of text) {
+    if ('([{'.includes(ch)) open.push(ch);
+    else if (ch in openerOf && (open.empty() || open.pop() !== openerOf[ch])) return false;
+  }
+  return open.empty();
+}
+
+console.log(balanced('{[()()]}'));  // → true
+console.log(balanced('([)]'));      // → false
+```
+
+</TabItem>
+</Tabs>
+
+## Creating a list
+
+| Form | Result |
+| --- | --- |
+| `new ArrayList<E>()` | empty list |
+| `new ArrayList<E>(initialCapacity)` | empty list; the capacity is only a hint, a negative one throws `IllegalArgumentException` |
+| `new ArrayList<E>(collection)` | copy of any `Collection`, in its iteration order |
+| `ArrayList.of(a, b, c)` | list of the arguments; spread a JS array with `ArrayList.of(...array)` |
+| `new LinkedList<E>()`, `new LinkedList<E>(collection)`, `LinkedList.of(…)` | the same for `LinkedList` |
+| `new Vector<E>(initialCapacity?, capacityIncrement?)`, `new Vector<E>(collection)`, `Vector.of(…)` | see [capacity](#capacity-setsize-and-elements) |
+| `new Stack<E>()`, `Stack.of(…)` | empty stack, or a stack of the arguments (last argument on top) |
+| `list.clone()` | shallow copy of the same class: the list is copied, the elements are shared |
+
+```ts
+import { ArrayList, HashSet } from '@ylcnfrht/collections';
+
+const fromValues = ArrayList.of(3, 1, 2);
+// with new:
+// const fromValues = new ArrayList<number>();
+// fromValues.add(3);
+// fromValues.add(1);
+// fromValues.add(2);
+const copy = new ArrayList(fromValues);             // copy of any Collection
+const fromSet = new ArrayList(new HashSet(ArrayList.of('x')));
+
+console.log(copy.toString(), fromSet.toString());   // → [3, 1, 2] [x]
+console.log(fromValues.equals(copy), fromValues === copy); // → true false
+console.log(ArrayList.of(...[3, 1, 2]).toArray());  // → [ 3, 1, 2 ]
+```
+
+`ensureCapacity(n)` and `trimToSize()` exist for API compatibility and do nothing useful: the engine manages the
+array's storage.
+
+## The List API
+
+Besides the full `Collection` API (`contains`, `addAll`, `removeIf`, `stream()`, …):
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `get(i)` / `set(i, e)` | `E` | element at `i` / replace it and return the old one |
+| `add(e)` / `add(i, e)` | `boolean` / `void` | append (always `true`) / insert before index `i` |
+| `addAll(c)` / `addAll(i, c)` | `boolean` | append or insert every element of `c`; `addAll(i, c)` shifts the tail once |
+| `removeAt(i)` | `E` | remove and return the element at `i` |
+| `remove(o)` | `boolean` | remove the first element equal to `o` |
+| `indexOf(o)` / `lastIndexOf(o)` | `number` | index of the first / last element equal to `o`, or `-1` (linear scan) |
+| `getFirst()` / `getLast()`, `removeFirst()` / `removeLast()` | `E` | the ends; throw `NoSuchElementException` when empty |
+| `addFirst(e)` / `addLast(e)` | `void` | add at an end (O(n) at the front of an `ArrayList`) |
+| `sort(comparator)` | `void` | stable, in place; `null` means [natural ordering](/collections/concepts/ordering/) |
+| `replaceAll(fn)` | `void` | replace every element with `fn(element)` |
+| `subList(from, to)` / `reversed()` | `List<E>` | live views, see [below](#views) |
+| `listIterator(index?)` | `ListIterator<E>` | bidirectional cursor, see [below](#listiterator) |
+
+An index outside the valid range throws `IndexOutOfBoundsException`, never returns `undefined`. For `add(i, e)` the
+range is `0..size()` (inserting at `size()` appends); for the others it is `0..size()-1`. Searching uses
+`equals()`, see [equality](/collections/concepts/equality/).
+
+`remove(int)` and `remove(Object)` are overloads in the JDK, but TypeScript cannot tell them apart on a
+`List<number>`, so the index form is named `removeAt`:
+
+```ts
+import { ArrayList, Comparator } from '@ylcnfrht/collections';
+
+const nums = ArrayList.of(10, 20, 30, 1);
+// the value 1
+console.log(nums.remove(1));       // → true
+// index 1
+console.log(nums.removeAt(1));     // → 20
+nums.add(1, 15);
+console.log(nums.toString());      // → [10, 15, 30]
+
+nums.sort(Comparator.reverseOrder<number>());
+console.log(nums.toString());      // → [30, 15, 10]
+nums.sort(null);                   // numeric, unlike Array.prototype.sort()
+console.log(nums.toString());      // → [10, 15, 30]
+
+try {
+  nums.get(3);
+} catch (e) {
+  console.log((e as Error).name);  // → IndexOutOfBoundsException
+}
+```
+
+`removeIf`, `removeAll` and `retainAll` on an `ArrayList` test every element first and then compact once, so they are
+O(n) and a predicate that throws removes nothing.
+
+## Views
+
+`subList(from, to)` and `reversed()` return [live views](/collections/concepts/iteration-and-views/) that read and write the
+list's storage, created in O(1). For a copy, wrap the view: `new ArrayList(list.subList(1, 3))`.
+
+`subList(from, to)` covers the half-open range `[from, to)`. Range operations are written as operations on it:
+`subList(a, b).clear()` removes a range, `subList(a, b).sort(null)` sorts one. A structural change made directly to
+the backing list invalidates the view: its next use throws `ConcurrentModificationException`.
+
+```ts
+import { ArrayList, LinkedList } from '@ylcnfrht/collections';
+
+const list = ArrayList.of(10, 20, 30, 40, 50);
+const window = list.subList(1, 4);
+window.set(0, 21);                // writes through
+window.clear();                   // removes the range from the list
+console.log(list.toString());     // → [10, 50]
+
+const rev = list.reversed();
+rev.addFirst(60);                 // front of the view = end of the list
+console.log(list.toString());     // → [10, 50, 60]
+
+// on a LinkedList, reversed() is itself a LinkedList with the full deque API
+const linked = LinkedList.of(1, 2, 3).reversed();
+console.log(linked instanceof LinkedList, linked.peekFirst()); // → true 3
+```
+
+## ListIterator
+
+Lists iterate in index order. `listIterator(index?)` returns a cursor that moves both ways and edits in place. The
+cursor sits between elements, at positions `0..size()`; `next()` returns the element after it, `previous()` the one
+before.
+
+| Method | Description |
+| --- | --- |
+| `hasNext()` / `hasPrevious()` | whether there is an element after / before the cursor |
+| `next()` / `previous()` | return the element crossed and move the cursor |
+| `nextIndex()` / `previousIndex()` | index of the element `next()` / `previous()` would return |
+| `remove()` / `set(e)` | remove / replace the element last returned by `next()` or `previous()` |
+| `add(e)` | insert at the cursor; the cursor moves past it |
+
+`remove()` and `set()` throw `IllegalStateException` when there is no last-returned element: before any
+`next()`/`previous()`, or right after `add()` or `remove()`. On a `LinkedList` the three edits are O(1).
+
+```ts
+import { ArrayList } from '@ylcnfrht/collections';
+
+const letters = ArrayList.of('a', 'c', 'd');
+const it = letters.listIterator();
+it.next();
+it.add('b');                       // inserts at the cursor
+console.log(letters.toString());   // → [a, b, c, d]
+console.log(it.next());            // → c
+it.set('C');                       // replaces what next() returned
+console.log(letters.toString());   // → [a, b, C, d]
+
+// start at size() to walk backwards
+const back = letters.listIterator(letters.size());
+const out: string[] = [];
+while (back.hasPrevious()) out.push(back.previous());
+console.log(out);                  // → [ 'd', 'C', 'b', 'a' ]
+```
+
+List iterators are [fail-fast](/collections/concepts/iteration-and-views/): calling `list.remove(...)` inside a `for...of`
+over the same list throws `ConcurrentModificationException`. On `ArrayList` and `Vector`, `sort` and `replaceAll`
+count as structural changes; `set` never does. To remove while iterating, use `removeIf` (one pass), or
+`iterator().remove()` (shifts the tail on every removal of an `ArrayList`, O(n²) worst case).
+
+## Vector and Stack
+
+These classes exist for porting code. New code uses `ArrayList` and `ArrayDeque`.
+
+| Legacy `Vector` method | Modern equivalent |
+| --- | --- |
+| `elementAt(i)` | `get(i)` |
+| `firstElement()` / `lastElement()` | `getFirst()` / `getLast()` |
+| `addElement(e)` | `add(e)` |
+| `insertElementAt(e, i)` | `add(i, e)` (arguments swapped) |
+| `setElementAt(e, i)` | `set(i, e)` (arguments swapped; returns nothing) |
+| `removeElement(o)` | `remove(o)` |
+| `removeElementAt(i)` | `removeAt(i)` (returns nothing) |
+| `removeAllElements()` | `clear()` |
+| `indexOf(o, from)` / `lastIndexOf(o, from)` | search from index `from` (backwards for `lastIndexOf`) |
+| `elements()` | `iterator()`, but returns an `Enumeration` that is not fail-fast |
+| `copyInto(array)` | `toArray()` |
+
+### Capacity, setSize and elements
+
+`capacity()` is a reported number that starts at 10 (or the constructor argument) and, when outgrown, grows by
+`capacityIncrement` if that is positive and doubles otherwise. The engine manages the real storage; the number exists
+for ported code that reads it. `setSize(n)` truncates the vector or pads it with `null`. `elements()` returns an
+`Enumeration` (`hasMoreElements`/`nextElement`), which is also JS-iterable and has `asIterator()`.
+
+```ts
+import { Vector, IndexOutOfBoundsException } from '@ylcnfrht/collections';
+
+const stepped = new Vector<number>(3, 2);       // capacity 3, +2 each time
+for (let i = 0; i < 4; i++) stepped.add(i);
+console.log(stepped.capacity());                // → 5
+
+const v = Vector.of<number | null>(1, 2, 3);
+v.setSize(5);
+console.log(v.toString());                      // → [1, 2, 3, null, null]
+console.log(v.indexOf(null, 0), [...v.elements()].length); // → 3 5
+
+try {
+  v.get(10);
+} catch (e) {
+  console.log((e as Error).name, e instanceof IndexOutOfBoundsException); // → ArrayIndexOutOfBoundsException true
+}
+```
+
+`Vector` counts modifications for fail-fast iteration exactly as the JDK does, including its quirks: `remove(o)` of an
+absent element, `removeAt` with a bad index, and `add` at a negative index all count as a change, while `add` past the
+end does not.
+
+### Stack methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `push(e)` | `E` | adds `e` on top and returns it |
+| `pop()` / `peek()` | `E` | removes / returns the top; `EmptyStackException` if empty |
+| `empty()` | `boolean` | same as `isEmpty()` |
+| `search(o)` | `number` | 1-based distance of `o` from the top, or `-1` |
+
+`toString()` and iteration go bottom to top, and every `Vector` method stays available. `ArrayDeque` differs: an empty
+`pop()` throws `NoSuchElementException`, `peek()` returns `null` when empty, and iteration goes top first.
+
+```ts
+import { Stack } from '@ylcnfrht/collections';
+
+const s = Stack.of('a', 'b', 'c');  // c on top
+console.log(s.toString());          // → [a, b, c]
+console.log(s.search('c'), s.search('a'), s.search('z')); // → 1 3 -1
+s.clear();
+try {
+  s.pop();
+} catch (e) {
+  console.log((e as Error).name);   // → EmptyStackException
+}
+```
+
+## Recipes
+
+Remove duplicates, keeping first-occurrence order (or `withDupes.stream().distinct().toList()`):
+
+```ts
+import { ArrayList, LinkedHashSet } from '@ylcnfrht/collections';
+
+const withDupes = ArrayList.of('b', 'a', 'b', 'c', 'a');
+console.log(new ArrayList(new LinkedHashSet(withDupes)).toString()); // → [b, a, c]
+```
+
+Binary search a sorted list with `Collections.binarySearch(list, key, comparator?)`: O(log n) on a `RandomAccess`
+list. It returns the index, or `-(insertionPoint) - 1` when the key is absent. The list must be sorted by the ordering
+you search with. If you insert and search constantly, a [`TreeSet`](/collections/collections/sets/#treeset) keeps the order for you.
+
+```ts
+import { ArrayList, Collections } from '@ylcnfrht/collections';
+
+const sorted = ArrayList.of(1, 3, 5, 7);
+console.log(Collections.binarySearch(sorted, 5));  // → 2
+const r = Collections.binarySearch(sorted, 4);
+console.log(r);                                    // → -3
+sorted.add(-r - 1, 4);                             // insert at the sorted position
+console.log(sorted.toString());                    // → [1, 3, 4, 5, 7]
+```
+
+## Complexity
+
+n is the list size, m the size of the argument collection.
+
+| Operation | `ArrayList`, `Vector` | `LinkedList` |
+| --- | --- | --- |
+| `get(i)`, `set(i, e)` | O(1) | O(min(i, n − i)) |
+| `add(e)`, `addLast`, `removeLast` | O(1) amortized | O(1) |
+| `addFirst`, `removeFirst` | O(n) | O(1) |
+| `add(i, e)`, `removeAt(i)` | O(n − i) | O(min(i, n − i)) to walk, O(1) to relink |
+| `ListIterator` `add` / `set` / `remove` | O(n − i) / O(1) / O(n − i) | O(1) |
+| `contains`, `indexOf`, `remove(o)` | O(n) | O(n) |
+| `addAll(i, c)` | O(n + m) | O(n + m) |
+| `removeIf`, `removeAll`, `retainAll` | O(n), plus `contains` on the argument | O(n), plus `contains` on the argument |
+| `sort` | O(n log n), stable | O(n log n), stable |
+| `subList`, `reversed` | O(1) | O(1) |
+
+`Stack` `push`, `pop`, `peek` are O(1) and `search` is O(n). Legacy `Vector` methods cost what their modern
+equivalents cost.
+
+## Pitfalls
+
+- **`remove(1)` on a `List<number>` removes the value 1.** Use `removeAt(1)` for the index.
+- **Indexed loops over a `LinkedList` are O(n²).** Iterate with `for...of` or a `ListIterator`.
+- **A sub-list is invalidated by direct changes to its backing list.** Copy it if the list changes while you hold it.
+- **`LinkedList.poll()` returns `null` both when empty and for a `null` head.** Check `isEmpty()` first.

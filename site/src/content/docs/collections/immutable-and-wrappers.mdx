@@ -1,0 +1,250 @@
+---
+title: Immutable collections and wrappers
+description: List.of, Set.of and Map.of, unmodifiable views, lazy collections, empty and singleton collections, and checked and synchronized wrappers.
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Mutating methods (`add`, `remove`, `put`, `set`, `clear`, …) are optional operations: a collection may refuse them by
+throwing `UnsupportedOperationException`. Two kinds of collection refuse them:
+
+| | Immutable copy | Unmodifiable view |
+| --- | --- | --- |
+| Created with | `List.of(…)`, `List.copyOf(src)` and the `Set`/`Map` equivalents | `Collections.unmodifiableList(src)` and related methods |
+| Cost to create | O(n): copies once | O(1): keeps a reference to the source |
+| Can it change? | never; it is a snapshot | yes, when the source changes |
+| Nulls | rejected | whatever the source allows |
+| Use it to | share fixed data, constants, defensive copies | expose state you own, read-only |
+
+```ts
+import { ArrayList, Collections, List } from '@ylcnfrht/collections';
+
+class Playlist {
+  private readonly tracks = new ArrayList<string>();
+  add(track: string): void {
+    this.tracks.add(track);
+  }
+  /** read-only, always up to date */
+  getTracks(): List<string> {
+    return Collections.unmodifiableList(this.tracks);
+  }
+  /** a snapshot that later adds do not change */
+  snapshot(): List<string> {
+    return List.copyOf(this.tracks);
+  }
+}
+
+const p = new Playlist();
+const view = p.getTracks();
+p.add('Intro');
+const snap = p.snapshot();
+p.add('Outro');
+console.log(view.toString(), snap.toString()); // → [Intro, Outro] [Intro]
+
+try {
+  view.add('Hidden');
+} catch (e) {
+  console.log((e as Error).name); // → UnsupportedOperationException
+}
+```
+
+Wrapping an unmodifiable list again returns the same wrapper. The views of an unmodifiable map (`keySet()`,
+`values()`, `entrySet()`) are unmodifiable too, and its entries reject `setValue`.
+
+## Immutable factories
+
+`List`, `Set` and `Map` are both interfaces and factory objects. The factories build compact immutable collections
+that read like any other, including value equality with mutable ones.
+
+| Factory | Notes |
+| --- | --- |
+| `List.of(a, b, …)` | argument order, random access |
+| `List.copyOf(collection)` | returns the argument itself if it already is a `List.of`-style list |
+| `Set.of(a, b, …)` | a duplicate argument throws `IllegalArgumentException` |
+| `Set.copyOf(collection)` | duplicates are dropped |
+| `Map.of(k1, v1, k2, v2, …)` | a duplicate key or an odd argument count throws `IllegalArgumentException`; typed overloads up to 10 pairs |
+| `Map.ofEntries(e1, e2, …)` | usually with `Map.entry(k, v)`; duplicate keys throw; use it beyond 10 pairs |
+| `Map.copyOf(map)` | returns the argument itself if it already is a `Map.of`-style map |
+| `Map.entry(k, v)` | immutable entry |
+
+These collections report mistakes early:
+
+- A `null` or `undefined` element, key or value throws `NullPointerException`, in `copyOf` as well.
+- Null queries throw too: `contains(null)`, `indexOf(null)`, `get(null)`, `containsKey(null)` and
+  `containsValue(null)` throw `NullPointerException` instead of returning `false` or `null`.
+- `Set.of` and `Map.of` promise no iteration order. Copy into a `TreeSet`, `TreeMap` or `LinkedHashSet` for one.
+
+```ts
+import { List, Set, Map, ArrayList, TreeMap } from '@ylcnfrht/collections';
+
+const primes = List.of(2, 3, 5, 7);
+console.log(primes.equals(ArrayList.of(2, 3, 5, 7))); // → true
+console.log(Set.copyOf(ArrayList.of(1, 1, 2)).size()); // → 2
+
+const ports = Map.of('https', 443, 'http', 80);
+console.log(new TreeMap(ports).toString());           // → {http=80, https=443}
+const big = Map.ofEntries(Map.entry('a', 1), Map.entry('b', 2));
+console.log(big.get('b'));                            // → 2
+
+const nameOf = (f: () => unknown): string => {
+  try {
+    f();
+    return 'ok';
+  } catch (e) {
+    return (e as Error).name;
+  }
+};
+console.log(nameOf(() => List.of(1, null)));             // → NullPointerException
+console.log(nameOf(() => List.of(1, 2).contains(null))); // → NullPointerException
+console.log(nameOf(() => Set.of(1, 1)));                 // → IllegalArgumentException
+```
+
+## Lazy collections (preview)
+
+<Aside type="caution">
+Lazy collections are a preview feature. The API may change.
+</Aside>
+
+Immutable collections whose contents are computed on first access, at most once:
+
+| Factory | Content |
+| --- | --- |
+| `List.ofLazy(size, i => value)` | `size` elements; element `i` is computed the first time it is read |
+| `Set.ofLazy(candidates, e => boolean)` | the candidates for which the predicate is `true`, each decided on first query |
+| `Map.ofLazy(keys, k => value)` | the given keys; each value is computed on first `get` or iteration |
+
+Whole-collection operations (`toString`, `equals`, iteration, `size()` of a lazy set) compute everything they need.
+A function that throws or returns `null` makes that slot fail with `NoSuchElementException`, then and on every later
+access, without calling the function again. Later changes to the candidates or keys collection are not seen.
+
+```ts
+import { List, Map, Set } from '@ylcnfrht/collections';
+
+let calls = 0;
+const squares = List.ofLazy(5, (i) => {
+  calls++;
+  return i * i;
+});
+console.log(squares.get(3), squares.get(3), calls); // → 9 9 1
+console.log(squares.toString(), calls);             // → [0, 1, 4, 9, 16] 5
+
+const config = Map.ofLazy(Set.of('host', 'port'), (key) => (key === 'port' ? '8080' : 'localhost'));
+console.log(config.get('port'), config.get('debug')); // → 8080 null
+```
+
+## Empty, singleton and nCopies
+
+`Collections` provides shared unmodifiable collections for the trivial cases. Unlike `List.of`, they allow `null`
+and answer null queries normally, except the sorted and navigable empties, which reject `null` like a `TreeSet`.
+
+| Method | Result |
+| --- | --- |
+| `Collections.emptyList()`, `emptySet()`, `emptyMap()` (also `EMPTY_LIST`, `EMPTY_SET`, `EMPTY_MAP`) | one shared empty instance each |
+| `Collections.emptySortedSet()`, `emptyNavigableSet()`, `emptySortedMap()`, `emptyNavigableMap()` | empty sorted collections |
+| `Collections.emptyIterator()`, `emptyListIterator()`, `emptyEnumeration()` | nothing to iterate |
+| `Collections.singletonList(e)`, `singleton(e)`, `singletonMap(k, v)` | exactly one element or mapping |
+| `Collections.nCopies(n, e)` | `n` times the same element, in O(1) space |
+
+```ts
+import { Collections, ArrayList } from '@ylcnfrht/collections';
+
+console.log(Collections.singletonList(null).toString());   // → [null]
+
+// pre-filling a mutable list
+const slots = new ArrayList<number | null>(Collections.nCopies(4, null));
+slots.set(2, 42);
+console.log(slots.toString());                             // → [null, null, 42, null]
+```
+
+## Wrappers
+
+All wrappers are views that forward to the wrapped collection.
+
+| Kind | Methods |
+| --- | --- |
+| Unmodifiable | `unmodifiableCollection`, `unmodifiableSequencedCollection`, `unmodifiableList`, `unmodifiableSet`, `unmodifiableSequencedSet`, `unmodifiableSortedSet`, `unmodifiableNavigableSet`, `unmodifiableMap`, `unmodifiableSequencedMap`, `unmodifiableSortedMap`, `unmodifiableNavigableMap` |
+| Checked | `checkedCollection`, `checkedList`, `checkedQueue`, `checkedSet`, `checkedSortedSet`, `checkedNavigableSet` (one predicate); `checkedMap`, `checkedSortedMap`, `checkedNavigableMap` (key and value predicates) |
+| Synchronized | `synchronizedCollection`, `synchronizedList`, `synchronizedSet`, `synchronizedSortedSet`, `synchronizedNavigableSet`, `synchronizedMap`, `synchronizedSortedMap`, `synchronizedNavigableMap` |
+
+Range views of the unmodifiable sorted and navigable wrappers are unmodifiable too. `unmodifiableCollection` uses
+identity equality, since a plain collection has no value-equality contract.
+
+**Checked** wrappers reject elements of the wrong runtime type, which helps when data crosses an untyped boundary
+(parsed JSON, a plugin, `any`). Types are erased at run time, so you pass a predicate instead of a class token. Every
+entry point is checked (`add`, `addAll`, `set`, `offer`, `push`, list iterators, sub-views; for maps `put`, `putAll`,
+the results of `compute*` and `merge`, and `entry.setValue`), and a failing element throws `ClassCastException`
+before the collection is touched.
+
+```ts
+import { ArrayList, Collections } from '@ylcnfrht/collections';
+
+const names = Collections.checkedList(new ArrayList<unknown>(), (x) => typeof x === 'string');
+names.add('ada');
+try {
+  names.addAll(ArrayList.of<unknown>('bob', 42)); // checked before anything is added
+} catch (e) {
+  console.log((e as Error).name); // → ClassCastException
+}
+console.log(names.toString()); // → [ada]
+```
+
+**Synchronized** wrappers exist so ported code compiles. JS runs your code on one thread and workers do not share
+these objects, so they are plain delegating views with no safety and no measurable cost. New code uses the collection
+directly.
+
+## Sets backed by maps
+
+`Collections.newSetFromMap(map)` turns an empty map into a set with the map's key semantics: pair it with
+`IdentityHashMap` for an identity set. `Collections.newSequencedSetFromMap(map)` does the same for a `SequencedMap`
+and adds `addFirst`, `addLast` and `reversed`. A non-empty map throws `IllegalArgumentException`.
+
+```ts
+import { Collections, IdentityHashMap, ArrayList, List } from '@ylcnfrht/collections';
+
+const seen = Collections.newSetFromMap(new IdentityHashMap<List<number>, boolean>());
+seen.add(ArrayList.of(1));
+seen.add(ArrayList.of(1));
+console.log(seen.size()); // → 2
+```
+
+## Which mutators throw
+
+Every unmodifiable collection throws from a mutator that would change something. Whether a call that would change
+nothing also throws depends on the kind, as in the JDK:
+
+| Collection | Mutator call that would change nothing |
+| --- | --- |
+| `List.of`, `Set.of`, `Map.of` and their `copyOf` | throws (e.g. `List.of().clear()`, `Set.of(1).remove(9)`) |
+| `keySet()`/`values()` of a `Map.of` map | returns `false` (e.g. `keySet().remove('missing')`) |
+| `Collections.unmodifiable*` views and their views | throws |
+| `Collections.emptyList()`/`emptySet()`/`emptyMap()` | no-op: `clear()` does nothing, `remove`/`removeIf`/`removeAll`/`retainAll` return `false` (`remove` on the map returns `null`) |
+| `Collections.singletonList`/`singleton`/`singletonMap` | `remove(absent)` returns `false` (`null` for the map); `clear()` and `removeIf` throw |
+| `Collections.nCopies` | `remove(absent)`/`removeIf(nothing)` return `false`; `clear()` throws |
+| `Collections.emptySortedSet()` and related | throws |
+| `Map.entry`, `SimpleImmutableEntry`, `TreeMap` navigation entries | `setValue` always throws |
+
+```ts
+import { List, Map, Collections } from '@ylcnfrht/collections';
+
+const nameOf = (f: () => unknown): string => {
+  try {
+    return String(f());
+  } catch (e) {
+    return (e as Error).name;
+  }
+};
+
+console.log(nameOf(() => List.of<number>().clear()));                 // → UnsupportedOperationException
+console.log(nameOf(() => Map.of('a', 1).keySet().remove('missing'))); // → false
+console.log(nameOf(() => Collections.emptyList<number>().removeIf(() => true))); // → false
+console.log(nameOf(() => Collections.singleton(1).remove(1)));        // → UnsupportedOperationException
+```
+
+<Aside type="tip">
+Do not rely on a no-op mutator succeeding on a collection you did not create. To modify one safely, copy it
+(`new ArrayList(c)`) and modify the copy.
+</Aside>
+
+The algorithms (`sort`, `shuffle`, `binarySearch`, …) are on [the Collections utilities page](/collections/utilities/collections/).

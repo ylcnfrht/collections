@@ -91,11 +91,11 @@ console.log(byLength.toString()); // → {3=[fig], 4=[pear], 5=[apple]}
 - **Tested:** over 10,000 tests at about 99% line coverage. Every example in the documentation runs as a test.
 - **Verified against the JDK:** the same random operation scripts run on a real JDK and on this library. The latest
   run compared 1.69 million operations across every comparable public method and found
-  [0 library differences](docs/advanced/testing.md); the remaining ones are documented design choices or places
+  [0 library differences](https://ylcnfrht.github.io/collections/reference/compatibility/); the remaining ones are documented design choices or places
   where the JDK breaks its own specification.
 - **Fast:** benchmarked against native `Map`/`Set`/`Array` and popular libraries. `HashMap` with small integer keys
   (ids, indices) is several times faster than a native `Map`, and stream pipelines beat native array chains.
-  See [Performance](docs/advanced/performance.md).
+  See [Performance](https://ylcnfrht.github.io/collections/benchmarks/).
 
 ## Coming from Java
 
@@ -105,15 +105,14 @@ The API follows the Java Collections Framework closely, with a few adaptations f
 - Comparators are plain functions `(a, b) => number`; helpers live on the `Comparator` object.
 - Absent results are `null`, never `undefined`.
 
-The full list is in [Differences from the Java API](docs/advanced/compatibility.md).
+The full list is in [Differences from the Java API](https://ylcnfrht.github.io/collections/reference/compatibility/).
 
 ## Documentation
 
-- [Getting started](docs/guide/getting-started.md)
-- [Data structures primer](docs/guide/data-structures.md): what each structure is and how it stores data
-- [Choosing a collection](docs/guide/choosing-a-collection.md)
-- [Coming from JS](docs/guide/coming-from-js.md): `Array`/`Map`/`Set` side by side
-- [All documentation](docs/README.md) and the [API reference](https://ylcnfrht.github.io/collections/api/)
+- [Getting started](https://ylcnfrht.github.io/collections/start/quick-start/)
+- [Choosing a collection](https://ylcnfrht.github.io/collections/start/choosing-a-collection/)
+- [Coming from JS](https://ylcnfrht.github.io/collections/start/coming-from-js/): `Array`/`Map`/`Set` side by side
+- [All documentation](https://ylcnfrht.github.io/collections/) and the [API reference](https://ylcnfrht.github.io/collections/api/overview/)
 
 ## Contributing
 

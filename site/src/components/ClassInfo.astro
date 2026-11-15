@@ -1,0 +1,108 @@
+---
+// One line under a class heading: where the class lives and how much of it is checked against the JDK.
+// Read at build time from the sources and the generated comparison report, so it cannot drift from the code.
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
+
+interface Props {
+  name: string;
+}
+
+// astro runs in site/; import.meta.url points into the build output, so it can't locate the repo
+const ROOT = join(process.cwd(), '..');
+const SRC = join(ROOT, 'src');
+const REPORT = join(ROOT, 'site/src/content/docs/reference/compatibility-report.md');
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? sourceFiles(join(dir, e.name)) : e.name.endsWith('.ts') ? [join(dir, e.name)] : [],
+  );
+}
+
+/** Member rows of `<summary>Name (class)</summary>` and `Name (static)` in the report. */
+function coverage(report: string, name: string) {
+  let compared = 0;
+  let comparisons = 0;
+  let excluded = 0;
+  for (const kind of ['class', 'static']) {
+    const start = report.indexOf(`<summary>${name} (${kind})</summary>`);
+    if (start < 0) continue;
+    const block = report.slice(start, report.indexOf('</details>', start));
+    for (const [, cell] of block.matchAll(/^\| [^|]+ \| ([^|]+) \|$/gm)) {
+      const n = Number(cell.trim().replace(/,/g, ''));
+      if (Number.isFinite(n) && n > 0) {
+        compared++;
+        comparisons += n;
+      } else if (cell.trim().startsWith('excluded')) excluded++;
+    }
+  }
+  return { compared, comparisons, excluded };
+}
+
+const { name } = Astro.props;
+// internal base classes (e.g. TreeSet's NavigableKeySet) are not part of the API, so they are not shown
+const exported = new Set(readFileSync(join(SRC, 'index.ts'), 'utf8').match(/\b[A-Z]\w+\b/g));
+let info: { file: string; extends: string | null } | undefined;
+for (const f of sourceFiles(SRC)) {
+  for (const [, cls, base] of readFileSync(f, 'utf8').matchAll(/^export class (\w+)(?:<[^>{]*>)? extends (\w+)/gm)) {
+    if (cls === name) info = { file: relative(ROOT, f), extends: exported.has(base) ? base : null };
+  }
+}
+if (!info) throw new Error(`ClassInfo: no exported class ${name} in src/`);
+const cov = coverage(readFileSync(REPORT, 'utf8'), name);
+const n = (x: number) => x.toLocaleString('en-US');
+const reportHref = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/reference/compatibility-report/`;
+---
+
+<div class="class-info not-content">
+  <a class="item" href={`https://github.com/ylcnfrht/collections/blob/main/${info.file}`} target="_blank" rel="noreferrer">
+    <span class="key">Source</span><code>{info.file}</code>
+  </a>
+  {info.extends && <span class="item"><span class="key">Extends</span><code>{info.extends}</code></span>}
+  {
+    cov.compared > 0 && (
+      <a class="item" href={reportHref}>
+        <span class="key">Verified against the JDK</span>
+        {cov.compared} members, {n(cov.comparisons)} comparisons{cov.excluded > 0 && `, ${cov.excluded} excluded`}
+      </a>
+    )
+  }
+</div>
+
+<style>
+  .class-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.1rem;
+    margin: 0.5rem 0 1rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--rp-hairline);
+    border-radius: var(--rp-radius-sm);
+    background: var(--rp-surface);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--rp-text-muted);
+  }
+  .item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    color: inherit;
+    text-decoration: none;
+  }
+  a.item:hover {
+    color: var(--sl-color-white);
+  }
+  .key {
+    font-family: var(--rp-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rp-text-faint);
+  }
+  code {
+    font-family: var(--rp-mono);
+    font-size: 0.75rem;
+    color: var(--sl-color-white);
+  }
+</style>

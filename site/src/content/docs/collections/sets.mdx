@@ -1,0 +1,355 @@
+---
+title: Sets
+description: HashSet, LinkedHashSet and TreeSet, set algebra, sequenced operations, navigation and range views.
+sidebar:
+  order: 3
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+import ClassInfo from '../../../components/ClassInfo.astro';
+
+A set is a collection without duplicates. Unlike the native JS `Set`, these sets decide duplicates with
+`equals()`/`hashCode()` (or a comparator for `TreeSet`), so two distinct `Point(1, 2)` objects count as one element.
+See [equality](/collections/concepts/equality/) for how that works for primitives, plain objects and your own classes.
+`EnumSet` and concurrent sets are [not included](/collections/reference/compatibility/).
+
+| Class | Iteration order | `add` / `remove` / `contains` | Use it for |
+| --- | --- | --- | --- |
+| `HashSet` | unspecified | O(1) average | the default set |
+| `LinkedHashSet` | insertion order | O(1) average | deduplication that keeps order; sequenced operations |
+| `TreeSet` | sorted | O(log n) | sorted data, nearest-element queries, ranges |
+
+Every set follows three rules: `add(e)` returns `false` and changes nothing when an equal element is present; two sets
+are equal when they have the same elements, whatever their class or order; and `hashCode()` is the sum of the
+elements' hash codes. `LinkedHashSet` and `TreeSet` are also `SequencedSet`s; `TreeSet` is a `NavigableSet` (sorted
+order, nearest-element queries, range views).
+
+```ts
+import { HashSet, TreeSet, LinkedHashSet, Objects } from '@ylcnfrht/collections';
+
+class Point {
+  constructor(readonly x: number, readonly y: number) {}
+  equals(o: unknown): boolean {
+    return o instanceof Point && o.x === this.x && o.y === this.y;
+  }
+  hashCode(): number {
+    return Objects.hash(this.x, this.y);
+  }
+}
+
+const points = new HashSet<Point>();
+console.log(points.add(new Point(1, 2))); // → true
+console.log(points.add(new Point(1, 2))); // → false
+console.log(points.size());               // → 1
+
+const hashed = HashSet.of(3, 1, 2);
+// with new:
+// const hashed = new HashSet<number>();
+// hashed.add(3);
+// hashed.add(1);
+// hashed.add(2);
+console.log(hashed.equals(TreeSet.of(1, 2, 3)), hashed.equals(LinkedHashSet.of(2, 3, 1))); // → true true
+console.log(hashed.hashCode());           // → 6
+```
+
+## HashSet
+
+<ClassInfo name="HashSet" />
+
+The default set. `null` and `undefined` are allowed. Internally it routes each element to the cheapest store for its
+kind of equality: small non-negative integers to a dense array, primitives and objects without `equals()` to a native
+`Set` (identity for such objects), and objects with `equals()`/`hashCode()` and `Date`s to hash buckets. The split is
+not observable, but it is why small integers may appear sorted: do not depend on it.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { HashSet } from '@ylcnfrht/collections';
+
+const tags = new HashSet<string>();
+console.log(tags.add('ts'));      // → true
+console.log(tags.add('ts'));      // → false
+tags.add('node');
+console.log(tags.contains('ts')); // → true
+console.log(tags.remove('node')); // → true
+console.log(tags.size());         // → 1
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { HashSet, List } from '@ylcnfrht/collections';
+
+// no equals(): identity, like a native Set
+const plain = HashSet.of<object>({ id: 1 });
+console.log(plain.contains({ id: 1 })); // → false
+
+// Dates compare by time, collections by value
+console.log(HashSet.of(new Date(0)).contains(new Date(0)));  // → true
+console.log(HashSet.of(List.of(1, 2)).contains(List.of(1, 2))); // → true
+```
+
+</TabItem>
+</Tabs>
+
+## LinkedHashSet
+
+<ClassInfo name="LinkedHashSet" />
+
+A `HashSet` (it passes `instanceof HashSet`) that remembers insertion order and adds the
+[sequenced operations](#sequenced-operations).
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { LinkedHashSet, ArrayList } from '@ylcnfrht/collections';
+
+const steps = new LinkedHashSet<string>();
+steps.add('build');
+steps.add('test');
+steps.add('deploy');
+console.log(steps.add('build'));      // → false
+console.log([...steps].join(' '));    // → build test deploy
+
+// unique values in first-seen order
+const visits = ArrayList.of('home', 'docs', 'home', 'blog', 'docs');
+console.log(new LinkedHashSet(visits).toString()); // → [home, docs, blog]
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { LinkedHashSet } from '@ylcnfrht/collections';
+
+// recent searches: newest last, no repeats, at most 3 kept
+const recent = new LinkedHashSet<string>();
+const search = (q: string): void => {
+  recent.addLast(q); // moves a repeated query to the end
+  if (recent.size() > 3) recent.removeFirst();
+};
+for (const q of ['maps', 'sets', 'lists', 'maps', 'queues']) search(q);
+console.log(recent.toString());            // → [lists, maps, queues]
+console.log(recent.reversed().toString()); // → [queues, maps, lists]
+```
+
+</TabItem>
+</Tabs>
+
+## TreeSet
+
+<ClassInfo name="TreeSet" />
+
+A red-black tree: `add`, `remove` and `contains` are O(log n) and iteration is always sorted. It adds
+[navigation](#navigation) and [range views](#range-views). Elements are ordered by
+[natural ordering](/collections/concepts/ordering/) or by a comparator; mixing types that cannot be compared throws
+`ClassCastException`, and `null` throws `NullPointerException` under natural ordering.
+
+<Tabs syncKey="level">
+<TabItem label="Basic">
+
+```ts
+import { TreeSet, Comparator } from '@ylcnfrht/collections';
+
+console.log(TreeSet.of(30, 4, 100).toString());             // → [4, 30, 100]
+console.log(TreeSet.of('pear', 'Apple', 'fig').toString()); // → [Apple, fig, pear]
+
+const desc = new TreeSet<number>(Comparator.reverseOrder<number>());
+desc.add(1);
+desc.add(3);
+desc.add(2);
+console.log(desc.toString());   // → [3, 2, 1]
+console.log(desc.first());      // → 3
+```
+
+</TabItem>
+<TabItem label="Intermediate">
+
+```ts
+import { TreeSet } from '@ylcnfrht/collections';
+
+// booked meeting starts, in minutes since midnight
+const booked = TreeSet.of(540, 600, 690, 840);
+const hhmm = (m: number): string =>
+  `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+// the meetings just before and after 10:30
+console.log(hhmm(booked.floor(630)!), hhmm(booked.ceiling(630)!)); // → 10:00 11:30
+
+// afternoon meetings, as a live range view
+const afternoon = booked.tailSet(720);
+booked.add(780);
+console.log(afternoon.toString()); // → [780, 840]
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution">
+In a `TreeSet` the comparator defines equality: two elements are duplicates when it returns 0, and `equals()` is never
+called. A case-insensitive comparator gives a case-insensitive set; a comparator that ignores some fields merges
+elements that differ only in those fields.
+</Aside>
+
+```ts
+import { TreeSet, Comparator } from '@ylcnfrht/collections';
+
+const tags = new TreeSet<string>(Comparator.comparing((s: string) => s.toLowerCase()));
+tags.add('TypeScript');
+console.log(tags.add('typescript'));      // → false
+console.log(tags.contains('TYPESCRIPT')); // → true
+console.log(tags.toString());             // → [TypeScript]
+```
+
+## Creating a set
+
+| Form | Result |
+| --- | --- |
+| `new HashSet<E>()`, `new LinkedHashSet<E>()` | empty set |
+| `new HashSet<E>(initialCapacity, loadFactor?)` | empty set; validated sizing hints (a negative capacity or non-positive load factor throws `IllegalArgumentException`); same for `LinkedHashSet` |
+| `new HashSet<E>(collection)`, `new LinkedHashSet<E>(collection)` | copy of any collection, duplicates dropped |
+| `HashSet.of(…)`, `LinkedHashSet.of(…)`, `TreeSet.of(…)` | set of the arguments |
+| `HashSet.newHashSet<E>(n)`, `LinkedHashSet.newLinkedHashSet<E>(n)` | empty set for `n` elements; a hint, a negative or `NaN` `n` throws `IllegalArgumentException` |
+| `new TreeSet<E>(comparator?)` | empty sorted set, natural or comparator ordering |
+| `new TreeSet<E>(collection)` | copy; keeps the comparator if the source is a sorted set |
+| `s.clone()` | shallow copy of the same class |
+
+## Set algebra
+
+The bulk operations mutate the receiver, so copy first to keep the inputs. Copying into a `TreeSet` sorts the result.
+
+| Operation | Recipe |
+| --- | --- |
+| union A ∪ B | `copy.addAll(b)` |
+| intersection A ∩ B | `copy.retainAll(b)` |
+| difference A − B | `copy.removeAll(b)` |
+| subset A ⊆ B | `b.containsAll(a)` |
+| disjoint | `Collections.disjoint(a, b)` |
+
+```ts
+import { HashSet, TreeSet, Collections } from '@ylcnfrht/collections';
+
+const a = HashSet.of(1, 2, 3, 4);
+const b = HashSet.of(3, 4, 5);
+
+const union = new TreeSet<number>(a);
+union.addAll(b);
+const intersection = new TreeSet<number>(a);
+intersection.retainAll(b);
+const difference = new TreeSet<number>(a);
+difference.removeAll(b);
+console.log(union.toString(), intersection.toString(), difference.toString()); // → [1, 2, 3, 4, 5] [3, 4] [1, 2]
+console.log(Collections.disjoint(a, HashSet.of(9))); // → true
+```
+
+`retainAll`, and `removeAll` when the set is not larger than the argument, call the argument's `contains()`, which is
+O(n) on a list: pass a set for large inputs.
+
+## Sequenced operations
+
+`LinkedHashSet` and `TreeSet` have both ends:
+
+| Method | `LinkedHashSet` | `TreeSet` |
+| --- | --- | --- |
+| `getFirst()` / `getLast()` | oldest / newest | smallest / largest |
+| `removeFirst()` / `removeLast()` | removes the oldest / newest | removes the smallest / largest |
+| `addFirst(e)` / `addLast(e)` | adds, or moves an existing element, to the front / back | throws `UnsupportedOperationException` |
+| `reversed()` | live reverse-ordered view | live descending view |
+
+`get*` and `remove*` throw `NoSuchElementException` on an empty set. On a `LinkedHashSet`, `add()` of a present
+element keeps its position, while `addFirst`/`addLast` move it. On the reversed view, `addFirst` is `addLast` on the
+set.
+
+```ts
+import { LinkedHashSet } from '@ylcnfrht/collections';
+
+const s = LinkedHashSet.of('a', 'b', 'c');
+s.add('a');                // already present: position unchanged
+s.addFirst('c');           // moves c to the front
+console.log(s.toString()); // → [c, a, b]
+console.log(s.removeFirst(), s.getLast()); // → c b
+```
+
+## Navigation
+
+`TreeSet` finds the nearest element to a probe, which need not be in the set.
+
+| Method | Returns |
+| --- | --- |
+| `first()` / `last()` | smallest / largest; `NoSuchElementException` when empty |
+| `lower(e)` / `higher(e)` | greatest element `< e` / least element `> e`, or `null` |
+| `floor(e)` / `ceiling(e)` | greatest element `<= e` / least element `>= e`, or `null` |
+| `pollFirst()` / `pollLast()` | removes and returns the smallest / largest, or `null` when empty |
+
+```ts
+import { TreeSet } from '@ylcnfrht/collections';
+
+const s = TreeSet.of(10, 20, 30, 40);
+console.log(s.lower(30), s.floor(30), s.ceiling(30), s.higher(30)); // → 20 30 30 40
+console.log(s.floor(5), s.higher(40));                             // → null null
+console.log(s.pollFirst(), s.toString());                          // → 10 [20, 30, 40]
+```
+
+## Range views
+
+Range views of a `TreeSet` are [live](/collections/concepts/iteration-and-views/) and created in O(1).
+
+| Call | Elements |
+| --- | --- |
+| `headSet(to, inclusive = false)` | `< to` (or `<= to`) |
+| `tailSet(from, inclusive = true)` | `>= from` (or `> from`) |
+| `subSet(from, to)` | `from <= e < to` |
+| `subSet(from, fromInc, to, toInc)` | as given |
+| `descendingSet()` | the whole set in reverse; its `first()` is the largest and `headSet` takes the high end |
+
+A view remembers its bounds: adding an element outside them, or asking for a nested range beyond them, throws
+`IllegalArgumentException`, as does `subSet(from, to)` with `from > to`. `descendingIterator()` walks from the
+largest element down.
+
+```ts
+import { TreeSet } from '@ylcnfrht/collections';
+
+const s = TreeSet.of(10, 20, 30, 40, 50);
+console.log(s.headSet(30).toString(), s.tailSet(30, false).toString()); // → [10, 20] [40, 50]
+
+const mid = s.subSet(20, 40);      // [20, 40)
+mid.add(25);                       // writes through
+console.log(s.toString());         // → [10, 20, 25, 30, 40, 50]
+try {
+  mid.add(45);
+} catch (e) {
+  console.log((e as Error).name);  // → IllegalArgumentException
+}
+
+// strings starting with a prefix
+const users = TreeSet.of('alice', 'albert', 'bob', 'alfred');
+console.log(users.subSet('al', 'al￿').toString()); // → [albert, alfred, alice]
+```
+
+## Complexity
+
+| Operation | `HashSet` | `LinkedHashSet` | `TreeSet` |
+| --- | --- | --- | --- |
+| `add`, `remove`, `contains` | O(1) average | O(1) average | O(log n) |
+| `size`, `isEmpty` | O(1) | O(1) | O(1); O(r) on a range view of r elements |
+| first/last access and removal | — | O(1) | O(log n) |
+| `addFirst`/`addLast` | — | O(1) | unsupported |
+| navigation, `pollFirst`/`pollLast` | — | — | O(log n) |
+| creating a view | — | O(1) | O(1) |
+
+Hash costs assume reasonable `hashCode()` implementations; elements that share a hash code share a bucket, which is
+scanned linearly.
+
+## Pitfalls
+
+- **Do not mutate an element's `equals`/`hashCode` fields while it is in a hash set.** It stays in the set (iteration,
+  `size()`) but `contains` and `remove` can no longer find it. Make those fields `readonly`, or remove, change and
+  re-add. The same applies to the fields a `TreeSet` comparator reads, and to map keys.
+- **Plain objects compare by identity.** `{ id: 1 }` and `{ id: 1 }` are two elements.
+- **The package's `Set` shadows the native `Set`.** Use `globalThis.Set` or an import alias in that module.
+
+To build sets from streams, see [Collectors](/collections/streams/collectors/) (`Collectors.toSet()`,
+`Collectors.toCollection(() => new TreeSet())`).

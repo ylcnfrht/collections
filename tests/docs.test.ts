@@ -1,4 +1,4 @@
-// Doctest: every ```ts block in docs/ and README.md runs against the library, and every
+// Doctest: every ```ts block in the docs site (site/src/content/docs) and README.md runs against the library, and every
 // `console.log(...)` that carries a `// → expected` comment must print exactly that, in order.
 // Blocks fenced as ```ts nocheck are skipped (signatures, pseudo-code, intentionally failing code).
 import { readdirSync, readFileSync, statSync } from 'fs';
@@ -12,9 +12,9 @@ const ROOT = join(__dirname, '..');
 function markdownFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = join(dir, f);
-    // docs/api is generated from the sources by typedoc, and not committed
-    if (statSync(p).isDirectory()) return p === join(ROOT, 'docs', 'api') ? [] : markdownFiles(p);
-    return p.endsWith('.md') && !p.endsWith('COMPATIBILITY.md') ? [p] : [];
+    // api/ is generated from the sources by typedoc, and not committed; the compatibility report is generated too
+    if (statSync(p).isDirectory()) return f === 'api' ? [] : markdownFiles(p);
+    return /\.mdx?$/.test(p) && !p.endsWith('compatibility-report.md') ? [p] : [];
   });
 }
 
@@ -68,7 +68,7 @@ function run(block: Block): string[] {
   return printed;
 }
 
-const files = [join(ROOT, 'README.md'), ...markdownFiles(join(ROOT, 'docs'))];
+const files = [join(ROOT, 'README.md'), ...markdownFiles(join(ROOT, 'site', 'src', 'content', 'docs'))];
 
 describe.each(files.map((f) => [relative(ROOT, f), f]))('%s', (_name, file) => {
   const bs = blocks(file);
@@ -125,7 +125,8 @@ describe('docs examples type-check', () => {
   }, 120_000);
 });
 
-describe('docs links', () => {
+// site pages are checked by starlight-links-validator when the site builds; this covers the README
+describe('README links', () => {
   // GitHub-style heading anchors: lowercase, punctuation dropped, spaces to dashes
   const anchor = (h: string) => h.toLowerCase().replace(/[^\w\- ]+/g, '').trim().replace(/ /g, '-');
   const anchorsOf = (file: string) =>
@@ -136,7 +137,7 @@ describe('docs links', () => {
         .filter((l) => /^#{1,6}\s/.test(l))
         .map((l) => anchor(l.replace(/^#+\s+/, '').replace(/`/g, '')))
     );
-  it.each(files.map((f) => [relative(ROOT, f), f]))('%s: relative links and anchors resolve', (_n, file) => {
+  it.each([['README.md', join(ROOT, 'README.md')]])('%s: relative links and anchors resolve', (_n, file) => {
     const text = readFileSync(file, 'utf8').replace(/```[\s\S]*?```/g, '');
     const broken: string[] = [];
     for (const m of text.matchAll(/\]\(([^)\s]+)\)/g)) {

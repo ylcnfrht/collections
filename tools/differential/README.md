@@ -1,10 +1,10 @@
 # Differential testing against the reference JDK
 
-This harness runs the same randomly generated operation scripts on the real JDK (the reference) and on this library, then compares the results line by line. The proof run also measures how much of the public API those comparisons reach and writes `docs/COMPATIBILITY.md`.
+This harness runs the same randomly generated operation scripts on the real JDK (the reference) and on this library, then compares the results line by line. The proof run also measures how much of the public API those comparisons reach and writes `site/src/content/docs/reference/compatibility-report.md`.
 
 ```
 npm run test:diff          # 20,000 scripts, shrink + report, exit 1 on any divergence
-npm run test:diff:proof    # 200,000 scripts across worker processes + API coverage -> docs/COMPATIBILITY.md
+npm run test:diff:proof    # 200,000 scripts across worker processes + API coverage -> site/src/content/docs/reference/compatibility-report.md
 npx jest tests/differential  # 200-script smoke test (skipped without a JDK)
 
 npx ts-node --transpile-only -P tsconfig.test.json tools/differential/main.ts \
@@ -26,7 +26,7 @@ If no JDK 23 or newer is on `PATH`, every entry point prints a message and exits
 | `proof.ts` | The proof run. Batches go to worker processes (`fork`, no new dependencies); each worker installs coverage instrumentation. Results are merged, shrunk, assessed and rendered. |
 | `api.ts` | Reads the public API from the declarations with the TypeScript checker. That gives every public member of every exported class, value object and interface: about 1,700 rows. |
 | `coverage.ts` | Wraps every public method: exported classes, value objects, and the prototypes of every library object the harness gets back (views, iterators, streams, spliterators, collectors, gatherers, downstreams). It counts the calls the harness makes. Calls the library makes internally are not counted. |
-| `report.ts` | Renders `docs/COMPATIBILITY.md`. Also holds the list of API rows that cannot be compared, each with its reason. |
+| `report.ts` | Renders `site/src/content/docs/reference/compatibility-report.md`. Also holds the list of API rows that cannot be compared, each with its reason. |
 | `assessments.ts` | One assessment per divergence signature: `library` (we differ from the reference; reported, not fixed here), `reference-quirk` (the reference contradicts its own documented contract) or `intentional` (a documented design difference). Anything unassessed fails the proof run. |
 | `known.ts` | Library divergences tolerated by the jest smoke test. It is maintained by whoever fixes them. |
 
@@ -65,7 +65,7 @@ Each op prints `<result> ;; <target state>`. A view prints `view || base`. Strea
 - **Spliterators:** `estimateSize`/`getExactSizeIfKnown` are printed only before traversal (`~` afterwards). `trySplit` prints prefix ++ rest and ends the program, because the split point is unspecified.
 - **Bulk ops that throw midway:** an op such as `addAll`, `removeIf`, `sort` or `replaceAll` that throws partway through prints `EXC:X ;; ?`, and the rest of the script prints `DEAD`. The exception is `UnsupportedOperationException`, which is thrown before anything changes.
 
-The full list of normalisations and their reasons is in `report.ts` (`NORMALISATIONS`) and is rendered into `docs/COMPATIBILITY.md`.
+The full list of normalisations and their reasons is in `report.ts` (`NORMALISATIONS`) and is rendered into `site/src/content/docs/reference/compatibility-report.md`.
 
 ## Coverage, exclusions and assessments
 

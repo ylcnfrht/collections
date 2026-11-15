@@ -1,0 +1,139 @@
+---
+// Starlight's header + a top-level section nav (the default header has none).
+import config from 'virtual:starlight/user-config';
+import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
+import Search from 'virtual:starlight/components/Search';
+import SiteTitle from 'virtual:starlight/components/SiteTitle';
+import SocialIcons from 'virtual:starlight/components/SocialIcons';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+
+const shouldRenderSearch = config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+const path = Astro.url.pathname;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const links = [
+  { label: 'Docs', href: '/start/introduction/', match: ['/start/', '/concepts/'] },
+  { label: 'Collections', href: '/collections/lists/', match: ['/collections/'] },
+  { label: 'Streams', href: '/streams/overview/', match: ['/streams/'] },
+  { label: 'Guides', href: '/utilities/collections/', match: ['/utilities/', '/guides/'] },
+  { label: 'Reference', href: '/reference/compatibility/', match: ['/reference/', '/api/'] },
+  { label: 'Benchmarks', href: '/benchmarks/', match: ['/benchmarks/'] },
+].map((l) => ({ ...l, href: base + l.href, match: l.match.map((m) => base + m) }));
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex"><SiteTitle /></div>
+  <nav class="rp-topnav" aria-label="Sections">
+    {links.map((l) => <a href={l.href} aria-current={l.match.some((m) => path.startsWith(m)) ? 'true' : undefined}>{l.label}</a>)}
+  </nav>
+  <div class="sl-flex print:hidden rp-search">{shouldRenderSearch && <Search />}</div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <a class="rp-coffee" href="https://buymeacoffee.com/ylcnfrht" target="_blank" rel="noopener noreferrer">
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1" /><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z" /><line x1="6" y1="2" x2="6" y2="4" /><line x1="10" y1="2" x2="10" y2="4" /><line x1="14" y1="2" x2="14" y2="4" /></svg>
+      <span>Buy me a coffee</span>
+    </a>
+    <div class="sl-flex social-icons"><SocialIcons /></div>
+    <ThemeSelect />
+    <LanguageSelect />
+  </div>
+</div>
+
+<style>
+  .header {
+    display: flex;
+    gap: var(--sl-nav-gap);
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+  }
+  .title-wrapper {
+    overflow: clip;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    min-width: 0;
+  }
+  .rp-coffee {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklab, #ffdd00 45%, transparent);
+    background: color-mix(in oklab, #ffdd00 10%, transparent);
+    color: var(--sl-color-white);
+    font-size: 0.8rem;
+    font-weight: 550;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .rp-coffee svg {
+    color: #ffdd00;
+  }
+  .rp-coffee:hover {
+    background: color-mix(in oklab, #ffdd00 20%, transparent);
+    border-color: #ffdd00;
+  }
+  :global([data-theme='light']) .rp-coffee svg {
+    color: #b45309;
+  }
+  /* Too little room next to the full search box on mid-size screens: icon only. */
+  @media (max-width: 90rem) {
+    .rp-coffee span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+  }
+  .right-group,
+  .social-icons {
+    gap: 1rem;
+    align-items: center;
+  }
+  .rp-topnav {
+    display: none;
+    gap: 0.25rem;
+    align-items: center;
+  }
+  /* Later than Starlight's lg (72rem): the scoped package name needs the room; the sidebar has the same links. */
+  @media (min-width: 76rem) {
+    .rp-topnav {
+      display: flex;
+    }
+  }
+  .rp-topnav a {
+    color: var(--sl-color-gray-3);
+    text-decoration: none;
+    font-size: 0.875rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 8px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .rp-topnav a:hover {
+    color: var(--sl-color-white);
+  }
+  .rp-topnav a[aria-current='true'] {
+    color: var(--sl-color-white);
+    background: var(--rp-surface-2);
+  }
+  .rp-search {
+    justify-content: flex-end;
+  }
+  @media (min-width: 50rem) {
+    .rp-search {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+  @media (min-width: 76rem) {
+    .header {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto;
+      gap: 1.5rem;
+    }
+    .rp-search {
+      justify-content: flex-end;
+    }
+  }
+</style>

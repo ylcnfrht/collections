@@ -1,7 +1,7 @@
 // Compatibility proof run: a large seeded differential run across all targets, split over worker processes, with API
-// coverage instrumentation on the library side. Writes docs/COMPATIBILITY.md (generated; do not edit by hand).
+// coverage instrumentation on the library side. Writes site/src/content/docs/reference/compatibility-report.md (generated; do not edit by hand).
 //   ts-node --transpile-only -P tsconfig.test.json tools/differential/proof.ts [--scripts 200000] [--batch 5000]
-//     [--workers N] [--seed 1] [--out docs/COMPATIBILITY.md] [--max-shrink 80]
+//     [--workers N] [--seed 1] [--out site/src/content/docs/reference/compatibility-report.md] [--max-shrink 80]
 import { fork, spawnSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
   const batch = Number(arg(args, '--batch') ?? 5000);
   const seed = Number(arg(args, '--seed') ?? 1);
   const workers = Number(arg(args, '--workers') ?? Math.max(1, Math.min(8, os.cpus().length - 2)));
-  const out = arg(args, '--out') ?? path.join(__dirname, '../../docs/COMPATIBILITY.md');
+  const out = arg(args, '--out') ?? path.join(__dirname, '../../site/src/content/docs/reference/compatibility-report.md');
   const maxShrink = Number(arg(args, '--max-shrink') ?? 400);
   const nBatches = Math.ceil(total / batch);
   const seeds = Array.from({ length: nBatches }, (_, i) => seed + i);
