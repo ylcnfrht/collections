@@ -7,7 +7,7 @@ import type { Result } from './bench.worker';
 // Runs the isolated benchmark's workloads in the reader's browser, each implementation in a fresh worker,
 // next to the ratios the isolated Docker run measured.
 type W = (typeof workloads)[number];
-const OURS = '@nodestd/collections';
+const OURS = '@ylcnfrht/typescript-collection-framework';
 
 const selected = ref(workloads[0].id);
 const workload = computed(() => workloads.find((w) => w.id === selected.value)!);
@@ -198,7 +198,7 @@ const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)}
           <p>
             Each implementation runs in its own Web Worker, so only its library is loaded. It repeats the test for
             0.3 s to warm up and then for 1 s to measure, on the same data as our
-            <a href="https://github.com/nodestd/collections/tree/main/bench/isolated">isolated Docker benchmark</a>,
+            <a href="https://github.com/ylcnfrht/typescript-collection-framework/tree/main/bench/isolated">isolated Docker benchmark</a>,
             and every implementation has to return the same checksum. One call takes nanoseconds, so a second of
             measuring is millions of calls. Ratios divide by the baseline row. Browser engines and devices differ,
             so expect your numbers to vary from ours.

@@ -11,7 +11,7 @@ const n = (x: number) => x.toLocaleString('en-US');
 
 <template>
   <div v-if="info" class="class-info">
-    <a class="item" :href="`https://github.com/nodestd/collections/blob/main/${info.file}`" target="_blank" rel="noreferrer">
+    <a class="item" :href="`https://github.com/ylcnfrht/typescript-collection-framework/blob/main/${info.file}`" target="_blank" rel="noreferrer">
       <span class="key">Source</span><code>{{ info.file }}</code>
     </a>
     <span v-if="info.extends" class="item"><span class="key">Extends</span><code>{{ info.extends }}</code></span>

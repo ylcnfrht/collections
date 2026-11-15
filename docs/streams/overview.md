@@ -12,7 +12,7 @@ single-use rule and closing. The reference pages cover [operations](operations.m
 ::: code-group
 
 ```ts [Basic]
-import { List, Collectors } from '@nodestd/collections';
+import { List, Collectors } from '@ylcnfrht/typescript-collection-framework';
 
 const words = List.of('stream', 'map', 'filter', 'reduce', 'sorted', 'limit');
 
@@ -26,7 +26,7 @@ console.log(longWordsByLength); // → <STREAM, FILTER, REDUCE, SORTED>
 ```
 
 ```ts [Intermediate]
-import { List, Collectors } from '@nodestd/collections';
+import { List, Collectors } from '@ylcnfrht/typescript-collection-framework';
 
 type Order = { product: string; qty: number };
 const orders = List.of<Order>(
@@ -77,7 +77,7 @@ cover everything else:
 | `StreamSupport.stream(spliterator, parallel)` | a custom source ([spliterators](spliterators.md)) |
 
 ```ts
-import { Stream, IntStream, ArrayList, List } from '@nodestd/collections';
+import { Stream, IntStream, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(new ArrayList(List.of(1, 2, 3)).stream().toList()); // → [1, 2, 3]
 console.log(Stream.of('a', 'b').toList());                  // → [a, b]
@@ -101,7 +101,7 @@ console.log(IntStream.rangeClosed(1, 3).sum()); // → 6
 read when the terminal operation runs, so element updates made before then are visible:
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const data = [1, 2];
 const s = Stream.ofArray(data);
@@ -115,7 +115,7 @@ console.log(s.toList()); // → [100, 2]
 > overflows the call stack. To join many streams, flatten them instead:
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const parts = [Stream.of(1, 2), Stream.of(3), Stream.of(4, 5)];
 console.log(Stream.of(...parts).flatMap((p) => p).toList()); // → [1, 2, 3, 4, 5]
@@ -132,7 +132,7 @@ console.log(Stream.of(...parts).flatMap((p) => p).toList()); // → [1, 2, 3, 4,
 A pipeline without a terminal operation does nothing at all:
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const seen: number[] = [];
 const pipeline = Stream.of(1, 2, 3).peek((x) => seen.push(x)).map((x) => x * 2);
@@ -170,7 +170,7 @@ sequenceDiagram
 The `peek` log shows the order:
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const log: string[] = [];
 const result = Stream.of(5, 3, 8, 1, 9, 2)
@@ -192,7 +192,7 @@ Some operations can finish without seeing all elements: `limit`, `takeWhile`, `f
 element-by-element, they work on infinite sources:
 
 ```ts
-import { Stream, IntStream } from '@nodestd/collections';
+import { Stream, IntStream } from '@ylcnfrht/typescript-collection-framework';
 
 // first square above 1000
 console.log(IntStream.iterate(1, (i) => i + 1).map((i) => i * i).filter((sq) => sq > 1000).findFirst().getAsInt()); // → 1024
@@ -217,7 +217,7 @@ on a stream object, any further operation on that object throws `IllegalStateExc
 the source each time, for example with a `() => Stream` factory function.
 
 ```ts
-import { Stream, List } from '@nodestd/collections';
+import { Stream, List } from '@ylcnfrht/typescript-collection-framework';
 
 const s = Stream.of(1, 2, 3);
 console.log(s.count()); // → 3
@@ -253,7 +253,7 @@ then resumes element by element. A short-circuit after the barrier stops the dow
 has already been read in full.
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const log: string[] = [];
 const first = Stream.of(3, 1, 2)
@@ -269,7 +269,7 @@ console.log(log.join(' ')); // → a3 a1 a2 b1
 `distinct()` is stateful but not a barrier: it emits an element the first time it sees it.
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const log: string[] = [];
 Stream.of(1, 1, 2, 3)
@@ -291,7 +291,7 @@ sequential, so results still come out in source order. Treat `unordered()` as a 
 rely on any particular order after it.
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(Stream.of(1, 2, 3).unordered().toList()); // → [1, 2, 3]
 ```
@@ -306,7 +306,7 @@ console.log(Stream.of(1, 2, 3).unordered().toList()); // → [1, 2, 3]
 > streams (associative reducers, combiners, `findAny`) works unchanged and produces the same results.
 
 ```ts
-import { Stream, List } from '@nodestd/collections';
+import { Stream, List } from '@ylcnfrht/typescript-collection-framework';
 
 const s = List.of(1, 2, 3).parallelStream();
 console.log(s.isParallel()); // → true
@@ -325,7 +325,7 @@ handlers still run, and the first error is rethrown with later ones added as sup
 > [Iterating a stream from JS](#iterating-a-stream-from-js)). Otherwise call `close()` or use `using`.
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const log: string[] = [];
 const s = Stream.of(1, 2)
@@ -342,7 +342,7 @@ console.log(log); // → [ 'first', 'second' ]
 Streams implement `Symbol.dispose`, so a `using` declaration closes them at the end of the block:
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const events: string[] = [];
 function openLines() {
@@ -372,7 +372,7 @@ throws leaves the source open and reading can continue, as in the Java API, so c
 (`close()` or `using`).
 
 ```ts
-import { Stream } from '@nodestd/collections';
+import { Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const seen: string[] = [];
 for (const w of Stream.of('a', 'b').map((s) => s.toUpperCase())) seen.push(w);
@@ -400,7 +400,7 @@ console.log(out); // → [ 'x', 'y' ]
 | Reusable result | yes (an array) | single use | single use |
 
 ```ts
-import { Stream, Collectors } from '@nodestd/collections';
+import { Stream, Collectors } from '@ylcnfrht/typescript-collection-framework';
 
 type Order = { customer: string; total: number };
 const orders: Order[] = [

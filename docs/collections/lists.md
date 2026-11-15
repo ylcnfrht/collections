@@ -43,7 +43,7 @@ For a queue or stack without the list API, use [`ArrayDeque`](./queues-and-deque
 ::: code-group
 
 ```ts [Basic]
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = new ArrayList<string>();
 list.add('a');
@@ -58,7 +58,7 @@ console.log(list.size(), list.toString()); // → 2 [b, c]
 ```
 
 ```ts [Intermediate]
-import { ArrayList, Comparator } from '@nodestd/collections';
+import { ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 interface Product { name: string; price: number }
 
@@ -89,7 +89,7 @@ console.log(page(2));   // → [ 'stapler' ]
 `ArrayList` carries the `RandomAccess` marker, which algorithms such as `Collections.binarySearch` use to choose an index-based strategy (see [RandomAccess](../guide/core-concepts.md#randomaccess)).
 
 ```ts
-import { ArrayList, LinkedList, isRandomAccess } from '@nodestd/collections';
+import { ArrayList, LinkedList, isRandomAccess } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(isRandomAccess(new ArrayList<number>()));  // → true
 console.log(isRandomAccess(new LinkedList<number>())); // → false
@@ -104,7 +104,7 @@ console.log(isRandomAccess(new LinkedList<number>())); // → false
 ::: code-group
 
 ```ts [Basic]
-import { LinkedList } from '@nodestd/collections';
+import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = new LinkedList<string>();
 list.add('b');
@@ -120,7 +120,7 @@ console.log(joined, list.size());   // → bcd 3
 ```
 
 ```ts [Intermediate]
-import { LinkedList } from '@nodestd/collections';
+import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
 
 // undo/redo stacks; push/poll work on the front, the oldest entry sits at the back
 const undo = new LinkedList<string>();
@@ -164,7 +164,7 @@ Unlike `ArrayDeque`, `LinkedList` accepts `null` elements. Queue usage is covere
 ::: code-group
 
 ```ts [Basic]
-import { Vector } from '@nodestd/collections';
+import { Vector } from '@ylcnfrht/typescript-collection-framework';
 
 const v = new Vector<number>();
 v.add(10);
@@ -179,7 +179,7 @@ console.log(v.size(), v.toString());  // → 2 [20, 30]
 ```
 
 ```ts [Intermediate]
-import { Collections, TreeSet, Vector, type Enumeration } from '@nodestd/collections';
+import { Collections, TreeSet, Vector, type Enumeration } from '@ylcnfrht/typescript-collection-framework';
 
 // a ported function that reads an Enumeration and returns a Vector
 function upperAll(en: Enumeration<string>): Vector<string> {
@@ -213,7 +213,7 @@ console.log(list.toString());                        // → [red, green]
 ::: code-group
 
 ```ts [Basic]
-import { Stack } from '@nodestd/collections';
+import { Stack } from '@ylcnfrht/typescript-collection-framework';
 
 const s = new Stack<string>();
 s.push('a');
@@ -228,7 +228,7 @@ console.log(s.size(), s.empty());   // → 2 false
 ```
 
 ```ts [Intermediate]
-import { Stack } from '@nodestd/collections';
+import { Stack } from '@ylcnfrht/typescript-collection-framework';
 
 const openerOf: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
 
@@ -264,7 +264,7 @@ New code should use [`ArrayDeque`](./queues-and-deques.md#using-a-deque-as-a-sta
 | `list.clone()` | shallow, independent copy of the same class |
 
 ```ts
-import { ArrayList, HashSet } from '@nodestd/collections';
+import { ArrayList, HashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const empty = new ArrayList<string>();
 const sized = new ArrayList<string>(1000);          // capacity hint
@@ -286,7 +286,7 @@ console.log(fromValues === copy);                   // → false
 `clone()` copies the list, not the elements:
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const a = ArrayList.of({ n: 1 }, { n: 2 });
 const b = a.clone();
@@ -316,7 +316,7 @@ console.log(a.get(0).n);           // → 100
 | `removeAt(i)` | `E` | removes and returns the element at `i` |
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of('a', 'b', 'd');
 list.add(2, 'c');                  // insert before index 2
@@ -335,7 +335,7 @@ try {
 `addAll(index, c)` shifts the tail once, instead of once per element as repeated `add(index, e)` calls would:
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(1, 2, 6, 7);
 list.addAll(2, ArrayList.of(3, 4, 5));
@@ -352,7 +352,7 @@ In the Java Collections Framework, `remove(int)` and `remove(Object)` are overlo
 | `removeAt(i)` | `E` | removes the element at index `i`; throws if `i` is out of range |
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const nums = ArrayList.of(10, 20, 30, 1);
 console.log(nums.remove(1));       // → true
@@ -375,7 +375,7 @@ console.log(nums.remove(99));      // → false
 "Equal" means `Objects.equals`: the element's own `equals()` when it has one, otherwise SameValueZero (so `NaN` finds `NaN`).
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
@@ -405,7 +405,7 @@ All three are linear scans, O(n), in every list class. For a sorted list use [bi
 Every list has the [sequenced collection](../guide/core-concepts.md#sequenced-collections) methods for its two ends: `addFirst`, `addLast`, `getFirst`, `getLast`, `removeFirst` and `removeLast`. The `get*` and `remove*` methods throw `NoSuchElementException` on an empty list.
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const l = ArrayList.of(2);
 l.addFirst(1);
@@ -436,7 +436,7 @@ On an `ArrayList`, `addFirst` and `removeFirst` shift every element (O(n)). On a
 Natural ordering sorts numbers numerically, strings by UTF-16 code unit, and objects by their `compareTo()` (see [ordering](../guide/core-concepts.md#ordering-natural-order-and-comparators)).
 
 ```ts
-import { ArrayList, Comparator } from '@nodestd/collections';
+import { ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const nums = ArrayList.of(10, 9, 100, 1);
 nums.sort(null);
@@ -468,7 +468,7 @@ Ada and Cy have the same age, so the stable sort keeps Ada before Cy. Comparator
 `subList(from, to)` is a window over the half-open range `[from, to)`. View index `i` maps to list index `from + i`. Range operations are written as operations on the view:
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(10, 20, 30, 40, 50);
 const window = list.subList(1, 4);
@@ -487,7 +487,7 @@ In the same way, `list.subList(a, b).sort(null)` sorts a range and `list.subList
 A sub-list stays valid only while the backing list is changed through the view, or not at all. After a structural change made directly to the backing list, the view throws on its next use:
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(1, 2, 3, 4);
 const view = list.subList(1, 3);
@@ -505,7 +505,7 @@ try {
 `reversed()` returns a live view in reverse order. Adding to the front of the reversed view adds to the end of the list.
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(1, 2, 3);
 const rev = list.reversed();
@@ -518,7 +518,7 @@ console.log(rev.get(0));          // → 4
 On a `LinkedList`, `reversed()` returns a `LinkedList`, so the view has the full list and deque API:
 
 ```ts
-import { LinkedList } from '@nodestd/collections';
+import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = LinkedList.of(1, 2, 3);
 const rev = list.reversed();
@@ -549,7 +549,7 @@ A `ListIterator` is a cursor that moves both ways and edits the list in place. T
 `remove()` and `set()` need a last-returned element. Calling them before any `next()`/`previous()`, or right after `add()` or `remove()`, throws `IllegalStateException`.
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const letters = ArrayList.of('a', 'c', 'd');
 const it = letters.listIterator();
@@ -575,7 +575,7 @@ console.log(letters.toString());   // → [a, C, d]
 `listIterator(index)` starts the cursor at `index`. Start at `list.size()` to walk backwards:
 
 ```ts
-import { LinkedList } from '@nodestd/collections';
+import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = LinkedList.of(1, 2, 3);
 const it = list.listIterator(list.size());
@@ -591,7 +591,7 @@ On a `LinkedList`, `add`, `set` and `remove` through a `ListIterator` are O(1), 
 Calling `list.remove(...)` inside a `for...of` over the same list throws `ConcurrentModificationException`. Remove through the iterator, or use `removeIf`:
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(1, 2, 3, 4);
 try {
@@ -642,7 +642,7 @@ Prefer `removeIf` on an `ArrayList`. Removing through the iterator shifts the ta
 | `copyInto(array)` | `toArray()` |
 
 ```ts
-import { Vector } from '@nodestd/collections';
+import { Vector } from '@ylcnfrht/typescript-collection-framework';
 
 const v = new Vector<string>();
 v.addElement('a');
@@ -667,7 +667,7 @@ console.log(target);                       // → [ 1, 2, 1, 2 ]
 A bad index throws `ArrayIndexOutOfBoundsException`, a subclass of `IndexOutOfBoundsException`, so code that catches the latter keeps working:
 
 ```ts
-import { Vector, IndexOutOfBoundsException } from '@nodestd/collections';
+import { Vector, IndexOutOfBoundsException } from '@ylcnfrht/typescript-collection-framework';
 
 const v = Vector.of(1, 2, 3);
 try {
@@ -683,7 +683,7 @@ try {
 A `Vector` tracks a reported capacity, `capacity()`, which defaults to 10. When an add would exceed it, the capacity grows by `capacityIncrement` if that is positive, and doubles otherwise. The real storage is managed by the engine; the number exists so that ported code reading `capacity()` sees the values it expects.
 
 ```ts
-import { Vector } from '@nodestd/collections';
+import { Vector } from '@ylcnfrht/typescript-collection-framework';
 
 const doubling = new Vector<number>();          // capacity 10, doubles
 for (let i = 0; i < 11; i++) doubling.add(i);
@@ -700,7 +700,7 @@ console.log(stepped.capacityIncrement);         // → 2
 `setSize(n)` truncates the vector, or pads it with `null`. `elements()` returns a legacy `Enumeration` (`hasMoreElements`/`nextElement`), which is also JS-iterable and can be adapted with `asIterator()`. Unlike `iterator()`, an enumeration is not fail-fast.
 
 ```ts
-import { Vector } from '@nodestd/collections';
+import { Vector } from '@ylcnfrht/typescript-collection-framework';
 
 const v = Vector.of<number | null>(1, 2, 3);
 v.setSize(5);
@@ -729,7 +729,7 @@ console.log([...Vector.of('x', 'y').elements()]); // → [ 'x', 'y' ]
 | `search(o)` | `number` | 1-based distance of `o` from the top (the top is 1), or `-1` |
 
 ```ts
-import { Stack } from '@nodestd/collections';
+import { Stack } from '@ylcnfrht/typescript-collection-framework';
 
 const s = new Stack<string>();
 s.push('a');
@@ -763,7 +763,7 @@ try {
 Copy through a `LinkedHashSet` to keep first-occurrence order, or a `HashSet` if order does not matter. Both use `equals()`/`hashCode()`, so value objects are deduplicated correctly.
 
 ```ts
-import { ArrayList, LinkedHashSet } from '@nodestd/collections';
+import { ArrayList, LinkedHashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const withDupes = ArrayList.of('b', 'a', 'b', 'c', 'a');
 const unique = new ArrayList(new LinkedHashSet(withDupes));
@@ -777,7 +777,7 @@ The stream equivalent is `withDupes.stream().distinct().toList()` (see [streams]
 `Collections.binarySearch(list, key, comparator?)` runs in O(log n) on a `RandomAccess` list. It returns the index of the key, or `-(insertionPoint) - 1` when the key is absent. The list must be sorted by the ordering you search with.
 
 ```ts
-import { ArrayList, Collections, Comparator } from '@nodestd/collections';
+import { ArrayList, Collections, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const sorted = ArrayList.of(1, 3, 5, 7);
 console.log(Collections.binarySearch(sorted, 5));  // → 2
@@ -798,7 +798,7 @@ If you insert and search constantly, a [`TreeSet`](./sets.md#treeset) keeps the 
 ### Converting to and from JS arrays
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(...[3, 1, 2]);   // from an array
 console.log(list.toArray());               // → [ 3, 1, 2 ]

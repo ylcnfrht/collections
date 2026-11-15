@@ -49,7 +49,7 @@ function lowerBound(a: number[], k: number): number {
 // --- maps and sets -----------------------------------------------------------------------------
 
 const intMap: Workload['impls'] = {
-  '@nodestd/collections HashMap': async (load) => {
+  '@ylcnfrht/typescript-collection-framework HashMap': async (load) => {
     const { HashMap } = await load('ours');
     return { create: () => new HashMap(), put: (m: any, k: any, v: any) => m.put(k, v), get: (m: any, k: any) => m.get(k), size: (m: any) => m.size() };
   },
@@ -110,7 +110,7 @@ const hashSetAddHas: Workload = {
   unit: { perRun: 200000, label: 'add/has calls' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: {
-    '@nodestd/collections HashSet': async (load) => {
+    '@ylcnfrht/typescript-collection-framework HashSet': async (load) => {
       const { HashSet } = await load('ours');
       return { create: () => new HashSet(), add: (s: any, x: any) => s.add(x), has: (s: any, x: any) => s.contains(x) };
     },
@@ -148,7 +148,7 @@ const lru: Workload = {
     return Array.from({ length: N }, () => (below(10) < 8 ? below(900) : 1000 + below(1_000_000)));
   },
   impls: {
-    '@nodestd/collections LinkedHashMap.lru': async (load) => {
+    '@ylcnfrht/typescript-collection-framework LinkedHashMap.lru': async (load) => {
       const { LinkedHashMap } = await load('ours');
       return { create: (cap: number) => LinkedHashMap.lru(cap), get: (c: any, k: any) => c.get(k) ?? undefined, set: (c: any, k: any, v: any) => c.put(k, v) };
     },
@@ -201,7 +201,7 @@ const treeFloorCeiling: Workload = {
     return { keys, queries };
   },
   impls: {
-    '@nodestd/collections TreeMap': async (load) => {
+    '@ylcnfrht/typescript-collection-framework TreeMap': async (load) => {
       const { TreeMap } = await load('ours');
       return {
         create: () => new TreeMap(),
@@ -262,7 +262,7 @@ const pqChurn: Workload = {
     return Array.from({ length: N + PQ_SIZE }, () => r());
   },
   impls: {
-    '@nodestd/collections PriorityQueue': async (load) => {
+    '@ylcnfrht/typescript-collection-framework PriorityQueue': async (load) => {
       const { PriorityQueue } = await load('ours');
       return { create: () => new PriorityQueue(), offer: (q: any, x: number) => q.offer(x), poll: (q: any) => q.poll() };
     },
@@ -320,7 +320,7 @@ const dequeChurn: Workload = {
   unit: { perRun: 200000, label: 'offer/poll calls' },
   data: () => Array.from({ length: N + DQ_SIZE }, (_, i) => i),
   impls: {
-    '@nodestd/collections ArrayDeque': async (load) => {
+    '@ylcnfrht/typescript-collection-framework ArrayDeque': async (load) => {
       const { ArrayDeque } = await load('ours');
       return { create: () => new ArrayDeque(), offer: (d: any, x: number) => d.offer(x), poll: (d: any) => d.poll() };
     },
@@ -367,11 +367,11 @@ const streamSum: Workload = {
     return Array.from({ length: N }, () => r() % 1000);
   },
   impls: {
-    '@nodestd/collections Stream': async (load) => {
+    '@ylcnfrht/typescript-collection-framework Stream': async (load) => {
       const { Stream } = await load('ours');
       return { sum: (xs: number[]) => Stream.ofArray(xs).filter(even).map(triple).reduce(0, add) };
     },
-    '@nodestd/collections IntStream': async (load) => {
+    '@ylcnfrht/typescript-collection-framework IntStream': async (load) => {
       const { IntStream } = await load('ours');
       return { sum: (xs: number[]) => IntStream.ofArray(xs).filter(even).map(triple).sum() };
     },
@@ -393,7 +393,7 @@ const listAddGet: Workload = {
   unit: { perRun: 200_000, label: 'add/get calls' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: {
-    '@nodestd/collections ArrayList': async (load) => {
+    '@ylcnfrht/typescript-collection-framework ArrayList': async (load) => {
       const { ArrayList } = await load('ours');
       return { create: () => new ArrayList(), add: (l: any, x: number) => l.add(x), get: (l: any, i: number) => l.get(i) };
     },
@@ -424,7 +424,7 @@ const listSort: Workload = {
     return Array.from({ length: N }, () => r());
   },
   impls: {
-    '@nodestd/collections ArrayList': async (load) => {
+    '@ylcnfrht/typescript-collection-framework ArrayList': async (load) => {
       const { ArrayList } = await load('ours');
       return { create: () => new ArrayList(), add: (l: any, x: number) => l.add(x), sort: (l: any) => l.sort(asc), get: (l: any, i: number) => l.get(i) };
     },
@@ -451,7 +451,7 @@ const linkedQueue: Workload = {
   unit: { perRun: 200_000, label: 'offer/poll calls' },
   data: () => Array.from({ length: N + DQ_SIZE }, (_, i) => i),
   impls: {
-    '@nodestd/collections LinkedList': async (load) => {
+    '@ylcnfrht/typescript-collection-framework LinkedList': async (load) => {
       const { LinkedList } = await load('ours');
       return { create: () => new LinkedList(), offer: (d: any, x: number) => d.offer(x), poll: (d: any) => d.poll() };
     },
@@ -477,11 +477,11 @@ const stackPushPop: Workload = {
   unit: { perRun: 200_000, label: 'push/pop calls' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: {
-    '@nodestd/collections Stack': async (load) => {
+    '@ylcnfrht/typescript-collection-framework Stack': async (load) => {
       const { Stack } = await load('ours');
       return { create: () => new Stack(), push: (s: any, x: number) => s.push(x), pop: (s: any) => s.pop() };
     },
-    '@nodestd/collections ArrayDeque': async (load) => {
+    '@ylcnfrht/typescript-collection-framework ArrayDeque': async (load) => {
       const { ArrayDeque } = await load('ours');
       return { create: () => new ArrayDeque(), push: (s: any, x: number) => s.push(x), pop: (s: any) => s.pop() };
     },
@@ -513,7 +513,7 @@ const linkedSet: Workload = {
   unit: { perRun: 200_000, label: 'add/has calls' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: {
-    '@nodestd/collections LinkedHashSet': async (load) => {
+    '@ylcnfrht/typescript-collection-framework LinkedHashSet': async (load) => {
       const { LinkedHashSet } = await load('ours');
       return { create: () => new LinkedHashSet(), add: (s: any, x: any) => s.add(x), has: (s: any, x: any) => s.contains(x) };
     },
@@ -531,7 +531,7 @@ const treeSetAddContains: Workload = {
   unit: { perRun: 200_000, label: 'add/contains calls' },
   data: () => treeFloorCeiling.data(),
   impls: {
-    '@nodestd/collections TreeSet': async (load) => {
+    '@ylcnfrht/typescript-collection-framework TreeSet': async (load) => {
       const { TreeSet } = await load('ours');
       return { create: () => new TreeSet(), add: (s: any, k: number) => s.add(k), has: (s: any, k: number) => s.contains(k) };
     },
@@ -562,7 +562,7 @@ const treeMapPut: Workload = {
   unit: { perRun: 100_000, label: 'put calls' },
   data: () => treeFloorCeiling.data().keys,
   impls: {
-    '@nodestd/collections TreeMap': async (load) => {
+    '@ylcnfrht/typescript-collection-framework TreeMap': async (load) => {
       const { TreeMap } = await load('ours');
       return { create: () => new TreeMap(), put: (m: any, k: number) => m.put(k, k), size: (m: any) => m.size() };
     },
@@ -591,7 +591,7 @@ const linkedMapIterate: Workload = {
   unit: { perRun: 200_000, label: 'puts and visited entries' },
   data: () => Array.from({ length: N }, (_, i) => i),
   impls: {
-    '@nodestd/collections LinkedHashMap': async (load) => {
+    '@ylcnfrht/typescript-collection-framework LinkedHashMap': async (load) => {
       const { LinkedHashMap } = await load('ours');
       return { create: () => new LinkedHashMap(), put: (m: any, k: number, v: number) => m.put(k, v), each: (m: any, f: (k: number, v: number) => void) => m.forEach(f) };
     },
@@ -639,7 +639,7 @@ const valueKeys: Workload = {
     return { puts: coords.map(([x, y]) => new Point(x, y)), gets: coords.map(([x, y]) => new Point(x, y)) };
   },
   impls: {
-    '@nodestd/collections HashMap': async (load) => {
+    '@ylcnfrht/typescript-collection-framework HashMap': async (load) => {
       const { HashMap } = await load('ours');
       return { create: () => new HashMap(), put: (m: any, p: Point, v: number) => m.put(p, v), get: (m: any, p: Point) => m.get(p) ?? undefined };
     },

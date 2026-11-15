@@ -1,11 +1,11 @@
 # Introduction
 
-`@nodestd/collections` is a collections framework for TypeScript and JavaScript, inspired by the Java Collections
+`@ylcnfrht/typescript-collection-framework` is a collections framework for TypeScript and JavaScript, inspired by the Java Collections
 Framework. It provides lists, queues, deques, sets and maps behind one set of interfaces, lazy streams with
 collectors and gatherers, `Optional`, and the `Collections` utility class. It has zero runtime dependencies.
 
 ```ts
-import { ArrayList, TreeMap, Collectors, List } from '@nodestd/collections';
+import { ArrayList, TreeMap, Collectors, List } from '@ylcnfrht/typescript-collection-framework';
 
 const words = ArrayList.of('pear', 'fig', 'apple', 'kiwi');
 // with new:
@@ -166,7 +166,7 @@ classDiagram
 A class can be used through any interface it implements:
 
 ```ts
-import { LinkedList, List, Deque, SequencedCollection } from '@nodestd/collections';
+import { LinkedList, List, Deque, SequencedCollection } from '@ylcnfrht/typescript-collection-framework';
 
 const ll = new LinkedList<number>();
 const asList: List<number> = ll;
@@ -189,5 +189,5 @@ The rest of the type system:
 ## API reference
 
 Every exported class, interface, type and function, with its signatures and documentation comments, is in the
-[API reference](https://nodestd.github.io/collections/api/). It is generated from the source with TypeDoc each time
+[API reference](https://ylcnfrht.github.io/typescript-collection-framework/api/). It is generated from the source with TypeDoc each time
 the site is built; `npm run docs:dev` generates it and serves the site locally.

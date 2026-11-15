@@ -17,7 +17,7 @@ The maps in this package look up keys with `equals()`/`hashCode()`, or with a co
 | Value equality | `a.equals(b)` is `true` when `b` is any `Map` with the same key-value pairs; order is ignored. `hashCode()` is the sum over entries of `hash(key) ^ hash(value)`. |
 
 ```ts
-import { HashMap, TreeMap, LinkedHashMap } from '@nodestd/collections';
+import { HashMap, TreeMap, LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const ages = new HashMap<string, number>();
 console.log(ages.put('ada', 36));  // → null
@@ -65,7 +65,7 @@ The split is not observable: it is one map with one fail-fast iteration over all
 ::: code-group
 
 ```ts [Basic]
-import { HashMap } from '@nodestd/collections';
+import { HashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const ages = new HashMap<string, number>();
 ages.put('ada', 36);
@@ -78,7 +78,7 @@ for (const [name, age] of ages) console.log(name, age); // → ada 36
 ```
 
 ```ts [Intermediate]
-import { HashMap, List } from '@nodestd/collections';
+import { HashMap, List } from '@ylcnfrht/typescript-collection-framework';
 
 const byId = new HashMap<number, string>();
 for (let id = 0; id < 5; id++) byId.put(id, `user${id}`); // dense table
@@ -108,7 +108,7 @@ console.log(clicks.getOrDefault(List.of(0, 0), 0)); // → 0
 ::: code-group
 
 ```ts [Basic]
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const steps = new LinkedHashMap<string, number>();
 steps.put('build', 12);
@@ -124,7 +124,7 @@ console.log(order.join(', '));          // → build=12, deploy=5
 ```
 
 ```ts [Intermediate]
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const insertion = new LinkedHashMap<string, number>();
 insertion.put('a', 1);
@@ -158,7 +158,7 @@ Access order is the basis of [LRU caches](#lru-caches).
 ::: code-group
 
 ```ts [Basic]
-import { TreeMap, Comparator } from '@nodestd/collections';
+import { TreeMap, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const scores = new TreeMap<string, number>();
 scores.put('carol', 72);
@@ -178,7 +178,7 @@ console.log(desc.toString());            // → {bob=88, ada=95}
 ```
 
 ```ts [Intermediate]
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 // shipping price by minimum parcel weight in kg
 const tiers = new TreeMap<number, number>();
@@ -214,7 +214,7 @@ console.log(tiers.subMap(2, true, 30, false).toString()); // → {2=9, 10=20}
 ::: code-group
 
 ```ts [Basic]
-import { IdentityHashMap } from '@nodestd/collections';
+import { IdentityHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const a = { id: 1 };
 const b = { id: 1 }; // same contents, different object
@@ -229,7 +229,7 @@ for (const [key, tag] of tags) console.log(key, tag); // → { id: 1 } first
 ```
 
 ```ts [Intermediate]
-import { IdentityHashMap, HashMap, ArrayList, List } from '@nodestd/collections';
+import { IdentityHashMap, HashMap, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
 
 const a = ArrayList.of(1, 2);
 // with new:
@@ -288,7 +288,7 @@ console.log(byIdentity.get(a)); // → first
 Because `get` returns `null` both for a missing key and for a key mapped to `null`, ask `containsKey` when the difference matters:
 
 ```ts
-import { HashMap } from '@nodestd/collections';
+import { HashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const m = new HashMap<string, string | null>();
 m.put('nickname', null);
@@ -316,7 +316,7 @@ Every map has these methods. They come from `AbstractMap`, and the concrete maps
 | `forEach(f)` | `void` | calls `f(k, v)` for every mapping |
 
 ```ts
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 const stock = new TreeMap<string, number>();
 stock.put('apples', 3);
@@ -350,7 +350,7 @@ console.log(lines);                             // → [ 'apples: 60', 'pears: 8
 `computeIfAbsent` returns the value that is in the map afterwards, so "get the bucket, creating it if needed, then add to it" is one expression. The `!` is needed because `computeIfAbsent` is typed `V | null`: a function that returns `null` leaves the key absent.
 
 ```ts
-import { TreeMap, ArrayList, List } from '@nodestd/collections';
+import { TreeMap, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
 
 const words = ['apple', 'avocado', 'banana', 'blueberry', 'cherry'];
 const byLetter = new TreeMap<string, List<string>>();
@@ -363,7 +363,7 @@ console.log(byLetter.toString()); // → {a=[apple, avocado], b=[banana, blueber
 `merge(k, 1, (a, b) => a + b)` inserts 1 for a new key and adds 1 to an existing one:
 
 ```ts
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 const counts = new TreeMap<string, number>();
 for (const ch of 'mississippi') counts.merge(ch, 1, (a, b) => a + b);
@@ -379,7 +379,7 @@ console.log(counts.containsKey('m')); // → false
 The function passed to `computeIfAbsent`, `computeIfPresent`, `compute` or `merge` must not add or remove keys of the same map. If it does, the method detects the structural change and throws `ConcurrentModificationException` instead of storing into a map whose layout changed. The change the callback made is not rolled back. The same rule applies to `forEach`, `replaceAll` and iteration over any view.
 
 ```ts
-import { HashMap } from '@nodestd/collections';
+import { HashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const memo = new HashMap<number, number>();
 const fib = (n: number): number =>
@@ -420,7 +420,7 @@ console.log(fib2(50)); // → 12586269025
 | `sequencedKeySet()`, `sequencedValues()`, `sequencedEntrySet()` | sequenced views | views with `getFirst`, `reversed()`, … |
 
 ```ts
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
 // with new:
@@ -454,7 +454,7 @@ console.log(m.toString());            // → {a=1, c=3}
 Entries returned by navigation methods are immutable snapshots: `setValue` throws `UnsupportedOperationException`. Entries reached by iterating `entrySet()` are live and writable.
 
 ```ts
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 const grades = new TreeMap<number, string>();
 grades.put(90, 'A');
@@ -484,7 +484,7 @@ console.log(grades.pollFirstEntry()?.toString(), grades.size()); // → 0=F 3
 An access-ordered `LinkedHashMap` that drops its head when it grows too large is an LRU (least recently used) cache. `LinkedHashMap.lru(n)` builds one:
 
 ```ts
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const cache = LinkedHashMap.lru<string, string>(2);
 cache.put('a', 'A');
@@ -497,7 +497,7 @@ console.log(cache.toString()); // → {a=A, c=C}
 Combined with `computeIfAbsent`, the cache loads missing values on demand:
 
 ```ts
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const cache = LinkedHashMap.lru<string, number>(3);
 const load = (key: string): number => cache.computeIfAbsent(key, (k) => k.length)!; // k.length stands in for slow work
@@ -510,7 +510,7 @@ console.log(cache.keySet().toString()); // → [gamma, alpha, delta]
 For custom eviction rules (by total weight, by age, with a callback), subclass `LinkedHashMap` and override `removeEldestEntry(eldest)`. The map calls it after every insertion with the head entry; return `true` to evict that entry.
 
 ```ts
-import { LinkedHashMap, MapEntry } from '@nodestd/collections';
+import { LinkedHashMap, MapEntry } from '@ylcnfrht/typescript-collection-framework';
 
 class BoundedCache<K, V> extends LinkedHashMap<K, V> {
   readonly evicted: K[] = [];
@@ -545,7 +545,7 @@ A `MapEntry<K, V>` (the `Map.Entry` of the Java Collections Framework) has `getK
 `Map.Entry.comparingByKey()` and `Map.Entry.comparingByValue()` build comparators for sorting entries. Each optionally takes a comparator for the key or value.
 
 ```ts
-import { Map, SimpleEntry, SimpleImmutableEntry, HashMap, ArrayList, Comparator } from '@nodestd/collections';
+import { Map, SimpleEntry, SimpleImmutableEntry, HashMap, ArrayList, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const e = new SimpleEntry('k', 1);
 e.setValue(2);
@@ -584,7 +584,7 @@ Map views are [live](../guide/core-concepts.md#live-views): they always reflect 
 A view cannot add, because it has no way to supply the missing half of a mapping.
 
 ```ts
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 const m = new TreeMap<string, number>();
 m.put('a', 1);
@@ -614,7 +614,7 @@ try {
 `headMap`, `tailMap` and `subMap` on a `TreeMap` follow the rules of `TreeSet`'s [range views](./sets.md#range-views). They are live, writes go through, and putting a key outside the range throws `IllegalArgumentException`. The defaults are `headMap(to)` exclusive, `tailMap(from)` inclusive and `subMap(from, to)` half-open, with overloads that take explicit `inclusive` flags. `descendingMap()` is a live reverse-ordered view; `navigableKeySet()` and `descendingKeySet()` are the key views.
 
 ```ts
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 const m = new TreeMap<number, string>();
 for (const k of [10, 20, 30, 40]) m.put(k, `v${k}`);
@@ -642,7 +642,7 @@ console.log(m.toString()); // → {30=v30, 40=v40}
 Every map is iterable as `[key, value]` pairs, like a native `Map`, which supports destructuring loops, spread and conversion to native structures. Iteration and all views are [fail-fast](../guide/core-concepts.md#fail-fast-iteration): modifying the map other than through the view's iterator while iterating throws `ConcurrentModificationException`. To remove while iterating, use `iterator().remove()` or `removeIf` on a view.
 
 ```ts
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const m = LinkedHashMap.of<string, number>(['a', 1], ['b', 2]);
 
@@ -666,7 +666,7 @@ console.log(fromNative.toString());        // → {x=9, y=8}
 ### Word frequency
 
 ```ts
-import { HashMap, ArrayList, Map } from '@nodestd/collections';
+import { HashMap, ArrayList, Map } from '@ylcnfrht/typescript-collection-framework';
 
 const text = 'the quick fox jumps over the lazy dog the end';
 const freq = new HashMap<string, number>();
@@ -683,7 +683,7 @@ Streams do the same in one expression with `Collectors.groupingBy` and `Collecto
 ### Group by
 
 ```ts
-import { TreeMap, ArrayList, List } from '@nodestd/collections';
+import { TreeMap, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
 
 interface Order { customer: string; total: number }
 const orders: Order[] = [
@@ -702,7 +702,7 @@ console.log(byCustomer.toString()); // → {ann=[10, 7], bob=[5]}
 Map each word to the sorted set of documents that contain it:
 
 ```ts
-import { TreeMap, TreeSet } from '@nodestd/collections';
+import { TreeMap, TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const docs = ['red fish blue fish', 'one fish', 'red car'];
 const index = new TreeMap<string, TreeSet<number>>();
@@ -723,7 +723,7 @@ console.log(both.toString()); // → [0]
 A `TreeMap` keyed by timestamp, or by ISO date strings (which sort chronologically), answers "what happened between A and B" and "what was the latest value at time T" in O(log n):
 
 ```ts
-import { TreeMap } from '@nodestd/collections';
+import { TreeMap } from '@ylcnfrht/typescript-collection-framework';
 
 const price = new TreeMap<string, number>();
 price.put('2024-01-01', 100);

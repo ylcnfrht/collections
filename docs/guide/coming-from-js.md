@@ -29,7 +29,7 @@ the [Data structures primer](./data-structures.md).
 | `a.join(', ')` | `list.stream().map(String).collect(Collectors.joining(', '))` | |
 
 ```ts
-import { ArrayList, Collections } from '@nodestd/collections';
+import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const a = ArrayList.of(30, 10, 20);
 // with new:
@@ -70,7 +70,7 @@ A JS `Map` keeps insertion order, like `LinkedHashMap`. `HashMap` guarantees no 
 | `m.forEach((v, k) => …)` | `m.forEach((k, v) => …)` | **key first** |
 
 ```ts
-import { HashMap, TreeMap, ArrayList, List } from '@nodestd/collections';
+import { HashMap, TreeMap, ArrayList, List } from '@ylcnfrht/typescript-collection-framework';
 
 const words = ['bee', 'ant', 'bat', 'cow', 'ape'];
 
@@ -100,7 +100,7 @@ A JS `Set` keeps insertion order, like `LinkedHashSet`.
 | `a.isSubsetOf(b)` | `b.containsAll(a)` | |
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const a = TreeSet.of(1, 2, 3, 4);
 // with new:
@@ -142,7 +142,7 @@ Streams are lazy: nothing runs until a *terminal* operation (`toList`, `collect`
 | `Array.from({ length: n }, (_, i) => f(i))` | `IntStream.range(0, n).mapToObj(f)` | |
 
 ```ts
-import { List, Stream, IntStream, Collectors, Comparator } from '@nodestd/collections';
+import { List, Stream, IntStream, Collectors, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const nums = List.of(5, 3, 8, 1, 9, 2);
 
@@ -167,7 +167,7 @@ object with `equals()` and `hashCode()`, including every list, set, map and entr
 key directly.
 
 ```ts
-import { HashMap, List } from '@nodestd/collections';
+import { HashMap, List } from '@ylcnfrht/typescript-collection-framework';
 
 // JS: identity, so this lookup misses
 const native = new globalThis.Map<number[], string>();
@@ -205,7 +205,7 @@ Every collection is iterable and every map iterates as `[key, value]` pairs, so 
 | object → map | `HashMap.of(...Object.entries(obj))` |
 
 ```ts
-import { ArrayList, LinkedHashMap, HashSet, Stream } from '@nodestd/collections';
+import { ArrayList, LinkedHashMap, HashSet, Stream } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of(1.5, 2.5);
 console.log([...list], list.toArray());           // → [ 1.5, 2.5 ] [ 1.5, 2.5 ]
@@ -240,7 +240,7 @@ that module. See [Name clashes with built-ins](./getting-started.md#name-clashes
 On a `List<number>`, `remove(1)` removes the value `1`, not the element at index 1.
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const l = ArrayList.of(10, 1, 20);
 l.remove(1);       // removes the element equal to 1
@@ -260,7 +260,7 @@ Adding or removing elements inside a loop over the same collection throws `Concu
 `iterator().remove()`, `removeIf`, or collect the changes and apply them after the loop.
 
 ```ts
-import { HashMap } from '@nodestd/collections';
+import { HashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const m = HashMap.of<string, number>(['a', 1], ['b', 2], ['c', 3]);
 // with new:

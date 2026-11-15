@@ -344,7 +344,7 @@ const UNORDERED = new globalThis.Set(['PriorityQueue', 'PriorityQueueRev', 'Hash
   'SetCopyOf', 'MapCopyOf', 'MapOfPairs', 'AbsSet', 'EmptySet', 'EmptyMap', 'EmptySetConst', 'EmptyMapConst', 'Singleton', 'SingletonMap']);
 
 /** Marks harness subclasses of the library's abstract skeletons (coverage counts them under the skeleton). */
-export const HARNESS = Symbol.for('@nodestd/collections.diff.harness');
+export const HARNESS = Symbol.for('@ylcnfrht/typescript-collection-framework.diff.harness');
 
 class AbsListImpl extends AbstractList<any> {
   static readonly [HARNESS] = true;
@@ -509,7 +509,7 @@ function applyView(o: any, seg: string): any {
 /** Views created on the empty base before init (the reference requires an empty map). */
 const PRE_INIT = new globalThis.Set(['newSetFromMap', 'newSequencedSetFromMap']);
 
-const SET_BRAND = Symbol.for('@nodestd/collections.Set');
+const SET_BRAND = Symbol.for('@ylcnfrht/typescript-collection-framework.Set');
 const isSetObj = (t: any) => t?.[SET_BRAND] === true;
 const isMap = (t: any) => isFn(t, 'entrySet') && isFn(t, 'containsKey');
 

@@ -18,7 +18,7 @@ Every set in the package, and every set built on `AbstractSet`, follows three ru
 | `hashCode` is a sum | A set's `hashCode()` is the sum of its elements' hash codes, so equal sets have equal hashes whatever their implementation or order. |
 
 ```ts
-import { HashSet, TreeSet, LinkedHashSet, Objects } from '@nodestd/collections';
+import { HashSet, TreeSet, LinkedHashSet, Objects } from '@ylcnfrht/typescript-collection-framework';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
@@ -98,7 +98,7 @@ The split is not observable: the set behaves as one hash set.
 ::: code-group
 
 ```ts [Basic]
-import { HashSet } from '@nodestd/collections';
+import { HashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const tags = new HashSet<string>();
 console.log(tags.add('ts'));      // → true
@@ -111,7 +111,7 @@ for (const tag of tags) console.log(tag); // → ts
 ```
 
 ```ts [Intermediate]
-import { HashSet, List } from '@nodestd/collections';
+import { HashSet, List } from '@ylcnfrht/typescript-collection-framework';
 
 const plain = new HashSet<object>();
 plain.add({ id: 1 });
@@ -140,7 +140,7 @@ console.log(lists.contains(List.of(1, 2))); // → true
 ::: code-group
 
 ```ts [Basic]
-import { LinkedHashSet } from '@nodestd/collections';
+import { LinkedHashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const steps = new LinkedHashSet<string>();
 console.log(steps.add('build')); // → true
@@ -156,7 +156,7 @@ console.log(order.join(' '));        // → build deploy
 ```
 
 ```ts [Intermediate]
-import { LinkedHashSet, ArrayList } from '@nodestd/collections';
+import { LinkedHashSet, ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 // unique page visits in first-seen order
 const visits = ArrayList.of('home', 'docs', 'home', 'blog', 'docs');
@@ -186,7 +186,7 @@ console.log(recent.reversed().toString()); // → [queues, maps, lists]
 ::: code-group
 
 ```ts [Basic]
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const scores = new TreeSet<number>();
 console.log(scores.add(70)); // → true
@@ -202,7 +202,7 @@ console.log(total);               // → 152
 ```
 
 ```ts [Intermediate]
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 // booked meeting starts, in minutes since midnight
 const booked = TreeSet.of(540, 600, 690, 840);
@@ -240,7 +240,7 @@ console.log(hhmm(booked.first()), hhmm(booked.last())); // → 09:00 14:00
 The backing stores grow on their own, so the size passed to `newHashSet` and `newLinkedHashSet` is only a hint. The factories validate it (a negative or `NaN` count throws `IllegalArgumentException`) and exist so that code ported from the Java Collections Framework keeps compiling.
 
 ```ts
-import { HashSet, LinkedHashSet } from '@nodestd/collections';
+import { HashSet, LinkedHashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const seen = HashSet.newHashSet<string>(1000);
 const ordered = LinkedHashSet.newLinkedHashSet<string>(1000);
@@ -269,7 +269,7 @@ The bulk operations implement the set-theory operators. They mutate the receiver
 | disjoint | `Collections.disjoint(a, b)` | `boolean` |
 
 ```ts
-import { HashSet, TreeSet, Collections } from '@nodestd/collections';
+import { HashSet, TreeSet, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const a = HashSet.of(1, 2, 3, 4);
 const b = HashSet.of(3, 4, 5);
@@ -311,7 +311,7 @@ The argument of `addAll`, `retainAll` and `removeAll` can be any collection. `re
 The empty-set `get*` and `remove*` methods throw `NoSuchElementException`. On a `LinkedHashSet`, `add()` of an element that is already present keeps its position, while `addFirst` and `addLast` move it:
 
 ```ts
-import { LinkedHashSet } from '@nodestd/collections';
+import { LinkedHashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = LinkedHashSet.of('a', 'b', 'c');
 s.add('a');            // already present: position unchanged
@@ -332,7 +332,7 @@ console.log(s.toString());              // → [b, c]
 Without a comparator, `TreeSet` uses natural ordering: numbers numerically, strings by UTF-16 code unit, bigints, booleans and `Date`s by value, and objects with a `compareTo()` method (the `Comparable` interface) by that method. Mixing types that cannot be compared throws `ClassCastException`. Pass a comparator to choose another order; `Comparator` provides `comparing`, `reverseOrder`, `thenComparing`, `nullsFirst` and more (see [ordering](../guide/core-concepts.md#ordering-natural-order-and-comparators)). `comparator()` returns the comparator, or `null` for natural ordering.
 
 ```ts
-import { TreeSet, Comparator } from '@nodestd/collections';
+import { TreeSet, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(TreeSet.of(30, 4, 100).toString());       // → [4, 30, 100]
 console.log(TreeSet.of('pear', 'Apple', 'fig').toString()); // → [Apple, fig, pear]
@@ -353,7 +353,7 @@ console.log(byLength.toString()); // → [a, ccc]
 > In a `TreeSet`, the comparator defines equality. The set never calls `equals()`: two elements are duplicates when the comparator returns 0. A case-insensitive comparator gives a case-insensitive set, and a comparator that ignores some fields merges elements that differ only in those fields. With such a comparator, `equals()` between a `TreeSet` and another set can depend on which side you ask.
 
 ```ts
-import { TreeSet, Comparator } from '@nodestd/collections';
+import { TreeSet, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const tags = new TreeSet<string>(Comparator.comparing((s: string) => s.toLowerCase()));
 console.log(tags.add('TypeScript')); // → true
@@ -384,7 +384,7 @@ console.log(byLength.add('dog')); // → false
 When the probe is itself an element, `floor` and `ceiling` return it, while `lower` and `higher` skip past it.
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = TreeSet.of(10, 20, 30, 40);
 console.log(s.lower(25), s.floor(25), s.ceiling(25), s.higher(25)); // → 20 20 30 30
@@ -396,7 +396,7 @@ console.log(s.first(), s.last());                                  // → 10 40
 With `pollFirst()` and `pollLast()`, a `TreeSet` works as a priority queue without duplicates:
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const pending = TreeSet.of(5, 1, 3);
 console.log(pending.pollFirst()); // → 1
@@ -414,7 +414,7 @@ Set views are [live](../guide/core-concepts.md#live-views): they reflect later c
 `reversed()` on a `LinkedHashSet` returns a live view in reverse order. `add` on the view behaves like `add` on the set (it appends at the set's end), while `addFirst` on the view is `addLast` on the set.
 
 ```ts
-import { LinkedHashSet } from '@nodestd/collections';
+import { LinkedHashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = LinkedHashSet.of(1, 2, 3);
 const r = s.reversed();
@@ -438,7 +438,7 @@ console.log(r.toString()); // → [4, 3, 1]
 | `subSet(from, fromInc, to, toInc)` | as given | as given |
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = TreeSet.of(10, 20, 30, 40, 50);
 console.log(s.headSet(30).toString());        // → [10, 20]
@@ -457,7 +457,7 @@ console.log(s.toString());       // → [5, 20, 30, 40, 50]
 A view remembers its bounds. Adding an element outside them throws `IllegalArgumentException`, and so does requesting a nested range that reaches beyond them. `subSet(from, to)` with `from > to` is rejected the same way.
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = TreeSet.of(10, 20, 30, 40, 50);
 const mid = s.subSet(20, true, 40, false); // [20, 40)
@@ -480,7 +480,7 @@ console.log(mid.add(25), s.toString()); // → true [10, 20, 25, 30, 40, 50]
 For a string `prefix`, the range `[prefix, prefix + '\uffff')` contains the strings that start with it, unless the character after the prefix is U+FFFF itself:
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const users = TreeSet.of('alice', 'albert', 'bob', 'alfred', 'carol');
 const prefix = 'al';
@@ -492,7 +492,7 @@ console.log(users.subSet(prefix, prefix + '\uffff').toString()); // → [albert,
 `descendingSet()`, and its synonym `reversed()`, return a live view of a `TreeSet` in reverse order. `descendingIterator()` walks the set from the largest element down. In the descending view the navigation methods flip too: `first()` is the largest element and `headSet` takes the high end.
 
 ```ts
-import { TreeSet } from '@nodestd/collections';
+import { TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = TreeSet.of(1, 2, 3);
 const d = s.descendingSet();
@@ -509,7 +509,7 @@ console.log(s.descendingIterator().next()); // → 3
 A `HashSet` iterates in an unspecified order, a `LinkedHashSet` in insertion order, and a `TreeSet` in sorted order. All set iterators are [fail-fast](../guide/core-concepts.md#fail-fast-iteration): changing a set while iterating it, other than through the iterator's own `remove()`, throws `ConcurrentModificationException`.
 
 ```ts
-import { HashSet } from '@nodestd/collections';
+import { HashSet } from '@ylcnfrht/typescript-collection-framework';
 
 const s = HashSet.of(1, 2, 3, 4);
 try {
@@ -552,7 +552,7 @@ Hash costs assume reasonable `hashCode()` implementations. Elements that share a
 > Do not change the fields that `equals()`/`hashCode()` read while the element is in a hash set. The set filed the element under its hash code at insertion time. After the change, the element is still there (it appears in iteration and `size()`), but `contains` and `remove` can no longer find it.
 
 ```ts
-import { HashSet, Objects } from '@nodestd/collections';
+import { HashSet, Objects } from '@ylcnfrht/typescript-collection-framework';
 
 class MutablePoint {
   constructor(public x: number, public y: number) {}

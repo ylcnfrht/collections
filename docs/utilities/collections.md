@@ -11,7 +11,7 @@ Every helper throws `NullPointerException` when a collection argument is `null` 
 `Collections.sort(list, c?)` calls `list.sort(c)`. The sort is stable: elements that compare equal keep their relative order. If you omit the comparator or pass `null`, natural ordering is used (see [Comparator and Objects](./comparator-and-objects.md#natural-ordering)). Unlike `Array.prototype.sort`, there is no string conversion, so numbers sort numerically.
 
 ```ts
-import { ArrayList, Collections, Comparator } from '@nodestd/collections';
+import { ArrayList, Collections, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const nums = ArrayList.of(10, 9, 100, 1);
 // with new:
@@ -29,7 +29,7 @@ console.log(words); // → [fig, yam, pear, kiwi, apple]
 `reverse`, `swap` and `fill` change a list in place. `copy(dest, src)` overwrites the first `src.size()` positions of `dest`. It never grows `dest`, so a source that is too large throws `IndexOutOfBoundsException`.
 
 ```ts
-import { ArrayList, Collections, List } from '@nodestd/collections';
+import { ArrayList, Collections, List } from '@ylcnfrht/typescript-collection-framework';
 
 const l = ArrayList.of('a', 'b', 'c', 'd');
 Collections.reverse(l);
@@ -64,8 +64,8 @@ try {
 Pass a seeded source when you need shuffles you can reproduce, for example in tests, simulations or replays. The same seed always gives the same order:
 
 ```ts
-import { ArrayList, Collections } from '@nodestd/collections';
-import type { RandomSource } from '@nodestd/collections';
+import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
+import type { RandomSource } from '@ylcnfrht/typescript-collection-framework';
 
 // mulberry32: a tiny seeded PRNG returning floats in [0, 1)
 function seeded(seed: number): RandomSource {
@@ -94,7 +94,7 @@ console.log(c); // → [2, 3, 4, 5, 6, 1]
 `rotate(list, distance)` moves the element at index `i` to `(i + distance) mod size`. A positive distance rotates right and a negative one rotates left. Any integer works, including values larger than the size. A distance that is not an integer (such as `1.5` or `NaN`) throws `IllegalArgumentException`.
 
 ```ts
-import { ArrayList, Collections } from '@nodestd/collections';
+import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const l = ArrayList.of('a', 'b', 'c', 'd', 'e');
 Collections.rotate(l, 2);
@@ -129,7 +129,7 @@ This encoding makes every miss negative, including a miss whose insertion point 
 | `99` | no | 3 | `-4` |
 
 ```ts
-import { ArrayList, Collections } from '@nodestd/collections';
+import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const sorted = ArrayList.of(10, 20, 30);
 console.log(Collections.binarySearch(sorted, 20)); // → 1
@@ -149,7 +149,7 @@ console.log(sorted); // → [5, 10, 20, 25, 30]
 When the list was sorted with a comparator, pass the same comparator to the search:
 
 ```ts
-import { ArrayList, Collections, Comparator } from '@nodestd/collections';
+import { ArrayList, Collections, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const desc = ArrayList.of(30, 20, 10);
 console.log(Collections.binarySearch(desc, 20, Comparator.reverseOrder())); // → 1
@@ -161,7 +161,7 @@ console.log(Collections.binarySearch(desc, 15, Comparator.reverseOrder())); // �
 `min` and `max` scan any collection, using natural ordering or the comparator you pass. When several elements tie, the first one encountered wins. An empty collection throws `NoSuchElementException`.
 
 ```ts
-import { Collections, Comparator, List } from '@nodestd/collections';
+import { Collections, Comparator, List } from '@ylcnfrht/typescript-collection-framework';
 
 const fruit = List.of('pear', 'fig', 'banana');
 console.log(Collections.max(fruit)); // → pear
@@ -177,7 +177,7 @@ try {
 `frequency(c, o)` counts the elements that are `Objects.equals` to `o`, so `null` and objects with an `equals()` method both work. `disjoint(c1, c2)` is `true` when the two collections have no element in common. If one argument is a `Set`, `disjoint` asks that set `contains()`, which makes the check fast. If neither is a set, it iterates the smaller collection.
 
 ```ts
-import { ArrayList, Collections, HashSet, List } from '@nodestd/collections';
+import { ArrayList, Collections, HashSet, List } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(Collections.frequency(ArrayList.of<number | null>(1, 2, 1, null), 1)); // → 2
 console.log(Collections.frequency(ArrayList.of<number | null>(1, null, null), null)); // → 2
@@ -194,7 +194,7 @@ console.log(Collections.disjoint(List.of('alice', 'admin'), banned)); // → fal
 ### indexOfSubList, lastIndexOfSubList, replaceAll, addAll
 
 ```ts
-import { ArrayList, Collections, List } from '@nodestd/collections';
+import { ArrayList, Collections, List } from '@ylcnfrht/typescript-collection-framework';
 
 const seq = ArrayList.of(1, 2, 3, 1, 2, 3);
 console.log(Collections.indexOfSubList(seq, List.of(2, 3))); // → 1
@@ -220,7 +220,7 @@ console.log(set); // → [3, 1, 2]
 `nCopies(n, o)` returns an immutable list that contains `o` exactly `n` times. It stores only `o` and the count, so it uses O(1) memory whatever the value of `n`. Use it to build fixed-size lists or padding. `n` must be a non-negative integer. `nCopies(0, x)` returns the shared empty list.
 
 ```ts
-import { ArrayList, Collections } from '@nodestd/collections';
+import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const row = Collections.nCopies(3, '.');
 console.log(row); // → [., ., .]
@@ -240,7 +240,7 @@ console.log(Collections.nCopies(0, 'x') === Collections.emptyList()); // → tru
 `reverseOrder()` returns the comparator that reverses natural ordering. It is one shared instance, the same one as `Comparator.reverseOrder()`. `reverseOrder(c)` reverses `c`, and reversing a reversed comparator gives back the original.
 
 ```ts
-import { ArrayList, Collections, Comparator } from '@nodestd/collections';
+import { ArrayList, Collections, Comparator } from '@ylcnfrht/typescript-collection-framework';
 
 const l = ArrayList.of(3, 1, 2);
 l.sort(Collections.reverseOrder());
@@ -270,7 +270,7 @@ Lists that support O(1) `get(i)` carry the `RANDOM_ACCESS` brand: `ArrayList`, `
 Indexing into a `LinkedList` costs O(n), so an indexed loop over one would be O(n²). Every algorithm therefore stays O(n) on a `LinkedList` (O(n log n) for sort), and you can use them without checking which kind of list you have.
 
 ```ts
-import { ArrayList, Collections, LinkedList, isRandomAccess } from '@nodestd/collections';
+import { ArrayList, Collections, LinkedList, isRandomAccess } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(isRandomAccess(new ArrayList())); // → true
 console.log(isRandomAccess(new LinkedList())); // → false
@@ -298,7 +298,7 @@ These are immutable and cheap to create. Every mutator throws `UnsupportedOperat
 | `singletonMap(k, v)` | `Map<K, V>` of one entry | |
 
 ```ts
-import { Collections, List } from '@nodestd/collections';
+import { Collections, List } from '@ylcnfrht/typescript-collection-framework';
 
 console.log(Collections.emptyList()); // → []
 console.log(Collections.emptyMap()); // → {}
@@ -331,7 +331,7 @@ console.log(tagsOf(0).isEmpty()); // → true
 `emptyIterator()`, `emptyListIterator()` and `emptyEnumeration()` return iterators that have nothing to iterate. They are useful when you implement `iterator()` for a collection that may be empty.
 
 ```ts
-import { Collections } from '@nodestd/collections';
+import { Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const it = Collections.emptyIterator<string>();
 console.log(it.hasNext()); // → false
@@ -352,7 +352,7 @@ console.log(Collections.emptyEnumeration().hasMoreElements()); // → false
 `Enumeration` is the older iteration interface, with `hasMoreElements()` and `nextElement()`. `Vector` still offers it. `Collections.enumeration(c)` adapts any collection to it. `Collections.list(e)` drains an enumeration into a new `ArrayList`, taking only the elements that are left. `asIterator()` turns an enumeration back into an `Iterator`.
 
 ```ts
-import { Collections, List } from '@nodestd/collections';
+import { Collections, List } from '@ylcnfrht/typescript-collection-framework';
 
 const e = Collections.enumeration(List.of('a', 'b', 'c'));
 console.log(e.hasMoreElements(), e.nextElement()); // → true a
@@ -369,7 +369,7 @@ console.log(it.next(), it.hasNext()); // → 1 true
 `asLifoQueue(deque)` gives you a `Queue` view of a deque that is last-in, first-out. `add`/`offer` push at the front, and `poll`/`remove`/`peek`/`element` read the front. Code written against `Queue` then works as a stack:
 
 ```ts
-import { ArrayDeque, Collections } from '@nodestd/collections';
+import { ArrayDeque, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const deque = new ArrayDeque<string>();
 const stack = Collections.asLifoQueue(deque);
@@ -383,7 +383,7 @@ console.log(deque.isEmpty()); // → true
 `newSetFromMap(map)` turns an empty map into a `Set` view whose elements are the map's keys. `add(e)` is `map.put(e, true) === null`. Use it to get a set with a map's behaviour, for example identity semantics from an `IdentityHashMap`, or LRU eviction from an access-ordered `LinkedHashMap`. A map that is not empty throws `IllegalArgumentException`.
 
 ```ts
-import { Collections, HashMap, IdentityHashMap } from '@nodestd/collections';
+import { Collections, HashMap, IdentityHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 class Key {
   constructor(readonly id: number) {}
@@ -413,7 +413,7 @@ try {
 `newSequencedSetFromMap(map)` does the same for a `SequencedMap` such as `LinkedHashMap`. It returns a `SequencedSet`: `addFirst` and `addLast` map to `putFirst` and `putLast`, and `reversed()` is a live reversed view.
 
 ```ts
-import { Collections, LinkedHashMap } from '@nodestd/collections';
+import { Collections, LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const recent = Collections.newSequencedSetFromMap(new LinkedHashMap<string, boolean>());
 recent.add('b');
@@ -434,7 +434,7 @@ console.log(recent.reversed()); // → [c, b, a]
 `unmodifiable*` and `synchronized*` come in versions for `Collection`, `List`, `Set`, `SortedSet`, `NavigableSet`, `Map`, `SortedMap` and `NavigableMap`, plus `unmodifiableSequencedCollection`/`Set`/`Map`; `checked*` has the same set plus `checkedQueue`. They are documented with the immutable collections in [Immutable collections and wrappers](../collections/immutable-and-wrappers.md).
 
 ```ts
-import { ArrayList, Collections } from '@nodestd/collections';
+import { ArrayList, Collections } from '@ylcnfrht/typescript-collection-framework';
 
 const backing = ArrayList.of(1, 2);
 const view = Collections.unmodifiableList(backing);

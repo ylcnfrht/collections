@@ -29,7 +29,7 @@ choice.
 shifts every later element.
 
 ```ts
-import { ArrayList } from '@nodestd/collections';
+import { ArrayList } from '@ylcnfrht/typescript-collection-framework';
 
 const list = ArrayList.of('a', 'b', 'c');
 // with new:
@@ -69,7 +69,7 @@ Relinking a node is cheap, but reaching index `i` means walking there.
 ```
 
 ```ts
-import { LinkedList } from '@nodestd/collections';
+import { LinkedList } from '@ylcnfrht/typescript-collection-framework';
 
 const line = LinkedList.of(2, 3);
 // with new:
@@ -109,7 +109,7 @@ slot; both wrap around the end, so nothing ever shifts. When the ring fills up, 
 ```
 
 ```ts
-import { ArrayDeque } from '@nodestd/collections';
+import { ArrayDeque } from '@ylcnfrht/typescript-collection-framework';
 
 const tasks = new ArrayDeque<string>();
 tasks.addLast('b');
@@ -148,7 +148,7 @@ ordered, so iterating it does **not** give sorted order; `poll()` does.
 ```
 
 ```ts
-import { PriorityQueue } from '@nodestd/collections';
+import { PriorityQueue } from '@ylcnfrht/typescript-collection-framework';
 
 const queue = new PriorityQueue<number>();
 [5, 1, 8, 3].forEach((n) => queue.add(n));
@@ -173,7 +173,7 @@ key.
 `Map`, so they cost about the same as a native `Map`.
 
 ```ts
-import { HashSet } from '@nodestd/collections';
+import { HashSet } from '@ylcnfrht/typescript-collection-framework';
 
 class Point {
   constructor(readonly x: number, readonly y: number) {}
@@ -215,7 +215,7 @@ always at the front, ready to evict.
 ```
 
 ```ts
-import { LinkedHashMap } from '@nodestd/collections';
+import { LinkedHashMap } from '@ylcnfrht/typescript-collection-framework';
 
 const cache = LinkedHashMap.lru<string, string>(2); // keeps the 2 most recently used entries
 cache.put('a', '1');
@@ -251,7 +251,7 @@ itself on every change, so every path from the root is short, about log₂ n ste
 ```
 
 ```ts
-import { TreeMap, TreeSet } from '@nodestd/collections';
+import { TreeMap, TreeSet } from '@ylcnfrht/typescript-collection-framework';
 
 const grades = new TreeMap<number, string>();
 grades.put(70, 'C');
@@ -280,7 +280,7 @@ modules.
 so reads are as fast as on the mutable classes.
 
 ```ts
-import { List } from '@nodestd/collections';
+import { List } from '@ylcnfrht/typescript-collection-framework';
 
 const weekdays = List.of('Mon', 'Tue', 'Wed');
 try {

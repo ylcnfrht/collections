@@ -7,7 +7,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { workloads } from './workloads';
 
-const IMAGE = 'nodestd-collections-bench';
+const IMAGE = 'typescript-collection-framework-bench';
 const ROOT = join(__dirname, '../..');
 const arg = (k: string) => {
   const i = process.argv.indexOf(k);

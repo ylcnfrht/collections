@@ -70,23 +70,23 @@ const guideSidebar: DefaultTheme.SidebarItem[] = [
 
 export default withMermaid(
   defineConfig({
-    title: '@nodestd/collections',
+    title: '@ylcnfrht/typescript-collection-framework',
     description:
       "Collections framework for TypeScript and JS, inspired by Java's Collections Framework and Stream API.",
     base: '/collections/',
     cleanUrls: true,
     lastUpdated: true,
-    sitemap: { hostname: 'https://nodestd.github.io/collections/' },
+    sitemap: { hostname: 'https://ylcnfrht.github.io/typescript-collection-framework/' },
     head: [
       ['link', { rel: 'icon', type: 'image/svg+xml', href: '/collections/logo.svg' }],
       ['meta', { name: 'theme-color', content: '#4f46e5' }],
       ['meta', { property: 'og:type', content: 'website' }],
-      ['meta', { property: 'og:url', content: 'https://nodestd.github.io/collections/' }],
-      ['meta', { property: 'og:image', content: 'https://nodestd.github.io/collections/og.png' }],
+      ['meta', { property: 'og:url', content: 'https://ylcnfrht.github.io/typescript-collection-framework/' }],
+      ['meta', { property: 'og:image', content: 'https://ylcnfrht.github.io/typescript-collection-framework/og.png' }],
       ['meta', { property: 'og:image:width', content: '1200' }],
       ['meta', { property: 'og:image:height', content: '630' }],
       ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-      ['meta', { property: 'og:title', content: '@nodestd/collections' }],
+      ['meta', { property: 'og:title', content: '@ylcnfrht/typescript-collection-framework' }],
       [
         'meta',
         {
@@ -144,17 +144,17 @@ export default withMermaid(
         {
           text: `v${pkg.version}`,
           items: [
-            { text: 'Changelog', link: 'https://github.com/nodestd/collections/blob/main/CHANGELOG.md' },
-            { text: 'Releases', link: 'https://github.com/nodestd/collections/releases' },
-            { text: 'npm', link: 'https://www.npmjs.com/package/@nodestd/collections' },
+            { text: 'Changelog', link: 'https://github.com/ylcnfrht/typescript-collection-framework/blob/main/CHANGELOG.md' },
+            { text: 'Releases', link: 'https://github.com/ylcnfrht/typescript-collection-framework/releases' },
+            { text: 'npm', link: 'https://www.npmjs.com/package/@ylcnfrht/typescript-collection-framework' },
           ],
         },
       ],
       sidebar: { '/api/': apiSidebar, '/': guideSidebar },
       search: { provider: 'local' },
       outline: [2, 3],
-      socialLinks: [{ icon: 'github', link: 'https://github.com/nodestd/collections' }],
-      editLink: { pattern: 'https://github.com/nodestd/collections/edit/main/docs/:path' },
+      socialLinks: [{ icon: 'github', link: 'https://github.com/ylcnfrht/typescript-collection-framework' }],
+      editLink: { pattern: 'https://github.com/ylcnfrht/typescript-collection-framework/edit/main/docs/:path' },
       footer: { message: 'Released under the MIT License.', copyright: 'Copyright © 2026 nodestd' },
     },
   }),
