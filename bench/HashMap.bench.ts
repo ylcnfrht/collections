@@ -1,5 +1,4 @@
-// HashMap / HashSet vs native Map/Set (the ceiling) and js-sdsl.
-import { HashMap as SdslHashMap, HashSet as SdslHashSet } from 'js-sdsl';
+// HashMap / HashSet vs native Map/Set (the ceiling).
 import { HashMap } from '../src/map/HashMap';
 import { HashSet } from '../src/set/HashSet';
 import { Point } from '../tests/helpers';
@@ -20,20 +19,13 @@ export default async function () {
       for (let i = 0; i < N; i++) m.set(i, i);
       return m;
     },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<number, number>();
-      for (let i = 0; i < N; i++) m.setElement(i, i);
-      return m;
-    },
   });
 
   const ours = new HashMap<number, number>();
   const native = new Map<number, number>();
-  const sdsl = new SdslHashMap<number, number>();
   for (let i = 0; i < N; i++) {
     ours.put(i, i);
     native.set(i, i);
-    sdsl.setElement(i, i);
   }
 
   await compare('HashMap get 100k int keys', {
@@ -47,11 +39,6 @@ export default async function () {
       for (let i = 0; i < N; i++) s += native.get(i)!;
       return s;
     },
-    'js-sdsl HashMap': () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) s += sdsl.getElementByKey(i)!;
-      return s;
-    },
   });
 
   await compare('HashMap put 100k string keys', {
@@ -63,11 +50,6 @@ export default async function () {
     'native Map': () => {
       const m = new Map<string, number>();
       for (let i = 0; i < N; i++) m.set(strs[i], i);
-      return m;
-    },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<string, number>();
-      for (let i = 0; i < N; i++) m.setElement(strs[i], i);
       return m;
     },
   });
@@ -84,11 +66,6 @@ export default async function () {
       for (let i = 0; i < N; i++) if (native.get(i * 2) !== undefined) s++;
       return s;
     },
-    'js-sdsl HashMap': () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) if (sdsl.getElementByKey(i * 2) !== undefined) s++;
-      return s;
-    },
   });
 
   // each case fills then deletes, so fill cost is included equally
@@ -103,12 +80,6 @@ export default async function () {
       const m = new Map<number, number>();
       for (let i = 0; i < N; i++) m.set(i, i);
       for (let i = 0; i < N; i++) m.delete(i);
-      return m;
-    },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<number, number>();
-      for (let i = 0; i < N; i++) m.setElement(i, i);
-      for (let i = 0; i < N; i++) m.eraseElementByKey(i);
       return m;
     },
   });
@@ -129,11 +100,6 @@ export default async function () {
       for (const [k, v] of native) s += k + v;
       return s;
     },
-    'js-sdsl for..of': () => {
-      let s = 0;
-      for (const [k, v] of sdsl) s += k + v;
-      return s;
-    },
   });
 
   // random keys up to 2^31 defeat the dense index table, so this measures the native-Map fallback
@@ -151,13 +117,6 @@ export default async function () {
       for (let i = 0; i < N; i++) m.set(sparse[i], i);
       let s = 0;
       for (let i = 0; i < N; i++) s += m.get(sparse[i])!;
-      return s;
-    },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<number, number>();
-      for (let i = 0; i < N; i++) m.setElement(sparse[i], i);
-      let s = 0;
-      for (let i = 0; i < N; i++) s += m.getElementByKey(sparse[i])!;
       return s;
     },
   });
@@ -180,14 +139,6 @@ export default async function () {
       for (let i = 0; i < M; i++) s += m.get(probes[i].x + ',' + probes[i].y)!;
       return s;
     },
-    // js-sdsl hashes objects by identity, so lookups use the stored instances
-    'js-sdsl HashMap (identity only)': () => {
-      const m = new SdslHashMap<Point, number>();
-      for (let i = 0; i < M; i++) m.setElement(pts[i], i);
-      let s = 0;
-      for (let i = 0; i < M; i++) s += m.getElementByKey(pts[i])!;
-      return s;
-    },
   });
 
   await compare('HashSet add+has 100k int', {
@@ -203,13 +154,6 @@ export default async function () {
       for (let i = 0; i < N; i++) s.add(i);
       let c = 0;
       for (let i = 0; i < N; i++) if (s.has(i)) c++;
-      return c;
-    },
-    'js-sdsl HashSet': () => {
-      const s = new SdslHashSet<number>();
-      for (let i = 0; i < N; i++) s.insert(i);
-      let c = 0;
-      for (let i = 0; i < N; i++) if (!s.find(i).equals(s.end())) c++;
       return c;
     },
   });

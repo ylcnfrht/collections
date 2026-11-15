@@ -93,7 +93,7 @@ console.log(byLength.toString()); // → {3=[fig], 4=[pear], 5=[apple]}
   run compared 1.69 million operations across every comparable public method and found
   [0 library differences](https://ylcnfrht.github.io/collections/reference/compatibility/); the remaining ones are documented design choices or places
   where the JDK breaks its own specification.
-- **Fast:** benchmarked against native `Map`/`Set`/`Array` and popular libraries. `HashMap` with small integer keys
+- **Fast:** benchmarked against native `Map`/`Set`/`Array`. `HashMap` with small integer keys
   (ids, indices) is several times faster than a native `Map`, and stream pipelines beat native array chains.
   See [Performance](https://ylcnfrht.github.io/collections/benchmarks/).
 

@@ -1,8 +1,8 @@
 {
   "meta": {
-    "date": "2026-10-22T00:18:56.923Z",
+    "date": "2026-11-15T13:48:36.817Z",
     "node": "v24.12.0",
-    "reps": 5,
+    "reps": 3,
     "docker": "--cpuset-cpus 1 --cpus 1 --memory 2g --network none"
   },
   "report": [
@@ -18,45 +18,27 @@
       "rows": [
         {
           "impl": "native Array",
-          "opsPerSec": 651.0037813445399,
-          "rme": 8.420812418241523,
+          "opsPerSec": 568.8004883821732,
+          "rme": 6.873100644462382,
           "runs": [
-            699,
-            649,
-            651,
-            661,
-            627
+            634,
+            569,
+            508
           ],
           "check": 4999950000,
           "vsBaseline": 1
         },
         {
           "impl": "@ylcnfrht/collections ArrayList",
-          "opsPerSec": 560.0241879052589,
-          "rme": 7.808123279627926,
+          "opsPerSec": 409.1652834062984,
+          "rme": 14.261995273767825,
           "runs": [
-            590,
-            566,
-            560,
-            557,
-            550
+            409,
+            434,
+            322
           ],
           "check": 4999950000,
-          "vsBaseline": 0.8602472120033193
-        },
-        {
-          "impl": "js-sdsl Vector",
-          "opsPerSec": 524.1916826272846,
-          "rme": 7.220226366495383,
-          "runs": [
-            524,
-            518,
-            526,
-            541,
-            517
-          ],
-          "check": 4999950000,
-          "vsBaseline": 0.8052052809042891
+          "vsBaseline": 0.7193476302562227
         }
       ]
     },
@@ -71,37 +53,25 @@
       },
       "rows": [
         {
-          "impl": "js-sdsl Vector",
-          "opsPerSec": 47.61193465750168,
-          "rme": 2.129097171317214,
-          "runs": [
-            48,
-            43,
-            48
-          ],
-          "check": 3223867160,
-          "vsBaseline": 1.1051885561788248
-        },
-        {
           "impl": "@ylcnfrht/collections ArrayList",
-          "opsPerSec": 45.91038968342809,
-          "rme": 2.956549179870523,
+          "opsPerSec": 42.66044314372881,
+          "rme": 3.8334090170092776,
           "runs": [
-            47,
-            46,
-            43
+            44,
+            43,
+            42
           ],
           "check": 3223867160,
-          "vsBaseline": 1.0656915677305006
+          "vsBaseline": 1.0431979945858971
         },
         {
           "impl": "native Array",
-          "opsPerSec": 43.080372477000054,
-          "rme": 5.748301440279493,
+          "opsPerSec": 40.893908313793396,
+          "rme": 4.761178428480645,
           "runs": [
-            43,
-            30,
-            46
+            38,
+            46,
+            41
           ],
           "check": 3223867160,
           "vsBaseline": 1
@@ -119,61 +89,25 @@
       },
       "rows": [
         {
-          "impl": "mnemonist CircularBuffer (fixed capacity)",
-          "opsPerSec": 2367.0508779794595,
-          "rme": 0.5650230210865627,
-          "runs": [
-            2439,
-            2346,
-            2367
-          ],
-          "check": 4999950000,
-          "vsBaseline": 10.678317998594814
-        },
-        {
           "impl": "@ylcnfrht/collections ArrayDeque",
-          "opsPerSec": 1780.7858657654117,
-          "rme": 1.0896638781824775,
+          "opsPerSec": 1398.8852965131011,
+          "rme": 6.077800717992017,
           "runs": [
-            1728,
-            1815,
-            1781
+            1444,
+            1399,
+            1219
           ],
           "check": 4999950000,
-          "vsBaseline": 8.033539937374787
-        },
-        {
-          "impl": "js-sdsl Deque",
-          "opsPerSec": 1483.3011567763485,
-          "rme": 1.5795469457739446,
-          "runs": [
-            1378,
-            1483,
-            1517
-          ],
-          "check": 4999950000,
-          "vsBaseline": 6.691517105564655
-        },
-        {
-          "impl": "collections.js Deque",
-          "opsPerSec": 1077.9336303411583,
-          "rme": 0.4401540152796847,
-          "runs": [
-            1078,
-            1068,
-            1112
-          ],
-          "check": 4999950000,
-          "vsBaseline": 4.862809749145799
+          "vsBaseline": 6.548495140754001
         },
         {
           "impl": "native Array push + shift",
-          "opsPerSec": 221.66888814239712,
-          "rme": 0.7396569922902342,
+          "opsPerSec": 213.61935321708611,
+          "rme": 1.4830253483430536,
           "runs": [
-            216,
-            222,
-            227
+            210,
+            214,
+            216
           ],
           "check": 4999950000,
           "vsBaseline": 1
@@ -192,48 +126,24 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections LinkedList",
-          "opsPerSec": 1891.708286097047,
-          "rme": 2.344364324012467,
+          "opsPerSec": 1620.9807283123187,
+          "rme": 9.174436362569677,
           "runs": [
-            1964,
-            1712,
-            1892
+            1363,
+            1749,
+            1621
           ],
           "check": 4999950000,
-          "vsBaseline": 9.222162549165759
-        },
-        {
-          "impl": "js-sdsl LinkList",
-          "opsPerSec": 1566.3484303687044,
-          "rme": 3.145152169915719,
-          "runs": [
-            1566,
-            1611,
-            1413
-          ],
-          "check": 4999950000,
-          "vsBaseline": 7.63601869255109
-        },
-        {
-          "impl": "collections.js List",
-          "opsPerSec": 822.9025930598693,
-          "rme": 1.2479719719260995,
-          "runs": [
-            823,
-            769,
-            834
-          ],
-          "check": 4999950000,
-          "vsBaseline": 4.011686966274036
+          "vsBaseline": 9.469308893632116
         },
         {
           "impl": "native Array push + shift",
-          "opsPerSec": 205.1263221627092,
-          "rme": 2.815759719129723,
+          "opsPerSec": 171.18258011441463,
+          "rme": 4.950402769870872,
           "runs": [
-            199,
-            213,
-            205
+            171,
+            170,
+            189
           ],
           "check": 4999950000,
           "vsBaseline": 1
@@ -251,74 +161,40 @@
       },
       "rows": [
         {
-          "impl": "native Array push + pop",
-          "opsPerSec": 674.525471359443,
-          "rme": 7.691691977129766,
+          "impl": "@ylcnfrht/collections ArrayDeque",
+          "opsPerSec": 550.5940219328234,
+          "rme": 10.799859569606463,
           "runs": [
-            666,
-            639,
-            698,
-            691,
-            675
+            553,
+            551,
+            507
+          ],
+          "check": 4999950000,
+          "vsBaseline": 1.020086872321364
+        },
+        {
+          "impl": "native Array push + pop",
+          "opsPerSec": 539.752090603678,
+          "rme": 7.4786969741574065,
+          "runs": [
+            595,
+            540,
+            540
           ],
           "check": 4999950000,
           "vsBaseline": 1
         },
         {
-          "impl": "js-sdsl Stack",
-          "opsPerSec": 608.4603417721719,
-          "rme": 7.420151165619933,
-          "runs": [
-            596,
-            610,
-            611,
-            596,
-            608
-          ],
-          "check": 4999950000,
-          "vsBaseline": 0.9020568794027555
-        },
-        {
-          "impl": "mnemonist Stack",
-          "opsPerSec": 589.2371209665405,
-          "rme": 7.597681714117957,
-          "runs": [
-            612,
-            589,
-            607,
-            583,
-            587
-          ],
-          "check": 4999950000,
-          "vsBaseline": 0.8735579988980818
-        },
-        {
-          "impl": "@ylcnfrht/collections ArrayDeque",
-          "opsPerSec": 565.8818612878162,
-          "rme": 7.266406134269763,
-          "runs": [
-            568,
-            572,
-            566,
-            564,
-            560
-          ],
-          "check": 4999950000,
-          "vsBaseline": 0.8389332728196819
-        },
-        {
           "impl": "@ylcnfrht/collections Stack",
-          "opsPerSec": 535.3775945146997,
-          "rme": 6.985081383148856,
+          "opsPerSec": 480.0266815013163,
+          "rme": 14.880609097085868,
           "runs": [
-            521,
-            554,
-            530,
-            536,
-            535
+            480,
+            295,
+            488
           ],
           "check": 4999950000,
-          "vsBaseline": 0.7937099742663478
+          "vsBaseline": 0.889346590514244
         }
       ]
     },
@@ -326,83 +202,35 @@
       "id": "priorityqueue-churn",
       "title": "PriorityQueue churn",
       "detail": "size 1k, 100k offer + poll",
-      "baseline": "sorted array",
+      "baseline": "native sorted Array",
       "unit": {
         "perRun": 200000,
         "label": "offer/poll calls"
       },
       "rows": [
         {
-          "impl": "js-sdsl PriorityQueue",
-          "opsPerSec": 299.4034311311286,
-          "rme": 1.500733226905111,
-          "runs": [
-            323,
-            299,
-            294
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 1.0659543206126967
-        },
-        {
           "impl": "@ylcnfrht/collections PriorityQueue",
-          "opsPerSec": 294.5577103485848,
-          "rme": 1.551931316505681,
+          "opsPerSec": 277.66109882576126,
+          "rme": 1.5913587122806019,
           "runs": [
-            295,
-            294,
-            301
+            278,
+            290,
+            251
           ],
           "check": 106266651484159,
-          "vsBaseline": 1.0487022905169792
+          "vsBaseline": 1.006872872066759
         },
         {
-          "impl": "mnemonist Heap",
-          "opsPerSec": 286.22879689533056,
-          "rme": 0.4074459318483418,
+          "impl": "native sorted Array",
+          "opsPerSec": 275.7657957909024,
+          "rme": 1.8110983514753047,
           "runs": [
-            286,
-            287,
-            194
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 1.019049185848258
-        },
-        {
-          "impl": "sorted array",
-          "opsPerSec": 280.8782940708336,
-          "rme": 0.8167479958052867,
-          "runs": [
-            281,
-            281,
-            260
+            283,
+            228,
+            276
           ],
           "check": 106266651484159,
           "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js Heap",
-          "opsPerSec": 101.88084467839646,
-          "rme": 0.5648093591837102,
-          "runs": [
-            102,
-            102,
-            99
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 0.36272238485150987
-        },
-        {
-          "impl": "@datastructures-js/priority-queue",
-          "opsPerSec": 63.990682762350936,
-          "rme": 0.8370343458156336,
-          "runs": [
-            59,
-            64,
-            64
-          ],
-          "check": 106266651484159,
-          "vsBaseline": 0.22782352397160807
         }
       ]
     },
@@ -418,51 +246,27 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections HashSet",
-          "opsPerSec": 437.38731740970314,
-          "rme": 7.229515459624768,
+          "opsPerSec": 334.46539526452585,
+          "rme": 17.59156052209915,
           "runs": [
-            447,
-            437,
-            416
+            309,
+            389,
+            334
           ],
           "check": 100000,
-          "vsBaseline": 4.254403632155828
+          "vsBaseline": 3.386047426321384
         },
         {
           "impl": "native Set",
-          "opsPerSec": 102.80813839660682,
-          "rme": 12.210693533760603,
+          "opsPerSec": 98.77752823677677,
+          "rme": 10.235873502974238,
           "runs": [
-            103,
-            100,
-            108
+            99,
+            98,
+            106
           ],
           "check": 100000,
           "vsBaseline": 1
-        },
-        {
-          "impl": "js-sdsl HashSet",
-          "opsPerSec": 98.76346047408278,
-          "rme": 13.665636182589786,
-          "runs": [
-            111,
-            99,
-            97
-          ],
-          "check": 100000,
-          "vsBaseline": 0.9606579986214638
-        },
-        {
-          "impl": "collections.js FastSet",
-          "opsPerSec": 35.175709272738494,
-          "rme": 8.86590189366656,
-          "runs": [
-            35,
-            39,
-            28
-          ],
-          "check": 100000,
-          "vsBaseline": 0.3421490732284232
         }
       ]
     },
@@ -478,75 +282,27 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections LinkedHashSet",
-          "opsPerSec": 350.50721233641553,
-          "rme": 16.49136587107149,
+          "opsPerSec": 279.31509777925777,
+          "rme": 20.805047455478594,
           "runs": [
-            351,
-            326,
-            351
+            279,
+            355,
+            277
           ],
           "check": 100000,
-          "vsBaseline": 3.197377881615551
+          "vsBaseline": 2.994527317392173
         },
         {
           "impl": "native Set",
-          "opsPerSec": 109.623330527111,
-          "rme": 11.574961571893333,
+          "opsPerSec": 93.2751877590161,
+          "rme": 14.921903356604869,
           "runs": [
-            115,
-            103,
-            110
+            85,
+            110,
+            93
           ],
           "check": 100000,
           "vsBaseline": 1
-        }
-      ]
-    },
-    {
-      "id": "treeset-add-contains",
-      "title": "TreeSet add + contains",
-      "detail": "100k random keys, 100k queries",
-      "baseline": "js-sdsl OrderedSet",
-      "unit": {
-        "perRun": 200000,
-        "label": "add/contains calls"
-      },
-      "rows": [
-        {
-          "impl": "@ylcnfrht/collections TreeSet",
-          "opsPerSec": 17.92406915661959,
-          "rme": 8.801653895813669,
-          "runs": [
-            12,
-            18,
-            19
-          ],
-          "check": 9559,
-          "vsBaseline": 1.1373184070058808
-        },
-        {
-          "impl": "js-sdsl OrderedSet",
-          "opsPerSec": 15.75993938567013,
-          "rme": 7.30194487468775,
-          "runs": [
-            16,
-            16,
-            15
-          ],
-          "check": 9559,
-          "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js SortedSet",
-          "opsPerSec": 2.5785913463190338,
-          "rme": 4.20477516931758,
-          "runs": [
-            2,
-            3,
-            3
-          ],
-          "check": 9559,
-          "vsBaseline": 0.16361683146215916
         }
       ]
     },
@@ -562,59 +318,27 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections HashMap",
-          "opsPerSec": 1673.3343935532807,
-          "rme": 0.6453859100754076,
+          "opsPerSec": 1559.1218043537926,
+          "rme": 1.3698255964655939,
           "runs": [
-            1655,
-            1695,
-            1710,
-            1673,
-            1575
+            1587,
+            1559,
+            1506
           ],
           "check": 4999950000,
-          "vsBaseline": 3.4773348701926734
-        },
-        {
-          "impl": "js-sdsl HashMap",
-          "opsPerSec": 1439.8355408337668,
-          "rme": 0.4939276415656212,
-          "runs": [
-            1444,
-            1416,
-            1461,
-            1440,
-            1431
-          ],
-          "check": 4999950000,
-          "vsBaseline": 2.992103881192688
+          "vsBaseline": 3.8526680454540236
         },
         {
           "impl": "native Map",
-          "opsPerSec": 481.21174865754705,
-          "rme": 1.7074535608521697,
+          "opsPerSec": 404.68625533245375,
+          "rme": 8.627435395766714,
           "runs": [
-            478,
-            481,
-            490,
-            488,
-            477
+            377,
+            405,
+            453
           ],
           "check": 4999950000,
           "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js FastMap",
-          "opsPerSec": 110.80756249053445,
-          "rme": 0.522872906632911,
-          "runs": [
-            115,
-            109,
-            109,
-            111,
-            111
-          ],
-          "check": 4999950000,
-          "vsBaseline": 0.23026778294515485
         }
       ]
     },
@@ -630,59 +354,27 @@
       "rows": [
         {
           "impl": "native Map",
-          "opsPerSec": 101.46633516508875,
-          "rme": 11.621166503166995,
+          "opsPerSec": 73.31575472158588,
+          "rme": 18.509454228670844,
           "runs": [
-            100,
-            103,
-            102,
-            101,
-            101
+            70,
+            78,
+            73
           ],
           "check": 100000,
           "vsBaseline": 1
         },
         {
           "impl": "@ylcnfrht/collections HashMap",
-          "opsPerSec": 76.59198020429322,
-          "rme": 13.60145169160965,
+          "opsPerSec": 55.42311106671115,
+          "rme": 16.28286082888074,
           "runs": [
-            77,
-            78,
-            73,
-            80,
-            75
+            55,
+            51,
+            62
           ],
           "check": 100000,
-          "vsBaseline": 0.7548511541259058
-        },
-        {
-          "impl": "js-sdsl HashMap",
-          "opsPerSec": 61.71877835370864,
-          "rme": 16.779269863958397,
-          "runs": [
-            62,
-            64,
-            60,
-            64,
-            61
-          ],
-          "check": 100000,
-          "vsBaseline": 0.6082685282097786
-        },
-        {
-          "impl": "collections.js FastMap",
-          "opsPerSec": 16.912739351646657,
-          "rme": 10.747693139572648,
-          "runs": [
-            17,
-            18,
-            17,
-            18,
-            16
-          ],
-          "check": 100000,
-          "vsBaseline": 0.16668325828590463
+          "vsBaseline": 0.7559509041021069
         }
       ]
     },
@@ -697,46 +389,28 @@
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/collections HashMap",
-          "opsPerSec": 508.98513208562866,
-          "rme": 1.8758187347580162,
-          "runs": [
-            503,
-            518,
-            533,
-            509,
-            498
-          ],
-          "check": 52533968,
-          "vsBaseline": 1.1876997213357865
-        },
-        {
           "impl": "native Map with string keys",
-          "opsPerSec": 428.54698282928064,
-          "rme": 2.3625652273967033,
+          "opsPerSec": 358.49700123374004,
+          "rme": 3.1069322385398337,
           "runs": [
-            438,
-            434,
-            429,
-            421,
-            428
+            358,
+            321,
+            416
           ],
           "check": 52533968,
           "vsBaseline": 1
         },
         {
-          "impl": "collections.js FastMap",
-          "opsPerSec": 183.1075033709881,
-          "rme": 3.01341173761955,
+          "impl": "@ylcnfrht/collections HashMap",
+          "opsPerSec": 357.2644092017386,
+          "rme": 6.082751963594112,
           "runs": [
-            189,
-            167,
-            171,
-            183,
-            187
+            437,
+            268,
+            357
           ],
           "check": 52533968,
-          "vsBaseline": 0.42727521300489996
+          "vsBaseline": 0.9965617786822217
         }
       ]
     },
@@ -752,28 +426,24 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections LinkedHashMap",
-          "opsPerSec": 298.9732374975873,
-          "rme": 14.990076815252017,
+          "opsPerSec": 224.39350068072142,
+          "rme": 25.668108973003704,
           "runs": [
-            299,
-            297,
-            307,
-            280,
-            308
+            295,
+            179,
+            224
           ],
           "check": 5000050000,
-          "vsBaseline": 2.737515832768934
+          "vsBaseline": 2.650852665225843
         },
         {
           "impl": "native Map",
-          "opsPerSec": 109.21333638285584,
-          "rme": 10.886432362901882,
+          "opsPerSec": 84.64955582946513,
+          "rme": 16.93804962122355,
           "runs": [
-            111,
-            115,
-            109,
-            102,
-            109
+            101,
+            80,
+            85
           ],
           "check": 5000050000,
           "vsBaseline": 1
@@ -792,107 +462,27 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections LinkedHashMap.lru",
-          "opsPerSec": 282.23449817033503,
-          "rme": 0.6576470223604469,
+          "opsPerSec": 254.6253174117483,
+          "rme": 2.0834551162947608,
           "runs": [
-            282,
-            283,
-            282,
-            282,
-            287
+            255,
+            262,
+            222
           ],
           "check": 60066,
-          "vsBaseline": 4.855027009101803
-        },
-        {
-          "impl": "mnemonist LRUMap",
-          "opsPerSec": 181.71958314371878,
-          "rme": 0.6013971765485888,
-          "runs": [
-            184,
-            183,
-            179,
-            182,
-            179
-          ],
-          "check": 60066,
-          "vsBaseline": 3.125959051657161
+          "vsBaseline": 5.9867968959983155
         },
         {
           "impl": "native Map delete + set",
-          "opsPerSec": 58.13242596616356,
-          "rme": 0.6737490330327166,
+          "opsPerSec": 42.53114342027279,
+          "rme": 9.772986966200154,
           "runs": [
-            58,
-            58,
-            58,
-            58,
-            58
+            38,
+            43,
+            54
           ],
           "check": 60066,
           "vsBaseline": 1
-        },
-        {
-          "impl": "collections.js LruMap",
-          "opsPerSec": 7.1504131518175065,
-          "rme": 1.9242534609481963,
-          "runs": [
-            7,
-            7,
-            7,
-            7,
-            7
-          ],
-          "check": 60066,
-          "vsBaseline": 0.12300214609965635
-        }
-      ]
-    },
-    {
-      "id": "treemap-put",
-      "title": "TreeMap put",
-      "detail": "100k random integer keys",
-      "baseline": "js-sdsl OrderedMap",
-      "unit": {
-        "perRun": 100000,
-        "label": "put calls"
-      },
-      "rows": [
-        {
-          "impl": "js-sdsl OrderedMap",
-          "opsPerSec": 44.902761511736884,
-          "rme": 7.090704015259974,
-          "runs": [
-            44,
-            45,
-            45
-          ],
-          "check": 95233,
-          "vsBaseline": 1
-        },
-        {
-          "impl": "@ylcnfrht/collections TreeMap",
-          "opsPerSec": 42.01360230504644,
-          "rme": 5.41538475985668,
-          "runs": [
-            45,
-            42,
-            39
-          ],
-          "check": 95233,
-          "vsBaseline": 0.9356574270841836
-        },
-        {
-          "impl": "collections.js SortedMap",
-          "opsPerSec": 2.557744717295713,
-          "rme": 5.97824409868182,
-          "runs": [
-            3,
-            3,
-            2
-          ],
-          "check": 95233,
-          "vsBaseline": 0.05696185782754493
         }
       ]
     },
@@ -900,47 +490,35 @@
       "id": "treemap-floor-ceiling",
       "title": "TreeMap floor + ceiling",
       "detail": "100k keys, 100k queries",
-      "baseline": "js-sdsl OrderedMap",
+      "baseline": "native sorted Array + binary search",
       "unit": {
         "perRun": 200000,
         "label": "floor/ceiling calls"
       },
       "rows": [
         {
-          "impl": "@ylcnfrht/collections TreeMap",
-          "opsPerSec": 27.049876830558244,
-          "rme": 6.108798916416837,
+          "impl": "native sorted Array + binary search",
+          "opsPerSec": 45.70801245869564,
+          "rme": 16.761631611935265,
           "runs": [
-            27,
-            17,
-            27
-          ],
-          "check": 100062446441,
-          "vsBaseline": 2.6193681754070552
-        },
-        {
-          "impl": "js-sdsl OrderedMap",
-          "opsPerSec": 10.326870840276067,
-          "rme": 7.2672159686494435,
-          "runs": [
-            10,
-            10,
-            13
+            43,
+            50,
+            46
           ],
           "check": 100062446441,
           "vsBaseline": 1
         },
         {
-          "impl": "collections.js SortedSet",
-          "opsPerSec": 3.9413289461011076,
-          "rme": 5.778493700570842,
+          "impl": "@ylcnfrht/collections TreeMap",
+          "opsPerSec": 11.240436346977809,
+          "rme": 10.96181268635993,
           "runs": [
-            4,
-            4,
-            4
+            10,
+            11,
+            17
           ],
           "check": 100062446441,
-          "vsBaseline": 0.38165761991807234
+          "vsBaseline": 0.2459182918341791
         }
       ]
     },
@@ -956,51 +534,51 @@
       "rows": [
         {
           "impl": "@ylcnfrht/collections Stream",
-          "opsPerSec": 6859.262578435116,
-          "rme": 0.30558205572080116,
+          "opsPerSec": 6892.628752366393,
+          "rme": 0.6188139003759181,
           "runs": [
-            6859,
-            6985,
-            6838
+            6893,
+            6952,
+            6675
           ],
           "check": 74831160,
-          "vsBaseline": 15.286910282858518
+          "vsBaseline": 16.4638897855797
         },
         {
           "impl": "@ylcnfrht/collections IntStream",
-          "opsPerSec": 6777.194592810628,
-          "rme": 0.35908031037213356,
+          "opsPerSec": 6602.990418554925,
+          "rme": 0.8108052762434657,
           "runs": [
-            6721,
-            6777,
-            6813
+            6687,
+            5336,
+            6603
           ],
           "check": 74831160,
-          "vsBaseline": 15.104009290369804
+          "vsBaseline": 15.772053074671135
         },
         {
           "impl": "native Array filter/map/reduce",
-          "opsPerSec": 448.70169651787177,
-          "rme": 5.377760567358563,
+          "opsPerSec": 418.65129335374144,
+          "rme": 6.064787378453026,
           "runs": [
-            449,
-            435,
-            491
+            419,
+            405,
+            453
           ],
           "check": 74831160,
           "vsBaseline": 1
         },
         {
           "impl": "native Iterator helpers",
-          "opsPerSec": 362.0797266268593,
-          "rme": 1.1708604441836914,
+          "opsPerSec": 358.48589030891054,
+          "rme": 2.224270194534681,
           "runs": [
-            379,
-            361,
-            362
+            263,
+            358,
+            367
           ],
           "check": 74831160,
-          "vsBaseline": 0.8069497606912608
+          "vsBaseline": 0.8562875500446768
         }
       ]
     }

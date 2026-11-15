@@ -25,23 +25,7 @@ export default defineConfig({
     // Pages and the in-browser benchmark import the library straight from source.
     resolve: { alias: [{ find: /^@ylcnfrht\/collections$/, replacement: `${lib}index.ts` }] },
     server: { fs: { allow: ['..'] } },
-    // CommonJS packages the benchmark worker loads, pre-bundled so they get ESM default exports.
-    optimizeDeps: {
-      include: [
-        'js-sdsl',
-        'mnemonist',
-        '@datastructures-js/priority-queue',
-        'collections/fast-map',
-        'collections/fast-set',
-        'collections/lru-map',
-        'collections/sorted-set',
-        'collections/heap',
-        'collections/deque',
-        'collections/list',
-        'collections/sorted-map',
-      ],
-    },
-    // ES module workers load each benchmarked package as its own chunk.
+    // the in-browser benchmark runs in ES module workers
     worker: { format: 'es' },
   },
   integrations: [

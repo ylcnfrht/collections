@@ -1,8 +1,4 @@
-// LinkedHashMap / LinkedHashSet vs native Map/Set (insertion-ordered), js-sdsl HashMap/HashSet
-// (also insertion-ordered) and mnemonist's LRU caches.
-import { HashMap as SdslHashMap, HashSet as SdslHashSet } from 'js-sdsl';
-import LRUCache from 'mnemonist/lru-cache';
-import LRUMap from 'mnemonist/lru-map';
+// LinkedHashMap / LinkedHashSet vs native Map/Set (insertion-ordered).
 import { LinkedHashMap } from '../src/map/LinkedHashMap';
 import { LinkedHashSet } from '../src/set/LinkedHashSet';
 import { rng } from '../tests/helpers';
@@ -23,11 +19,6 @@ export default async function () {
       for (let i = 0; i < N; i++) m.set(i, i);
       return m;
     },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<number, number>();
-      for (let i = 0; i < N; i++) m.setElement(i, i);
-      return m;
-    },
   });
 
   await compare('LinkedHashMap put 100k string keys', {
@@ -41,20 +32,13 @@ export default async function () {
       for (let i = 0; i < N; i++) m.set(strs[i], i);
       return m;
     },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<string, number>();
-      for (let i = 0; i < N; i++) m.setElement(strs[i], i);
-      return m;
-    },
   });
 
   const ours = new LinkedHashMap<number, number>();
   const native = new Map<number, number>();
-  const sdsl = new SdslHashMap<number, number>();
   for (let i = 0; i < N; i++) {
     ours.put(i, i);
     native.set(i, i);
-    sdsl.setElement(i, i);
   }
 
   await compare('LinkedHashMap get 100k int keys', {
@@ -66,11 +50,6 @@ export default async function () {
     'native Map': () => {
       let s = 0;
       for (let i = 0; i < N; i++) s += native.get(i)!;
-      return s;
-    },
-    'js-sdsl HashMap': () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) s += sdsl.getElementByKey(i)!;
       return s;
     },
   });
@@ -96,11 +75,6 @@ export default async function () {
       native.forEach((v, k) => (s += k + v));
       return s;
     },
-    'js-sdsl forEach': () => {
-      let s = 0;
-      sdsl.forEach(([k, v]) => (s += k + v));
-      return s;
-    },
   });
 
   // 80% of lookups hit a hot set that fits the cache, 20% go to a large cold range
@@ -115,26 +89,6 @@ export default async function () {
         const k = stream[i];
         if (c.get(k) !== null) hits++;
         else c.put(k, i);
-      }
-      return hits;
-    },
-    'mnemonist LRUCache': () => {
-      const c = new LRUCache<number, number>(CAP);
-      let hits = 0;
-      for (let i = 0; i < N; i++) {
-        const k = stream[i];
-        if (c.get(k) !== undefined) hits++;
-        else c.set(k, i);
-      }
-      return hits;
-    },
-    'mnemonist LRUMap': () => {
-      const c = new LRUMap<number, number>(CAP);
-      let hits = 0;
-      for (let i = 0; i < N; i++) {
-        const k = stream[i];
-        if (c.get(k) !== undefined) hits++;
-        else c.set(k, i);
       }
       return hits;
     },
@@ -172,13 +126,6 @@ export default async function () {
       for (let i = 0; i < N; i++) if (s.has(i)) c++;
       return c;
     },
-    'js-sdsl HashSet': () => {
-      const s = new SdslHashSet<number>();
-      for (let i = 0; i < N; i++) s.insert(i);
-      let c = 0;
-      for (let i = 0; i < N; i++) if (!s.find(i).equals(s.end())) c++;
-      return c;
-    },
   });
 
   // each case fills then drains from the front, so fill cost is included equally
@@ -197,17 +144,6 @@ export default async function () {
       // one live iterator: re-reading entries().next() per step is O(n) over deleted slots
       for (const [k, v] of m) {
         m.delete(k);
-        s += v;
-      }
-      return s;
-    },
-    'js-sdsl HashMap': () => {
-      const m = new SdslHashMap<number, number>();
-      for (let i = 0; i < N; i++) m.setElement(i, i);
-      let s = 0;
-      while (!m.empty()) {
-        const [k, v] = m.front()!;
-        m.eraseElementByKey(k);
         s += v;
       }
       return s;

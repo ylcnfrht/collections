@@ -28,14 +28,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            site/package-lock.json
-      # the root install brings the benchmarked libraries the in-browser benchmark loads
-      - run: npm ci
+          cache-dependency-path: site/package-lock.json
       - run: npm ci
         working-directory: site
-      - run: npm run docs:build
+      - run: npm run build
+        working-directory: site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

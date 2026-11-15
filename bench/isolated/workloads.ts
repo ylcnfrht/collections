@@ -1,12 +1,11 @@
 // Workloads for the isolated benchmark, shared by the Docker runner (run-one.ts) and the docs site,
 // which runs them in the reader's browser. Each workload has one dataset and one test loop, written
 // once; implementations plug in through a small adapter. Adapters load their library through `load`,
-// lazily, so a process or worker that runs one implementation never loads another (collections.js
-// rewrites built-ins on load).
+// lazily, so a process or worker that runs one implementation never loads another.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** Loads a package by name; 'ours' is this library. Node passes require, the browser dynamic import. */
-export type Load = (pkg: 'ours' | 'js-sdsl' | 'mnemonist/lru-map' | 'mnemonist/heap' | 'mnemonist/circular-buffer' | 'mnemonist/stack' | '@datastructures-js/priority-queue' | 'collections/fast-map' | 'collections/fast-set' | 'collections/lru-map' | 'collections/sorted-set' | 'collections/heap' | 'collections/deque' | 'collections/list' | 'collections/sorted-map') => Promise<any>;
+/** Loads this library. Node passes require of the build, the browser a dynamic import of the sources. */
+export type Load = (pkg: 'ours') => Promise<any>;
 
 export interface Workload {
   id: string;
@@ -54,14 +53,6 @@ const intMap: Workload['impls'] = {
     return { create: () => new HashMap(), put: (m: any, k: any, v: any) => m.put(k, v), get: (m: any, k: any) => m.get(k), size: (m: any) => m.size() };
   },
   'native Map': async () => ({ create: () => new Map(), put: (m: any, k: any, v: any) => m.set(k, v), get: (m: any, k: any) => m.get(k), size: (m: any) => m.size }),
-  'js-sdsl HashMap': async (load) => {
-    const { HashMap } = await load('js-sdsl');
-    return { create: () => new HashMap(), put: (m: any, k: any, v: any) => m.setElement(k, v), get: (m: any, k: any) => m.getElementByKey(k), size: (m: any) => m.size() };
-  },
-  'collections.js FastMap': async (load) => {
-    const FastMap = await load('collections/fast-map');
-    return { create: () => new FastMap(), put: (m: any, k: any, v: any) => m.set(k, v), get: (m: any, k: any) => m.get(k), size: (m: any) => m.length };
-  },
 };
 
 const hashMapGetInt: Workload = {
@@ -115,14 +106,6 @@ const hashSetAddHas: Workload = {
       return { create: () => new HashSet(), add: (s: any, x: any) => s.add(x), has: (s: any, x: any) => s.contains(x) };
     },
     'native Set': async () => ({ create: () => new Set(), add: (s: any, x: any) => s.add(x), has: (s: any, x: any) => s.has(x) }),
-    'js-sdsl HashSet': async (load) => {
-      const { HashSet } = await load('js-sdsl');
-      return { create: () => new HashSet(), add: (s: any, x: any) => s.insert(x), has: (s: any, x: any) => !s.find(x).equals(s.end()) };
-    },
-    'collections.js FastSet': async (load) => {
-      const FastSet = await load('collections/fast-set');
-      return { create: () => new FastSet(), add: (s: any, x: any) => s.add(x), has: (s: any, x: any) => s.has(x) };
-    },
   },
   run(a, xs: number[]) {
     const s = a.create();
@@ -167,14 +150,6 @@ const lru: Workload = {
         if (c.m.size > c.cap) c.m.delete(c.m.keys().next().value);
       },
     }),
-    'mnemonist LRUMap': async (load) => {
-      const LRUMap = await load('mnemonist/lru-map');
-      return { create: (cap: number) => new LRUMap(cap), get: (c: any, k: any) => c.get(k), set: (c: any, k: any, v: any) => c.set(k, v) };
-    },
-    'collections.js LruMap': async (load) => {
-      const LruMap = await load('collections/lru-map');
-      return { create: (cap: number) => new LruMap(null, cap), get: (c: any, k: any) => c.get(k), set: (c: any, k: any, v: any) => c.set(k, v) };
-    },
   },
   run(a, keys: number[]) {
     const c = a.create(LRU_CAP);
@@ -192,7 +167,7 @@ const treeFloorCeiling: Workload = {
   group: 'Maps',
   title: 'TreeMap floor + ceiling',
   detail: '100k keys, 100k queries',
-  baseline: 'js-sdsl OrderedMap',
+  baseline: 'native sorted Array + binary search',
   unit: { perRun: 200000, label: 'floor/ceiling calls' },
   data() {
     const r = lcg(12345);
@@ -210,35 +185,22 @@ const treeFloorCeiling: Workload = {
         ceiling: (m: any, q: number) => m.ceilingKey(q) ?? 0,
       };
     },
-    'js-sdsl OrderedMap': async (load) => {
-      const { OrderedMap } = await load('js-sdsl');
-      return {
-        create: () => new OrderedMap([], asc),
-        put: (m: any, k: number) => m.setElement(k, k),
-        floor(m: any, q: number) {
-          const it = m.reverseLowerBound(q);
-          return it.equals(m.rEnd()) ? 0 : it.pointer[0];
-        },
-        ceiling(m: any, q: number) {
-          const it = m.lowerBound(q);
-          return it.equals(m.end()) ? 0 : it.pointer[0];
-        },
-      };
-    },
-    'collections.js SortedSet': async (load) => {
-      const SortedSet = await load('collections/sorted-set');
-      return {
-        create: () => new SortedSet(),
-        put: (s: any, k: number) => s.add(k),
-        floor: (s: any, q: number) => s.findGreatestLessThanOrEqual(q)?.value ?? 0,
-        ceiling: (s: any, q: number) => s.findLeastGreaterThanOrEqual(q)?.value ?? 0,
-      };
-    },
+    // the native way to answer floor/ceiling: a sorted array of the distinct keys, searched in O(log n)
+    'native sorted Array + binary search': async () => ({
+      create: () => [] as number[],
+      put: (a: number[], k: number) => a.push(k),
+      seal: (a: number[]) => [...new Set(a)].sort(asc),
+      floor(a: number[], q: number) {
+        const i = lowerBound(a, q);
+        return a[i] === q ? q : i > 0 ? a[i - 1] : 0;
+      },
+      ceiling: (a: number[], q: number) => a[lowerBound(a, q)] ?? 0,
+    }),
   },
   prepare(a, d) {
     const m = a.create();
     for (const k of d.keys) a.put(m, k);
-    return m;
+    return a.seal?.(m) ?? m;
   },
   run(a, d, m) {
     let s = 0;
@@ -255,7 +217,7 @@ const pqChurn: Workload = {
   group: 'Queues and stacks',
   title: 'PriorityQueue churn',
   detail: 'size 1k, 100k offer + poll',
-  baseline: 'sorted array',
+  baseline: 'native sorted Array',
   unit: { perRun: 200000, label: 'offer/poll calls' },
   data() {
     const r = lcg(2);
@@ -266,24 +228,7 @@ const pqChurn: Workload = {
       const { PriorityQueue } = await load('ours');
       return { create: () => new PriorityQueue(), offer: (q: any, x: number) => q.offer(x), poll: (q: any) => q.poll() };
     },
-    'js-sdsl PriorityQueue': async (load) => {
-      const { PriorityQueue } = await load('js-sdsl');
-      return { create: () => new PriorityQueue([], asc), offer: (q: any, x: number) => q.push(x), poll: (q: any) => q.pop() };
-    },
-    'mnemonist Heap': async (load) => {
-      const Heap = await load('mnemonist/heap');
-      return { create: () => new Heap(), offer: (q: any, x: number) => q.push(x), poll: (q: any) => q.pop() };
-    },
-    '@datastructures-js/priority-queue': async (load) => {
-      const { MinPriorityQueue } = await load('@datastructures-js/priority-queue');
-      return { create: () => new MinPriorityQueue(), offer: (q: any, x: number) => q.enqueue(x), poll: (q: any) => q.dequeue() };
-    },
-    'collections.js Heap': async (load) => {
-      const Heap = await load('collections/heap');
-      // a max-heap by default; the reversed comparator makes it a min-heap like the others
-      return { create: () => new Heap([], null, (a: number, b: number) => b - a), offer: (q: any, x: number) => q.push(x), poll: (q: any) => q.pop() };
-    },
-    'sorted array': async () => ({
+    'native sorted Array': async () => ({
       create: () => [] as number[],
       offer(a: number[], v: number) {
         let lo = 0;
@@ -325,18 +270,6 @@ const dequeChurn: Workload = {
       return { create: () => new ArrayDeque(), offer: (d: any, x: number) => d.offer(x), poll: (d: any) => d.poll() };
     },
     'native Array push + shift': async () => ({ create: () => [] as number[], offer: (d: number[], x: number) => d.push(x), poll: (d: number[]) => d.shift() }),
-    'js-sdsl Deque': async (load) => {
-      const { Deque } = await load('js-sdsl');
-      return { create: () => new Deque(), offer: (d: any, x: number) => d.pushBack(x), poll: (d: any) => d.popFront() };
-    },
-    'mnemonist CircularBuffer (fixed capacity)': async (load) => {
-      const CircularBuffer = await load('mnemonist/circular-buffer');
-      return { create: () => new CircularBuffer(Array, DQ_SIZE + 1), offer: (d: any, x: number) => d.push(x), poll: (d: any) => d.shift() };
-    },
-    'collections.js Deque': async (load) => {
-      const Deque = await load('collections/deque');
-      return { create: () => new Deque(), offer: (d: any, x: number) => d.push(x), poll: (d: any) => d.shift() };
-    },
   },
   run(a, xs: number[]) {
     const d = a.create();
@@ -398,10 +331,6 @@ const listAddGet: Workload = {
       return { create: () => new ArrayList(), add: (l: any, x: number) => l.add(x), get: (l: any, i: number) => l.get(i) };
     },
     'native Array': async () => ({ create: () => [] as number[], add: (l: number[], x: number) => l.push(x), get: (l: number[], i: number) => l[i] }),
-    'js-sdsl Vector': async (load) => {
-      const { Vector } = await load('js-sdsl');
-      return { create: () => new Vector(), add: (l: any, x: number) => l.pushBack(x), get: (l: any, i: number) => l.getElementByPos(i) };
-    },
   },
   run(a, xs: number[]) {
     const l = a.create();
@@ -429,10 +358,6 @@ const listSort: Workload = {
       return { create: () => new ArrayList(), add: (l: any, x: number) => l.add(x), sort: (l: any) => l.sort(asc), get: (l: any, i: number) => l.get(i) };
     },
     'native Array': async () => ({ create: () => [] as number[], add: (l: number[], x: number) => l.push(x), sort: (l: number[]) => l.sort(asc), get: (l: number[], i: number) => l[i] }),
-    'js-sdsl Vector': async (load) => {
-      const { Vector } = await load('js-sdsl');
-      return { create: () => new Vector(), add: (l: any, x: number) => l.pushBack(x), sort: (l: any) => l.sort(asc), get: (l: any, i: number) => l.getElementByPos(i) };
-    },
   },
   run(a, xs: number[]) {
     const l = a.create();
@@ -456,14 +381,6 @@ const linkedQueue: Workload = {
       return { create: () => new LinkedList(), offer: (d: any, x: number) => d.offer(x), poll: (d: any) => d.poll() };
     },
     'native Array push + shift': async () => ({ create: () => [] as number[], offer: (d: number[], x: number) => d.push(x), poll: (d: number[]) => d.shift() }),
-    'js-sdsl LinkList': async (load) => {
-      const { LinkList } = await load('js-sdsl');
-      return { create: () => new LinkList(), offer: (d: any, x: number) => d.pushBack(x), poll: (d: any) => d.popFront() };
-    },
-    'collections.js List': async (load) => {
-      const List = await load('collections/list');
-      return { create: () => new List(), offer: (d: any, x: number) => d.push(x), poll: (d: any) => d.shift() };
-    },
   },
   run: (a, xs: number[]) => dequeChurn.run(a, xs, undefined),
 };
@@ -486,14 +403,6 @@ const stackPushPop: Workload = {
       return { create: () => new ArrayDeque(), push: (s: any, x: number) => s.push(x), pop: (s: any) => s.pop() };
     },
     'native Array push + pop': async () => ({ create: () => [] as number[], push: (s: number[], x: number) => s.push(x), pop: (s: number[]) => s.pop() }),
-    'js-sdsl Stack': async (load) => {
-      const { Stack } = await load('js-sdsl');
-      return { create: () => new Stack(), push: (s: any, x: number) => s.push(x), pop: (s: any) => s.pop() };
-    },
-    'mnemonist Stack': async (load) => {
-      const Stack = await load('mnemonist/stack');
-      return { create: () => new Stack(), push: (s: any, x: number) => s.push(x), pop: (s: any) => s.pop() };
-    },
   },
   run(a, xs: number[]) {
     const st = a.create();
@@ -520,66 +429,6 @@ const linkedSet: Workload = {
     'native Set': async () => ({ create: () => new Set(), add: (s: any, x: any) => s.add(x), has: (s: any, x: any) => s.has(x) }),
   },
   run: (a, xs: number[]) => hashSetAddHas.run(a, xs, undefined),
-};
-
-const treeSetAddContains: Workload = {
-  id: 'treeset-add-contains',
-  group: 'Sets',
-  title: 'TreeSet add + contains',
-  detail: '100k random keys, 100k queries',
-  baseline: 'js-sdsl OrderedSet',
-  unit: { perRun: 200_000, label: 'add/contains calls' },
-  data: () => treeFloorCeiling.data(),
-  impls: {
-    '@ylcnfrht/collections TreeSet': async (load) => {
-      const { TreeSet } = await load('ours');
-      return { create: () => new TreeSet(), add: (s: any, k: number) => s.add(k), has: (s: any, k: number) => s.contains(k) };
-    },
-    'js-sdsl OrderedSet': async (load) => {
-      const { OrderedSet } = await load('js-sdsl');
-      return { create: () => new OrderedSet([], asc), add: (s: any, k: number) => s.insert(k), has: (s: any, k: number) => !s.find(k).equals(s.end()) };
-    },
-    'collections.js SortedSet': async (load) => {
-      const SortedSet = await load('collections/sorted-set');
-      return { create: () => new SortedSet(), add: (s: any, k: number) => s.add(k), has: (s: any, k: number) => s.has(k) };
-    },
-  },
-  run(a, d) {
-    const s = a.create();
-    for (const k of d.keys) a.add(s, k);
-    let c = 0;
-    for (let i = 0; i < d.queries.length; i++) if (a.has(s, d.queries[i])) c++;
-    return c;
-  },
-};
-
-const treeMapPut: Workload = {
-  id: 'treemap-put',
-  group: 'Maps',
-  title: 'TreeMap put',
-  detail: '100k random integer keys',
-  baseline: 'js-sdsl OrderedMap',
-  unit: { perRun: 100_000, label: 'put calls' },
-  data: () => treeFloorCeiling.data().keys,
-  impls: {
-    '@ylcnfrht/collections TreeMap': async (load) => {
-      const { TreeMap } = await load('ours');
-      return { create: () => new TreeMap(), put: (m: any, k: number) => m.put(k, k), size: (m: any) => m.size() };
-    },
-    'js-sdsl OrderedMap': async (load) => {
-      const { OrderedMap } = await load('js-sdsl');
-      return { create: () => new OrderedMap([], asc), put: (m: any, k: number) => m.setElement(k, k), size: (m: any) => m.size() };
-    },
-    'collections.js SortedMap': async (load) => {
-      const SortedMap = await load('collections/sorted-map');
-      return { create: () => new SortedMap(), put: (m: any, k: number) => m.set(k, k), size: (m: any) => m.length };
-    },
-  },
-  run(a, keys: number[]) {
-    const m = a.create();
-    for (let i = 0; i < keys.length; i++) a.put(m, keys[i]);
-    return a.size(m);
-  },
 };
 
 const linkedMapIterate: Workload = {
@@ -648,14 +497,6 @@ const valueKeys: Workload = {
       put: (m: Map<string, number>, p: Point, v: number) => m.set(`${p.x},${p.y}`, v),
       get: (m: Map<string, number>, p: Point) => m.get(`${p.x},${p.y}`),
     }),
-    'collections.js FastMap': async (load) => {
-      const FastMap = await load('collections/fast-map');
-      return {
-        create: () => new FastMap(null, (a: Point, b: Point) => a.x === b.x && a.y === b.y, (p: Point) => `${p.x},${p.y}`),
-        put: (m: any, p: Point, v: number) => m.set(p, v),
-        get: (m: any, p: Point) => m.get(p),
-      };
-    },
   },
   run(a, d) {
     const m = a.create();
@@ -676,13 +517,11 @@ export const workloads: Workload[] = [
   pqChurn,
   hashSetAddHas,
   linkedSet,
-  treeSetAddContains,
   hashMapGetInt,
   hashMapPutString,
   valueKeys,
   linkedMapIterate,
   lru,
-  treeMapPut,
   treeFloorCeiling,
   streamSum,
 ];

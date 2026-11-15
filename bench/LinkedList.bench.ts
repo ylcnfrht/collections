@@ -1,4 +1,3 @@
-import { LinkList } from 'js-sdsl';
 import { LinkedList } from '../src/list/LinkedList';
 import { compare } from './harness';
 
@@ -16,11 +15,6 @@ export default async function () {
       for (let i = 0; i < N; i++) a.push(i);
       return a;
     },
-    'js-sdsl LinkList.pushBack': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < N; i++) l.pushBack(i);
-      return l;
-    },
   });
 
   await compare('LinkedList addFirst 10k', {
@@ -33,11 +27,6 @@ export default async function () {
       const a: number[] = [];
       for (let i = 0; i < N; i++) a.unshift(i);
       return a;
-    },
-    'js-sdsl LinkList.pushFront': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < N; i++) l.pushFront(i);
-      return l;
     },
   });
 
@@ -56,13 +45,6 @@ export default async function () {
       while (a.length) s += a.shift()!;
       return s;
     },
-    'js-sdsl LinkList.popFront': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < N; i++) l.pushBack(i);
-      let s = 0;
-      while (!l.empty()) s += l.popFront()!;
-      return s;
-    },
   });
 
   await compare('LinkedList fill + removeLast drain 10k', {
@@ -78,13 +60,6 @@ export default async function () {
       for (let i = 0; i < N; i++) a.push(i);
       let s = 0;
       while (a.length) s += a.pop()!;
-      return s;
-    },
-    'js-sdsl LinkList.popBack': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < N; i++) l.pushBack(i);
-      let s = 0;
-      while (!l.empty()) s += l.popBack()!;
       return s;
     },
   });
@@ -111,25 +86,13 @@ export default async function () {
       }
       return s;
     },
-    'js-sdsl LinkList pushBack/popFront': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < 1000; i++) l.pushBack(i);
-      let s = 0;
-      for (let i = 0; i < N; i++) {
-        l.pushBack(i);
-        s += l.popFront()!;
-      }
-      return s;
-    },
   });
 
   const ours = new LinkedList<number>();
   const arr: number[] = [];
-  const sdsl = new LinkList<number>();
   for (let i = 0; i < N; i++) {
     ours.addLast(i);
     arr.push(i);
-    sdsl.pushBack(i);
   }
 
   await compare('LinkedList for..of 10k', {
@@ -143,11 +106,6 @@ export default async function () {
       for (const x of arr) s += x;
       return s;
     },
-    'js-sdsl LinkList for..of': () => {
-      let s = 0;
-      for (const x of sdsl) s += x;
-      return s;
-    },
   });
 
   await compare('LinkedList forEach 10k', {
@@ -159,11 +117,6 @@ export default async function () {
     'native Array.forEach': () => {
       let s = 0;
       arr.forEach((x) => (s += x));
-      return s;
-    },
-    'js-sdsl LinkList.forEach': () => {
-      let s = 0;
-      sdsl.forEach((x) => (s += x));
       return s;
     },
   });
@@ -184,12 +137,6 @@ export default async function () {
       for (let i = 0, at = M >> 1; i < M; i++) a.splice(at++, 0, i);
       return a;
     },
-    'js-sdsl LinkList.insert': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < M; i++) l.pushBack(i);
-      for (let i = 0, at = M >> 1; i < M; i++) l.insert(at++, i);
-      return l;
-    },
   });
 
   await compare('LinkedList fill + removeIf half of 10k', {
@@ -204,15 +151,6 @@ export default async function () {
       for (let i = 0; i < N; i++) a.push(i);
       a = a.filter((x) => (x & 1) !== 0);
       return a;
-    },
-    'js-sdsl LinkList eraseElementByIterator': () => {
-      const l = new LinkList<number>();
-      for (let i = 0; i < N; i++) l.pushBack(i);
-      for (let it = l.begin(); !it.equals(l.end()); ) {
-        if ((it.pointer & 1) === 0) it = l.eraseElementByIterator(it);
-        else it.next();
-      }
-      return l;
     },
   });
 }

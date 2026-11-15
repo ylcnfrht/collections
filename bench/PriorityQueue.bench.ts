@@ -1,6 +1,3 @@
-import { MinPriorityQueue, PriorityQueue as DsPQ } from '@datastructures-js/priority-queue';
-import { PriorityQueue as SdslPQ } from 'js-sdsl';
-import Heap from 'mnemonist/heap';
 import { PriorityQueue } from '../src/queue/PriorityQueue';
 import { compare } from './harness';
 import { SimpleList } from '../tests/support';
@@ -46,21 +43,6 @@ export default async function () {
       for (let i = 0; i < N; i++) q.offer(xs[i]);
       return q;
     },
-    'datastructures-js MinPriorityQueue': () => {
-      const q = new MinPriorityQueue<number>();
-      for (let i = 0; i < N; i++) q.enqueue(xs[i]);
-      return q;
-    },
-    'mnemonist Heap': () => {
-      const q = new Heap<number>();
-      for (let i = 0; i < N; i++) q.push(xs[i]);
-      return q;
-    },
-    'js-sdsl PriorityQueue': () => {
-      const q = new SdslPQ<number>([], asc);
-      for (let i = 0; i < N; i++) q.push(xs[i]);
-      return q;
-    },
     'baseline push + sort': () => xs.slice().sort(asc),
   }, 600);
 
@@ -70,27 +52,6 @@ export default async function () {
       for (let i = 0; i < N; i++) q.offer(xs[i]);
       let s = 0;
       for (let i = 0; i < N; i++) s += q.poll() as number;
-      return s;
-    },
-    'datastructures-js MinPriorityQueue': () => {
-      const q = new MinPriorityQueue<number>();
-      for (let i = 0; i < N; i++) q.enqueue(xs[i]);
-      let s = 0;
-      for (let i = 0; i < N; i++) s += q.dequeue() as number;
-      return s;
-    },
-    'mnemonist Heap': () => {
-      const q = new Heap<number>();
-      for (let i = 0; i < N; i++) q.push(xs[i]);
-      let s = 0;
-      for (let i = 0; i < N; i++) s += q.pop() as number;
-      return s;
-    },
-    'js-sdsl PriorityQueue': () => {
-      const q = new SdslPQ<number>([], asc);
-      for (let i = 0; i < N; i++) q.push(xs[i]);
-      let s = 0;
-      for (let i = 0; i < N; i++) s += q.pop() as number;
       return s;
     },
     'baseline push + sort': () => {
@@ -112,36 +73,6 @@ export default async function () {
       for (let i = 0; i < N; i++) {
         q.offer(churn[i]);
         s += q.poll() as number;
-      }
-      return s;
-    },
-    'datastructures-js MinPriorityQueue': () => {
-      const q = new MinPriorityQueue<number>();
-      for (let i = 0; i < K; i++) q.enqueue(seed[i]);
-      let s = 0;
-      for (let i = 0; i < N; i++) {
-        q.enqueue(churn[i]);
-        s += q.dequeue() as number;
-      }
-      return s;
-    },
-    'mnemonist Heap': () => {
-      const q = new Heap<number>();
-      for (let i = 0; i < K; i++) q.push(seed[i]);
-      let s = 0;
-      for (let i = 0; i < N; i++) {
-        q.push(churn[i]);
-        s += q.pop() as number;
-      }
-      return s;
-    },
-    'js-sdsl PriorityQueue': () => {
-      const q = new SdslPQ<number>([], asc);
-      for (let i = 0; i < K; i++) q.push(seed[i]);
-      let s = 0;
-      for (let i = 0; i < N; i++) {
-        q.push(churn[i]);
-        s += q.pop() as number;
       }
       return s;
     },
@@ -167,27 +98,6 @@ export default async function () {
       for (let i = 0; i < M; i++) s += (q.poll() as Task).id;
       return s;
     },
-    'datastructures-js PriorityQueue': () => {
-      const q = new DsPQ<Task>(byTask);
-      for (let i = 0; i < M; i++) q.enqueue(tasks[i]);
-      let s = 0;
-      for (let i = 0; i < M; i++) s += (q.dequeue() as Task).id;
-      return s;
-    },
-    'mnemonist Heap': () => {
-      const q = new Heap<Task>(byTask);
-      for (let i = 0; i < M; i++) q.push(tasks[i]);
-      let s = 0;
-      for (let i = 0; i < M; i++) s += (q.pop() as Task).id;
-      return s;
-    },
-    'js-sdsl PriorityQueue': () => {
-      const q = new SdslPQ<Task>([], byTask);
-      for (let i = 0; i < M; i++) q.push(tasks[i]);
-      let s = 0;
-      for (let i = 0; i < M; i++) s += (q.pop() as Task).id;
-      return s;
-    },
     'baseline push + sort': () => {
       const a = tasks.slice().sort(byTask);
       let s = 0;
@@ -200,36 +110,15 @@ export default async function () {
   await compare('heapify 100k via constructor', {
     ours: () => PriorityQueue.of(...xs),
     'ours (from collection)': () => new PriorityQueue<number>(list),
-    'datastructures-js MinPriorityQueue.fromArray': () => MinPriorityQueue.fromArray(xs.slice()),
-    'mnemonist Heap.from': () => Heap.from(xs),
-    'js-sdsl PriorityQueue (copy)': () => new SdslPQ<number>(xs, asc),
     'baseline sort': () => xs.slice().sort(asc),
   }, 600);
 
   const ours = PriorityQueue.of(...xs);
-  const ds = MinPriorityQueue.fromArray(xs.slice());
-  const mn = Heap.from(xs);
-  const sd = new SdslPQ<number>(xs, asc);
   const sorted = xs.slice().sort(asc);
   await compare('peek loop 100k', {
     ours: () => {
       let s = 0;
       for (let i = 0; i < N; i++) s += ours.peek() as number;
-      return s;
-    },
-    'datastructures-js MinPriorityQueue': () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) s += ds.front() as number;
-      return s;
-    },
-    'mnemonist Heap': () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) s += mn.peek() as number;
-      return s;
-    },
-    'js-sdsl PriorityQueue': () => {
-      let s = 0;
-      for (let i = 0; i < N; i++) s += sd.top() as number;
       return s;
     },
     'baseline sorted array': () => {

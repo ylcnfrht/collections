@@ -4,7 +4,7 @@ import { Bench } from 'tinybench';
 import { workloads, type Load } from './workloads';
 
 // the published build of this library, not the sources
-const load: Load = async (pkg) => require(pkg === 'ours' ? '../../dist/index.js' : pkg);
+const load: Load = async () => require('../../dist/index.js');
 
 let sink: unknown; // keeps results observable so the JIT can't drop the work
 

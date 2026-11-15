@@ -1,5 +1,5 @@
 // Runs one implementation of one workload from bench/isolated/workloads.ts in its own worker (its own JS
-// engine instance), so its library is the only one loaded, as in the isolated Docker run.
+// engine instance), as in the isolated Docker run.
 import { workloads, type Load } from '../../../../bench/isolated/workloads';
 
 export interface Result { ops: number; ms: number; check: number }
@@ -7,38 +7,7 @@ export interface Result { ops: number; ms: number; check: number }
 const WARMUP_MS = 300;
 const TIME_MS = 1000;
 
-/** collections.js reads Node's `global`; this worker runs only that library, so defining it here is contained */
-const withNodeGlobal = <T>(load: () => Promise<T>) => () => {
-  (globalThis as { global?: unknown }).global ??= globalThis;
-  return load();
-};
-
-// static specifiers, so the bundler emits one chunk per package and a worker fetches only its own
-const packages: Record<Parameters<Load>[0], () => Promise<any>> = {
-  ours: () => import('../../../../src/index'),
-  'js-sdsl': () => import('js-sdsl'),
-  // mnemonist exposes its subpaths to require() only; the browser takes the classes from its entry point
-  'mnemonist/lru-map': async () => ({ default: (await import('mnemonist')).LRUMap }),
-  'mnemonist/heap': async () => ({ default: (await import('mnemonist')).Heap }),
-  'mnemonist/circular-buffer': async () => ({ default: (await import('mnemonist')).CircularBuffer }),
-  'mnemonist/stack': async () => ({ default: (await import('mnemonist')).Stack }),
-  '@datastructures-js/priority-queue': () => import('@datastructures-js/priority-queue'),
-  'collections/fast-map': withNodeGlobal(() => import('collections/fast-map')),
-  'collections/fast-set': withNodeGlobal(() => import('collections/fast-set')),
-  'collections/lru-map': withNodeGlobal(() => import('collections/lru-map')),
-  'collections/sorted-set': withNodeGlobal(() => import('collections/sorted-set')),
-  'collections/heap': withNodeGlobal(() => import('collections/heap')),
-  'collections/deque': withNodeGlobal(() => import('collections/deque')),
-  'collections/list': withNodeGlobal(() => import('collections/list')),
-  'collections/sorted-map': withNodeGlobal(() => import('collections/sorted-map')),
-};
-
-// adapters expect what require() returns: a CommonJS class itself, or an object of named exports
-const load: Load = async (pkg) => {
-  const m = await packages[pkg]();
-  if (typeof m.default === 'function') return m.default;
-  return m.default && typeof m.default === 'object' ? { ...m.default, ...m } : m;
-};
+const load: Load = () => import('../../../../src/index');
 
 /**
  * Rounds until `ms` have passed; returns rounds, elapsed time and the last round's checksum. Posts
@@ -56,7 +25,7 @@ function runFor(round: () => number, ms: number, offset: number) {
     now = performance.now();
     if (now - posted > 50) {
       posted = now;
-      self.postMessage({ progress: (offset + now - start) / (WARMUP_MS + TIME_MS), measuring: offset > 0 });
+      self.postMessage({ progress: (offset + now - start) / (WARMUP_MS + TIME_MS) });
     }
   }
   return { rounds, ms: now - start, check };

@@ -5,47 +5,35 @@ import { workloads } from '../../../../bench/isolated/workloads';
 import type { Result } from './bench.worker';
 
 // Runs the isolated benchmark's workloads in the reader's browser, each implementation in a fresh worker,
-// next to the ratios the isolated Docker run measured.
+// and shows how this library compares with the native baseline, next to what the isolated Docker run measured.
 type W = (typeof workloads)[number];
-const OURS = '@ylcnfrht/collections';
+const OURS = '@ylcnfrht/collections ';
 
-const selected = ref(workloads[0].id);
-const workload = computed(() => workloads.find((w) => w.id === selected.value)!);
 const runs = ref<Record<string, Record<string, Result>>>({});
+const job = ref<{ workload: string; done: number; total: number } | null>(null);
+const progress = ref(0); // of the implementation that is running
 const error = ref('');
-const progress = ref({ value: 0, measuring: false }); // of the implementation that is running
-const job = ref<{ workload: string; impl: string; done: number; total: number } | null>(null);
 
-const implsOf = (w: W) => Object.keys(w.impls);
 const groups = [...new Set(workloads.map((w) => w.group))].map((g) => ({ name: g, items: workloads.filter((w) => w.group === g) }));
-const oursOf = (w: W) => implsOf(w).find((i) => i.startsWith(OURS))!;
-const opsPerSec = (r: Result) => r.ops / (r.ms / 1000);
-const measured = (w: W, impl: string) => results.report.find((x) => x.id === w.id)?.rows.find((r) => r.impl === impl)?.vsBaseline ?? null;
-const yours = (w: W, impl: string) => {
-  const r = runs.value[w.id];
-  return r?.[impl] && r[w.baseline] ? opsPerSec(r[impl]) / opsPerSec(r[w.baseline]) : null;
-};
-const complete = (w: W) => implsOf(w).every((i) => runs.value[w.id]?.[i]);
+const ours = (w: W) => Object.keys(w.impls).filter((i) => i.startsWith(OURS));
+// only our implementations and the native baseline run; other native variants stay in the Docker report
+const toRun = (w: W) => [...ours(w), w.baseline];
+const total = workloads.reduce((n, w) => n + toRun(w).length, 0);
+const perSec = (r: Result) => r.ops / (r.ms / 1000);
 
-/** rows of the selected workload: fastest first once measured, else in the isolated run's order */
-const rows = computed(() => {
-  const w = workload.value;
-  const r = runs.value[w.id] ?? {};
-  const isolated = results.report.find((x) => x.id === w.id)?.rows.map((x) => x.impl) ?? [];
-  return [...implsOf(w)].sort((a, b) =>
-    r[a] && r[b] ? opsPerSec(r[b]) - opsPerSec(r[a]) : isolated.indexOf(a) - isolated.indexOf(b),
-  );
-});
-const maxMeasured = computed(() => Math.max(1e-9, ...implsOf(workload.value).map((i) => measured(workload.value, i) ?? 0)));
-const maxOps = computed(() => Math.max(1, ...Object.values(runs.value[selected.value] ?? {}).map(opsPerSec)));
+const isolated = (w: W, impl: string) => results.report.find((x) => x.id === w.id)?.rows.find((r) => r.impl === impl)?.vsBaseline ?? null;
+const mine = (w: W, impl: string) => {
+  const r = runs.value[w.id];
+  return r?.[impl] && r[w.baseline] ? perSec(r[impl]) / perSec(r[w.baseline]) : null;
+};
 
 function runOne(w: string, impl: string): Promise<Result> {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./bench.worker.ts', import.meta.url), { type: 'module' });
-    progress.value = { value: 0, measuring: false };
-    worker.onmessage = (e: MessageEvent<Result & { error?: string; progress?: number; measuring?: boolean }>) => {
+    progress.value = 0;
+    worker.onmessage = (e: MessageEvent<Result & { error?: string; progress?: number }>) => {
       if (e.data.progress !== undefined) {
-        progress.value = { value: e.data.progress, measuring: !!e.data.measuring };
+        progress.value = e.data.progress;
         return;
       }
       worker.terminate();
@@ -60,17 +48,15 @@ function runOne(w: string, impl: string): Promise<Result> {
   });
 }
 
-async function run(all: boolean) {
+async function run(todo: W[]) {
   error.value = '';
-  const todo = all ? workloads : [workload.value];
-  const total = todo.reduce((n, w) => n + implsOf(w).length, 0);
+  const count = todo.reduce((n, w) => n + toRun(w).length, 0);
   let done = 0;
   try {
     for (const w of todo) {
-      selected.value = w.id;
       runs.value = { ...runs.value, [w.id]: {} };
-      for (const impl of implsOf(w)) {
-        job.value = { workload: w.id, impl, done, total };
+      for (const impl of toRun(w)) {
+        job.value = { workload: w.id, done, total: count };
         const r = await runOne(w.id, impl);
         runs.value = { ...runs.value, [w.id]: { ...runs.value[w.id], [impl]: r } };
         done++;
@@ -87,438 +73,325 @@ async function run(all: boolean) {
 }
 
 const busy = computed(() => job.value !== null);
-const overall = computed(() => (job.value ? (job.value.done + progress.value.value) / job.value.total : 0));
+const overall = computed(() => (job.value ? (job.value.done + progress.value) / job.value.total : 0));
+const measuredCount = computed(() => workloads.filter((w) => mine(w, ours(w)[0]) !== null).length);
+const wins = computed(() => workloads.filter((w) => (mine(w, ours(w)[0]) ?? 0) >= 1).length);
 
-function words(n: number): string {
-  if (n >= 1e9) return `${(n / 1e9).toFixed(2)} billion`;
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} million`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(0)} thousand`;
-  return `${Math.round(n)}`;
+const times = (x: number) => `${x >= 10 ? x.toFixed(0) : x.toFixed(1)}×`;
+// within 2% is noise, not a result
+const verdict = (x: number) => (Math.abs(x - 1) < 0.02 ? 'about the same' : x >= 1 ? `${times(x)} faster` : `${times(1 / x)} slower`);
+/** bar half-width in %, log scale: 1× is 0, 10× and beyond fill the half */
+const bar = (x: number) => Math.min(1, Math.abs(Math.log10(x))) * 50;
+function rate(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B/s`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M/s`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(0)}K/s`;
+  return `${Math.round(n)}/s`;
 }
-const times = (x: number) => `${x >= 10 ? x.toFixed(1) : x.toFixed(2)}×`;
-/** "4.13× faster" or "1.37× slower", never a fraction */
-const verdict = (x: number) => (x >= 1 ? `${times(x)} faster` : `${times(1 / x)} slower`);
+const label = (impl: string) => impl.slice(OURS.length);
 </script>
 
 <template>
-  <div class="bench">
-    <div class="bar-top">
-      <div class="status">
+  <div class="tb not-content">
+    <div class="head">
+      <p class="status" aria-live="polite">
         <template v-if="job">
-          <span class="dot" />
-          {{ job.done + 1 }} / {{ job.total }} · {{ workloads.find((w) => w.id === job!.workload)!.title }} ·
-          {{ job.impl }} · {{ progress.measuring ? 'measuring' : 'warming up' }}
+          <span class="dot" />Running {{ workloads.find((w) => w.id === job!.workload)!.title }} · {{ job.done + 1 }} of {{ job.total }}
         </template>
-        <template v-else>Runs on your device. Each implementation takes about 1.5 s.</template>
-      </div>
-      <div class="actions">
-        <button class="btn" :disabled="busy" @click="run(false)">{{ runs[selected] && complete(workload) ? 'Run again' : 'Run this test' }}</button>
-        <button class="btn primary" :disabled="busy" @click="run(true)">Run all {{ workloads.length }} tests</button>
-      </div>
+        <template v-else-if="measuredCount > 0">
+          Faster than native in <strong>{{ wins }} of {{ measuredCount }}</strong> tests on your device.
+        </template>
+        <template v-else>Each test runs this library and the native equivalent in separate workers, about 1.5 s each.</template>
+      </p>
+      <button class="run-all" :disabled="busy" @click="run(workloads)">
+        {{ measuredCount ? 'Run all again' : `Run all ${workloads.length} tests` }}
+        <span class="time">~{{ Math.round(total * 1.5) }} s</span>
+      </button>
     </div>
-    <div class="overall" :class="{ on: busy }"><span :style="{ width: `${overall * 100}%` }" /></div>
+    <div class="progress" :class="{ on: busy }"><span :style="{ width: `${overall * 100}%` }" /></div>
+    <p v-if="error" class="error">{{ error }}</p>
 
-    <div class="body">
-      <nav class="list" aria-label="Workloads">
-        <template v-for="g in groups" :key="g.name">
-        <div class="group">{{ g.name }}</div>
-        <button
-          v-for="w in g.items"
-          :key="w.id"
-          :class="{ active: w.id === selected, running: job?.workload === w.id }"
-          :aria-current="w.id === selected"
-          @click="selected = w.id"
-        >
-          <span class="name">{{ w.title }}</span>
-          <span class="sub">{{ w.detail }}</span>
-          <span
-            class="pill"
-            :class="{
-              measured: complete(w),
-              slower: (complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w)))! < 1,
-            }"
-            :title="complete(w) ? 'your browser' : 'our isolated run'"
-          >
-            {{ (complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w))) === null ? 'new' : times((complete(w) ? yours(w, oursOf(w)) : measured(w, oursOf(w)))!) }}
-          </span>
-        </button>
-        </template>
-      </nav>
-
-      <section class="panel">
-        <p class="headline">
-          <template v-if="complete(workload)">
-            <strong>{{ oursOf(workload) }}</strong> was{{ ' ' }}
-            <strong :class="{ slower: yours(workload, oursOf(workload))! < 1 }">{{ verdict(yours(workload, oursOf(workload))!) }}</strong>{{ ' ' }}
-            than {{ workload.baseline }} in your browser.
-            <span v-if="measured(workload, oursOf(workload)) !== null" class="muted">Our isolated run measured {{ verdict(measured(workload, oursOf(workload))!) }}.</span>
-          </template>
-          <template v-else-if="measured(workload, oursOf(workload)) !== null">
-            Our isolated run measured <strong>{{ oursOf(workload) }}</strong>{{ ' ' }}
-            <strong :class="{ slower: measured(workload, oursOf(workload))! < 1 }">{{ verdict(measured(workload, oursOf(workload))!) }}</strong>{{ ' ' }}
-            than {{ workload.baseline }}. Run the test to measure it on your device.
-          </template>
-          <template v-else>
-            Run the test to compare <strong>{{ oursOf(workload) }}</strong> with {{ workload.baseline }} on your device.
-          </template>
-        </p>
-        <p class="unit">{{ workload.unit.label }} per second, higher is faster</p>
-
-        <TransitionGroup tag="div" name="rows" class="rows">
-          <div v-for="impl in rows" :key="impl" class="row" :class="{ ours: impl.startsWith(OURS) }">
-            <div class="label">
-              {{ impl }}<span v-if="impl === workload.baseline" class="tag">baseline</span>
+    <section v-for="g in groups" :key="g.name" class="group">
+      <h3>{{ g.name }}</h3>
+      <div class="rows">
+        <template v-for="w in g.items" :key="w.id">
+          <div v-for="(impl, k) in ours(w)" :key="impl" class="row" :class="{ running: job?.workload === w.id }">
+            <div class="what">
+              <span class="title">{{ w.title }}<span v-if="ours(w).length > 1" class="variant"> · {{ label(impl) }}</span></span>
+              <span class="sub">{{ k === 0 ? w.detail : '' }}<template v-if="k === 0"> · vs {{ w.baseline }}</template></span>
             </div>
-            <div class="track">
-              <span v-if="runs[selected]?.[impl]" class="fill" :style="{ width: `${(opsPerSec(runs[selected][impl]) / maxOps) * 100}%` }" />
-              <span v-else-if="job?.workload === selected && job.impl === impl" class="fill live" :style="{ width: `${progress.value * 100}%` }" />
-              <span v-else-if="!runs[selected]?.[impl] && measured(workload, impl) !== null" class="fill ghost" :style="{ width: `${(measured(workload, impl)! / maxMeasured) * 100}%` }" />
-            </div>
-            <div class="value">
-              <template v-if="runs[selected]?.[impl]">
-                <span class="main">{{ words(opsPerSec(runs[selected][impl])) }} / s</span>
-                <span class="sub">
-                  {{ ((runs[selected][impl].ms * 1e6) / runs[selected][impl].ops).toFixed(1) }} ns per call
-                  <template v-if="impl !== workload.baseline && yours(workload, impl) !== null"> · {{ times(yours(workload, impl)!) }}</template>
-                  <template v-if="measured(workload, impl) !== null && impl !== workload.baseline"> (isolated {{ times(measured(workload, impl)!) }})</template>
-                </span>
+
+            <div class="meter" :title="mine(w, impl) !== null ? 'your device' : 'isolated run'">
+              <template v-for="x in [mine(w, impl) ?? isolated(w, impl)]" :key="String(x)">
+                <div class="track" :class="{ ghost: mine(w, impl) === null }">
+                  <span class="mid" />
+                  <span
+                    v-if="x !== null"
+                    class="fill"
+                    :class="x >= 1 ? 'fast' : 'slow'"
+                    :style="x >= 1 ? { left: '50%', width: `${bar(x)}%` } : { right: '50%', width: `${bar(x)}%` }"
+                  />
+                </div>
+                <span v-if="x !== null" class="ratio" :class="[x >= 1 ? 'fast' : 'slow', { ghost: mine(w, impl) === null }]">{{ verdict(x) }}</span>
               </template>
-              <span v-else-if="job?.workload === selected && job.impl === impl" class="sub">
-                {{ progress.measuring ? 'measuring' : 'warming up' }} {{ Math.round(progress.value * 100) }}%
-              </span>
-              <span v-else-if="measured(workload, impl) !== null" class="sub">isolated run {{ times(measured(workload, impl)!) }}</span>
-              <span v-else class="sub">not measured yet</span>
             </div>
-          </div>
-        </TransitionGroup>
 
-        <p v-if="error" class="error">{{ error }}</p>
-        <details class="how">
-          <summary>How this is measured</summary>
-          <p>
-            Each implementation runs in its own Web Worker, so only its library is loaded. It repeats the test for
-            0.3 s to warm up and then for 1 s to measure, on the same data as our
-            <a href="https://github.com/ylcnfrht/collections/tree/main/bench/isolated">isolated Docker benchmark</a>,
-            and every implementation has to return the same checksum. One call takes nanoseconds, so a second of
-            measuring is millions of calls. Ratios divide by the baseline row. Browser engines and devices differ,
-            so expect your numbers to vary from ours.
-          </p>
-        </details>
-      </section>
-    </div>
+            <div class="nums">
+              <template v-if="runs[w.id]?.[impl] && runs[w.id]?.[w.baseline]">
+                <span>{{ rate(perSec(runs[w.id][impl])) }}</span>
+                <span class="vs">native {{ rate(perSec(runs[w.id][w.baseline])) }}</span>
+              </template>
+              <span v-else-if="isolated(w, impl) !== null" class="vs">isolated run</span>
+            </div>
+
+            <button v-if="k === 0" class="run-one" :disabled="busy" :aria-label="`Run ${w.title}`" @click="run([w])">Run</button>
+            <span v-else />
+          </div>
+        </template>
+      </div>
+    </section>
+    <p class="foot">
+      Rates are {{ '' }}operations per second, higher is better. Faded bars are the isolated Docker run's ratios until you run a test.
+    </p>
   </div>
 </template>
 
 <style scoped>
-.bench {
-  margin: 20px 0 28px;
+.tb {
+  margin-top: 1.5rem;
   border: 1px solid var(--rp-hairline);
-  border-radius: 14px;
+  border-radius: var(--rp-radius);
   background: var(--rp-surface);
   overflow: hidden;
 }
-.bar-top {
+.head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px 16px;
-  padding: 14px 18px;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
 }
 .status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  margin: 0;
+  font-size: 0.875rem;
   color: var(--rp-text-muted);
 }
+.status strong {
+  color: var(--sl-color-white);
+  font-weight: 600;
+}
 .dot {
-  width: 8px;
-  height: 8px;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 0.5rem;
   border-radius: 50%;
-  background: var(--sl-color-accent);
-  animation: pulse 1s ease-in-out infinite alternate;
+  background: var(--rp-accent);
+  box-shadow: 0 0 8px var(--rp-accent);
+  animation: pulse 1s infinite alternate;
 }
 @keyframes pulse {
-  from { opacity: 0.3; }
-  to { opacity: 1; }
+  to {
+    opacity: 0.35;
+  }
 }
-.actions {
-  display: flex;
-  gap: 8px;
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 9px;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
 }
-.btn {
-  padding: 7px 14px;
-  border: 1px solid var(--rp-hairline);
-  border-radius: 8px;
-  background: var(--rp-bg);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--sl-color-white);
-  white-space: nowrap;
-  transition: background 0.2s, border-color 0.2s;
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
-.btn:hover:not(:disabled) {
-  border-color: var(--sl-color-accent);
-}
-.btn.primary {
-  border-color: transparent;
+.run-all {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 2.3rem;
+  padding: 0 0.95rem;
+  border: none;
   background: var(--sl-color-white);
   color: var(--rp-bg);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
-.btn.primary:hover:not(:disabled) {
-  background: var(--sl-color-gray-1);
+.run-all .time {
+  font-family: var(--rp-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.6;
 }
-.btn:disabled {
-  opacity: 0.55;
-  cursor: progress;
-}
-.overall {
+.progress {
   height: 2px;
   background: var(--rp-hairline);
 }
-.overall span {
+.progress span {
   display: block;
   height: 100%;
   width: 0;
-  background: var(--sl-color-accent);
-  transition: width 0.15s linear;
+  background: var(--rp-accent);
+  transition: width 0.12s linear;
 }
-.overall:not(.on) span {
-  width: 0 !important;
+.progress:not(.on) span {
+  opacity: 0;
 }
-.body {
-  display: grid;
-  grid-template-columns: 250px 1fr;
-}
-.list {
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-  max-height: 640px;
-  overflow-y: auto;
-  border-right: 1px solid var(--rp-hairline);
-  background: var(--rp-bg);
-}
-.group {
-  padding: 10px 10px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--rp-text-faint);
-}
-.group:first-child {
-  padding-top: 4px;
-}
-.list button {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas: 'name pill' 'sub pill';
-  align-items: center;
-  gap: 0 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  text-align: left;
-  transition: background 0.15s;
-}
-.list button:hover {
-  background: var(--rp-surface-2);
-}
-.list button.active {
-  background: var(--sl-color-accent-low);
-}
-.list .name {
-  grid-area: name;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--sl-color-white);
-}
-.list .sub {
-  grid-area: sub;
-  font-size: 11px;
-  color: var(--rp-text-faint);
-}
-.list button.running .name::after {
-  content: ' ·';
-  color: var(--sl-color-accent);
-  animation: pulse 0.6s ease-in-out infinite alternate;
-}
-.pill {
-  grid-area: pill;
-  padding: 1px 7px;
-  border: 1px dashed var(--rp-hairline);
-  border-radius: 999px;
-  font-family: var(--rp-mono);
-  font-size: 11px;
-  color: var(--rp-text-faint);
-}
-.pill.measured {
-  border-style: solid;
-  border-color: transparent;
-  background: var(--sl-color-accent-low);
-  color: var(--sl-color-accent);
-  font-weight: 600;
-}
-.pill.measured.slower {
-  background: color-mix(in oklab, var(--rp-amber) 14%, transparent);
-  color: var(--rp-amber);
-}
-.panel {
-  min-width: 0;
-  padding: 16px 20px 18px;
-}
-.headline {
+.error {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--sl-color-white);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--rp-red);
+  border-bottom: 1px solid var(--rp-hairline);
 }
-.headline strong {
-  font-weight: 600;
-}
-.headline strong:nth-of-type(2) {
-  color: var(--sl-color-accent);
-}
-.headline strong.slower {
-  color: var(--rp-amber);
-}
-.muted {
-  color: var(--rp-text-muted);
-}
-.unit {
-  margin: 4px 0 10px;
-  font-size: 12px;
+
+.group h3 {
+  margin: 0;
+  padding: 1.1rem 1.25rem 0.5rem;
+  font-family: var(--rp-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--rp-text-faint);
 }
 .row {
   display: grid;
-  grid-template-columns: minmax(130px, 210px) 1fr 230px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.3fr) 8.5rem 3.6rem;
   align-items: center;
-  gap: 14px;
-  padding: 7px 0;
+  gap: 1rem;
+  padding: 0.7rem 1.25rem;
   border-top: 1px solid var(--rp-hairline);
+  transition: background 0.15s;
 }
-.row:first-child {
-  border-top: none;
+.row.running {
+  background: color-mix(in oklab, var(--rp-accent) 6%, transparent);
 }
-.label {
-  font-size: 13px;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  color: var(--rp-text-muted);
-}
-.row.ours .label {
-  font-weight: 600;
-  color: var(--sl-color-white);
-}
-.tag {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 6px;
-  border: 1px solid var(--rp-hairline);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 400;
-  white-space: nowrap;
-  color: var(--rp-text-faint);
-}
-.track {
-  height: 8px;
-  border-radius: 6px;
-  background: var(--rp-surface-2);
-  overflow: hidden;
-}
-.fill {
-  display: block;
-  height: 100%;
-  border-radius: 6px;
-  background: var(--rp-text-faint);
-  opacity: 0.45;
-  transition: width 0.5s ease;
-}
-.row.ours .fill {
-  background: linear-gradient(90deg, var(--rp-accent), var(--rp-accent-2));
-  opacity: 1;
-}
-.fill.ghost {
-  background: transparent;
-  border: 1px dashed var(--rp-text-faint);
-  opacity: 0.5;
-}
-.fill.live {
-  transition: width 0.1s linear;
-  opacity: 0.8;
-}
-.value {
+.what {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+  min-width: 0;
 }
-.value .main {
-  font-size: 14px;
-  font-weight: 600;
+.title {
+  font-size: 0.875rem;
+  font-weight: 550;
   color: var(--sl-color-white);
 }
-.row:not(.ours) .value .main {
-  font-weight: 500;
+.variant {
+  font-weight: 400;
   color: var(--rp-text-muted);
 }
-.value .sub {
-  font-size: 11px;
+.sub {
+  font-size: 0.75rem;
   color: var(--rp-text-faint);
 }
-.rows-move {
-  transition: transform 0.4s ease;
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
-.error {
-  margin: 10px 0 0;
-  font-size: 13px;
-  color: var(--rp-red);
+.track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rp-surface-2);
 }
-.how {
-  margin-top: 12px;
-  font-size: 12px;
+.track.ghost {
+  opacity: 0.45;
+}
+.mid {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--rp-hairline-strong);
+}
+.fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  transition: width 0.3s;
+}
+.fill.fast {
+  background: var(--rp-accent);
+}
+.fill.slow {
+  background: var(--rp-amber);
+}
+.ratio {
+  flex: none;
+  width: 6.2rem;
+  font-family: var(--rp-mono);
+  font-size: 0.78rem;
+  text-align: right;
+}
+.ratio.fast {
+  color: var(--sl-color-white);
+}
+.ratio.slow {
+  color: var(--rp-amber);
+}
+.ratio.ghost {
+  opacity: 0.55;
+}
+.nums {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--rp-mono);
+  font-size: 0.75rem;
+  color: var(--sl-color-white);
+  text-align: right;
+}
+.nums .vs {
   color: var(--rp-text-faint);
+  font-size: 0.7rem;
 }
-.how summary {
-  cursor: pointer;
-  width: fit-content;
-}
-.how summary:hover {
+.run-one {
+  height: 1.9rem;
+  border: 1px solid var(--rp-hairline-strong);
+  background: transparent;
   color: var(--rp-text-muted);
+  font-size: 0.78rem;
 }
-.how p {
-  margin: 6px 0 0;
-  line-height: 1.6;
+.run-one:not(:disabled):hover {
+  border-color: var(--rp-accent);
+  color: var(--sl-color-white);
 }
-@media (max-width: 760px) {
-  .body {
-    grid-template-columns: 1fr;
-  }
-  .list {
-    flex-direction: row;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--rp-hairline);
-  }
-  .list button {
-    flex: 0 0 auto;
-    grid-template-areas: 'name pill';
-  }
-  .list .sub,
-  .group {
-    display: none;
+.foot {
+  margin: 0;
+  padding: 0.9rem 1.25rem;
+  border-top: 1px solid var(--rp-hairline);
+  font-size: 0.75rem;
+  color: var(--rp-text-faint);
+}
+
+@media (max-width: 50rem) {
+  .head {
+    flex-direction: column;
+    align-items: stretch;
   }
   .row {
-    grid-template-columns: 1fr auto;
-    gap: 4px 12px;
+    grid-template-columns: minmax(0, 1fr) 3.6rem;
+    row-gap: 0.5rem;
   }
-  .track {
+  .meter {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+  .nums {
+    grid-column: 1;
+    grid-row: 3;
+    flex-direction: row;
+    gap: 0.75rem;
+    text-align: left;
+  }
+  .run-one {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 </style>

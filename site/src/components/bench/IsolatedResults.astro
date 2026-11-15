@@ -1,0 +1,73 @@
+---
+// The isolated Docker run's results, rendered at build time from bench/isolated/results.json,
+// so the table always matches the last run.
+import results from '../../../../bench/isolated/results.json';
+
+const OURS = '@ylcnfrht/collections ';
+const rate = (n: number) =>
+  n >= 1e9 ? `${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${(n / 1e3).toFixed(0)}K`;
+const verdict = (x: number) => {
+  const t = (v: number) => `${v >= 10 ? v.toFixed(0) : v.toFixed(2)}×`;
+  // within 2% is noise, not a result
+  return Math.abs(x - 1) < 0.02 ? 'about the same' : x >= 1 ? `${t(x)} faster` : `${t(1 / x)} slower`;
+};
+const rows = results.report.flatMap((w) => {
+  const base = w.rows.find((r) => r.impl === w.baseline)!;
+  const ours = w.rows.filter((r) => r.impl.startsWith(OURS));
+  return ours.map((r) => ({
+    test: w.title,
+    detail: w.detail,
+    // name the class only when a test runs more than one of ours
+    impl: ours.length > 1 ? r.impl.slice(OURS.length) : '',
+    ours: r.opsPerSec * w.unit.perRun,
+    native: base.opsPerSec * w.unit.perRun,
+    baseline: w.baseline.replace(/^native /, ''),
+    unit: w.unit.label,
+    ratio: r.vsBaseline,
+  }));
+});
+const date = results.meta.date.slice(0, 10);
+---
+
+<table>
+  <thead>
+    <tr><th>Test</th><th>This library</th><th>Native</th><th>Result</th></tr>
+  </thead>
+  <tbody>
+    {
+      rows.map((r) => (
+        <tr>
+          <td>
+            <strong>{r.test}</strong> {r.impl && <span class="impl">({r.impl})</span>}
+            <br />
+            <small>{r.detail}; native: {r.baseline}</small>
+          </td>
+          <td class="num">{rate(r.ours)} {r.unit}/s</td>
+          <td class="num">{rate(r.native)}/s</td>
+          <td class="num" data-slow={r.ratio < 1 ? '' : undefined}>{verdict(r.ratio)}</td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+<p class="meta">Medians of {results.meta.reps} runs, Node.js {results.meta.node}, {date}.</p>
+
+<style>
+  .num {
+    font-family: var(--rp-mono);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    text-align: end;
+  }
+  [data-slow] {
+    color: var(--rp-amber);
+  }
+  .impl,
+  small {
+    color: var(--rp-text-faint);
+  }
+  .meta {
+    font-size: 0.8rem;
+    color: var(--rp-text-faint);
+  }
+</style>
