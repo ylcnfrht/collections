@@ -29,7 +29,8 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: site/package-lock.json
-      - run: npm ci
+      # npm install, not ci: the site lock comes from macOS and npm drops a Linux-only wasm dependency from it.
+      - run: npm install --no-audit --no-fund
         working-directory: site
       - run: npm run build
         working-directory: site
