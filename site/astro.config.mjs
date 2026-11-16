@@ -7,8 +7,7 @@ import starlightLinksValidator from 'starlight-links-validator';
 import { fileURLToPath } from 'node:url';
 
 const lib = fileURLToPath(new URL('../src/', import.meta.url));
-const site = 'https://ylcnfrht.github.io';
-const base = '/collections';
+const site = 'https://collections.ferhatyalcin.dev';
 
 // SKIP_TYPEDOC=1 skips the API reference (and links into it) for faster content checks.
 const skipTypeDoc = process.env.SKIP_TYPEDOC === '1';
@@ -16,7 +15,6 @@ const skipTypeDoc = process.env.SKIP_TYPEDOC === '1';
 export default defineConfig({
   devToolbar: { enabled: false },
   site,
-  base,
   trailingSlash: 'always',
   // separate output and cache dirs let several builds run at once
   outDir: process.env.ASTRO_OUT_DIR ?? './dist',
@@ -36,11 +34,11 @@ export default defineConfig({
       logo: { src: './src/assets/logo.svg' },
       favicon: '/favicon.svg',
       head: [
-        { tag: 'meta', attrs: { property: 'og:image', content: `${site}${base}/og.png` } },
+        { tag: 'meta', attrs: { property: 'og:image', content: `${site}/og.png` } },
         { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
         { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
         { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
-        { tag: 'meta', attrs: { name: 'twitter:image', content: `${site}${base}/og.png` } },
+        { tag: 'meta', attrs: { name: 'twitter:image', content: `${site}/og.png` } },
       ],
       customCss: ['@fontsource-variable/geist', '@fontsource-variable/geist-mono', './src/styles/theme.css'],
       components: { Header: './src/components/overrides/Header.astro' },

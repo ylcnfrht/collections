@@ -10,7 +10,7 @@ order* unless you pass a comparator. Natural order is defined for:
 
 | Type | Order |
 |---|---|
-| objects with `compareTo` | `a.compareTo(b)` (see [Writing equals and hashCode](/collections/concepts/equality/#writing-equals-and-hashcode)) |
+| objects with `compareTo` | `a.compareTo(b)` (see [Writing equals and hashCode](/concepts/equality/#writing-equals-and-hashcode)) |
 | `number` | numeric; `-0` equals `0`, `NaN` sorts after everything else |
 | `string` | UTF-16 code unit order, not `localeCompare` |
 | `bigint` | numeric |
@@ -52,4 +52,4 @@ try {
 ```
 
 Every helper (`naturalOrder`, `reverseOrder`, `reversed`, `comparing`, `thenComparing`, `nullsFirst`, `nullsLast`,
-...) is on [Comparator and Objects](/collections/utilities/comparator-and-objects/).
+...) is on [Comparator and Objects](/utilities/comparator-and-objects/).

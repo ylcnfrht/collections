@@ -6,7 +6,7 @@ sidebar:
 ---
 
 `Collections` is an object of static helpers that work on any `List`, `Set`, `Map`, `Queue` or `Deque` from this library,
-including your own classes built on the [abstract skeletons](/collections/guides/custom-collections/). Every helper throws
+including your own classes built on the [abstract skeletons](/guides/custom-collections/). Every helper throws
 `NullPointerException` when a collection argument is `null` or `undefined`.
 
 | Method | Cost | Notes |
@@ -291,4 +291,4 @@ console.log(ids.size()); // → 2
 
 `unmodifiable*` (read-only views), `synchronized*` (the same API, no locking, kept for ported code) and `checked*`
 (runtime element type checks) are covered in
-[Immutable collections and wrappers](/collections/collections/immutable-and-wrappers/).
+[Immutable collections and wrappers](/collections/immutable-and-wrappers/).

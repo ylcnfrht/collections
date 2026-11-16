@@ -9,7 +9,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 import ClassInfo from '../../../components/ClassInfo.astro';
 
 A `Queue<E>` hands out elements from its head. A `Deque<E>` adds and removes at both ends, so it serves as a FIFO
-queue and as a LIFO stack. Concurrent and blocking queues are [not included](/collections/reference/compatibility/).
+queue and as a LIFO stack. Concurrent and blocking queues are [not included](/reference/compatibility/).
 
 | Need | Use |
 | --- | --- |
@@ -17,13 +17,13 @@ queue and as a LIFO stack. Concurrent and blocking queues are [not included](/co
 | Always take the smallest or highest-priority item | `PriorityQueue`: O(log n) insert and remove |
 | A queue that is also a `List`, or holds `null` | [`LinkedList`](#linkedlist-as-a-queue) |
 | Pass a stack to code that expects a `Queue` | [`Collections.asLifoQueue(deque)`](#lifo-view-of-a-deque) |
-| Sorted iteration, not only sorted removal | [`TreeSet`](/collections/collections/sets/#treeset) / [`TreeMap`](/collections/collections/maps/#treemap) |
+| Sorted iteration, not only sorted removal | [`TreeSet`](/collections/sets/#treeset) / [`TreeMap`](/collections/maps/#treemap) |
 
 ## Queue and Deque methods
 
 Each operation comes in two forms: one throws when it cannot do its job, the other returns a special value. Use
 `poll`/`peek` where an empty queue is normal (a processing loop), `remove`/`element` where it is a bug. See
-[throwing and non-throwing pairs](/collections/concepts/null-and-errors/).
+[throwing and non-throwing pairs](/concepts/null-and-errors/).
 
 | Operation | `Queue`, throws | `Queue`, special value | `Deque` head | `Deque` tail |
 | --- | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ Because `poll()` and `peek()` use `null` to mean "empty", `ArrayDeque` and `Prio
 
 `push(e)` is `addFirst(e)`, `pop()` is `removeFirst()` and `peek()` is `peekFirst()`. The head is the top of the
 stack, so iteration and `toString()` go top first. This is the recommended stack, rather than the legacy
-[`Stack`](/collections/collections/lists/#stack). Note that `push` and `add` work on opposite ends: mixing stack and queue methods on one
+[`Stack`](/collections/lists/#stack). Note that `push` and `add` work on opposite ends: mixing stack and queue methods on one
 deque reorders it.
 
 ```ts
@@ -179,7 +179,7 @@ console.log(ran); // → [ 'report', 'email', 'cleanup', 'backup' ]
 
 ### Priority ordering
 
-Without a comparator, natural ordering applies (see [ordering](/collections/concepts/ordering/)); adding an object with no
+Without a comparator, natural ordering applies (see [ordering](/concepts/ordering/)); adding an object with no
 natural ordering throws `ClassCastException`. Pass `Comparator.reverseOrder()` for a max-heap, or a key comparator
 for objects. `comparator()` returns the comparator, or `null` for natural ordering. Ties come out in arbitrary order.
 
@@ -219,7 +219,7 @@ try {
 
 ## LinkedList as a queue
 
-[`LinkedList`](/collections/collections/lists/#linkedlist) implements `Deque` with O(1) end operations. Choose it over `ArrayDeque` only
+[`LinkedList`](/collections/lists/#linkedlist) implements `Deque` with O(1) end operations. Choose it over `ArrayDeque` only
 when you also need the `List` API on the same object, or must store `null` (then check `isEmpty()` rather than
 trusting `poll()`).
 
@@ -287,7 +287,7 @@ console.log(new PriorityQueue(desc).poll());   // → 3
 ## Views and iteration
 
 A deque iterates head to tail. `descendingIterator()` walks tail to head, and `reversed()` returns a
-[live](/collections/concepts/iteration-and-views/) reverse-ordered `Deque` whose writes go through. Iterators of all three
+[live](/concepts/iteration-and-views/) reverse-ordered `Deque` whose writes go through. Iterators of all three
 classes are fail-fast.
 
 ```ts
@@ -303,7 +303,7 @@ console.log(rev.peek());           // → 4
 
 ## Complexity
 
-For `LinkedList`, see [list complexity](/collections/collections/lists/#complexity).
+For `LinkedList`, see [list complexity](/collections/lists/#complexity).
 
 | Operation | `ArrayDeque` | `PriorityQueue` |
 | --- | --- | --- |

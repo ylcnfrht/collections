@@ -10,8 +10,8 @@ import ClassInfo from '../../../components/ClassInfo.astro';
 
 A set is a collection without duplicates. Unlike the native JS `Set`, these sets decide duplicates with
 `equals()`/`hashCode()` (or a comparator for `TreeSet`), so two distinct `Point(1, 2)` objects count as one element.
-See [equality](/collections/concepts/equality/) for how that works for primitives, plain objects and your own classes.
-`EnumSet` and concurrent sets are [not included](/collections/reference/compatibility/).
+See [equality](/concepts/equality/) for how that works for primitives, plain objects and your own classes.
+`EnumSet` and concurrent sets are [not included](/reference/compatibility/).
 
 | Class | Iteration order | `add` / `remove` / `contains` | Use it for |
 | --- | --- | --- | --- |
@@ -145,7 +145,7 @@ console.log(recent.reversed().toString()); // → [queues, maps, lists]
 
 A red-black tree: `add`, `remove` and `contains` are O(log n) and iteration is always sorted. It adds
 [navigation](#navigation) and [range views](#range-views). Elements are ordered by
-[natural ordering](/collections/concepts/ordering/) or by a comparator; mixing types that cannot be compared throws
+[natural ordering](/concepts/ordering/) or by a comparator; mixing types that cannot be compared throws
 `ClassCastException`, and `null` throws `NullPointerException` under natural ordering.
 
 <Tabs syncKey="level">
@@ -295,7 +295,7 @@ console.log(s.pollFirst(), s.toString());                          // → 10 [20
 
 ## Range views
 
-Range views of a `TreeSet` are [live](/collections/concepts/iteration-and-views/) and created in O(1).
+Range views of a `TreeSet` are [live](/concepts/iteration-and-views/) and created in O(1).
 
 | Call | Elements |
 | --- | --- |
@@ -351,5 +351,5 @@ scanned linearly.
 - **Plain objects compare by identity.** `{ id: 1 }` and `{ id: 1 }` are two elements.
 - **The package's `Set` shadows the native `Set`.** Use `globalThis.Set` or an import alias in that module.
 
-To build sets from streams, see [Collectors](/collections/streams/collectors/) (`Collectors.toSet()`,
+To build sets from streams, see [Collectors](/streams/collectors/) (`Collectors.toSet()`,
 `Collectors.toCollection(() => new TreeSet())`).

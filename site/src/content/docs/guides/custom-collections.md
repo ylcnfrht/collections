@@ -368,4 +368,4 @@ snapshots. To support them, return entries whose `setValue` also updates `bwd`.
   library iterator handles both.
 - Queues on `AbstractQueue` reject `null`.
 - Element types need `equals`/`hashCode` (and `compareTo` for sorted use): see
-  [Equality](/collections/concepts/equality/#writing-equals-and-hashcode).
+  [Equality](/concepts/equality/#writing-equals-and-hashcode).

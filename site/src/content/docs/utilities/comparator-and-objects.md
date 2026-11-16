@@ -7,8 +7,8 @@ sidebar:
 
 A comparator is a plain function `(a, b) => number`, the same kind `Array.prototype.sort` takes. The `Comparator` object
 builds and combines them. `Objects` holds the equality and hashing rules every hash-based collection uses, plus null and
-index checks. For the concepts behind both, see [Ordering](/collections/concepts/ordering/) and
-[Equality](/collections/concepts/equality/).
+index checks. For the concepts behind both, see [Ordering](/concepts/ordering/) and
+[Equality](/concepts/equality/).
 
 ```ts nocheck
 type Comparator<T> = (a: T, b: T) => number; // < 0: a first, 0: tie, > 0: b first
@@ -73,7 +73,7 @@ A class with `compareTo(o): number` (the `Comparable<T>` interface) gets a natur
 | `max(c, a, b)` / `min(c, a, b)` | the greater or lesser of two values; `a` on a tie |
 
 `Comparator.max` and `Comparator.min` are newer than the JDK the library is tested against
-(see [Compatibility](/collections/reference/compatibility/#apis-newer-than-the-jdk)).
+(see [Compatibility](/reference/compatibility/#apis-newer-than-the-jdk)).
 
 ```ts
 import { ArrayList, Comparator, naturalCompare } from '@ylcnfrht/collections';
@@ -244,7 +244,7 @@ console.log(fail(() => Objects.checkFromIndexSize(2, 2, 3))); // → Range [2, 2
 
 Arrays and plain objects have no `equals`, so they compare by reference. To use them as values in hash-based
 collections, wrap them in a list or give them a class with `equals`/`hashCode` (see
-[Writing equals and hashCode](/collections/concepts/equality/#writing-equals-and-hashcode)).
+[Writing equals and hashCode](/concepts/equality/#writing-equals-and-hashcode)).
 
 ### How hashCode is computed
 

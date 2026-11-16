@@ -112,7 +112,7 @@ try {
 All library exceptions extend `RuntimeException`, which extends `Error`. `ArrayIndexOutOfBoundsException` extends
 `IndexOutOfBoundsException`; every other one extends `RuntimeException` directly. Each sets `name` explicitly, so
 `e.name` survives minification. `instanceof` works when a single copy of the library is loaded (see
-[Browsers and bundlers](/collections/start/installation/#browsers-and-bundlers)).
+[Browsers and bundlers](/start/installation/#browsers-and-bundlers)).
 
 | Exception | Typical cause |
 |---|---|
@@ -123,7 +123,7 @@ All library exceptions extend `RuntimeException`, which extends `Error`. `ArrayI
 | `NullPointerException` | a `null` where it is not allowed (see [above](#which-collections-accept-null)) |
 | `IllegalArgumentException` | negative capacity, duplicate in `Set.of`, key outside a sorted view's range |
 | `IllegalStateException` | `iterator.remove()` twice, a stream used twice, `Collectors.toMap` duplicate key |
-| `UnsupportedOperationException` | mutating an unmodifiable or immutable collection (see [Immutable collections and wrappers](/collections/collections/immutable-and-wrappers/)) |
+| `UnsupportedOperationException` | mutating an unmodifiable or immutable collection (see [Immutable collections and wrappers](/collections/immutable-and-wrappers/)) |
 | `ConcurrentModificationException` | changing a collection while iterating it |
 | `ClassCastException` | natural ordering of values that have none, `checked*` wrappers |
 

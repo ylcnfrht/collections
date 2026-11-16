@@ -63,7 +63,7 @@ console.log(counts.toString()); // → {a=1, b=2}
 console.log(counts.firstKey()); // → a
 ```
 
-Missing keys return `null`, not `undefined`. See [Null and errors](/collections/concepts/null-and-errors/).
+Missing keys return `null`, not `undefined`. See [Null and errors](/concepts/null-and-errors/).
 
 ## Streams
 
@@ -88,7 +88,7 @@ console.log(IntStream.rangeClosed(1, 5).sum());             // → 15
 console.log(Stream.of(3, 1, 2).sorted().findFirst().get()); // → 1
 ```
 
-More in [Streams overview](/collections/streams/overview/) and [Collectors](/collections/streams/collectors/).
+More in [Streams overview](/streams/overview/) and [Collectors](/streams/collectors/).
 
 ## Iterating
 
@@ -117,7 +117,7 @@ console.log(list.toString()); // → [1, 3]
 
 Iteration is fail-fast: adding or removing elements inside a `for..of` over the same collection throws
 `ConcurrentModificationException`. Use `iterator().remove()` or `removeIf`. See
-[Fail-fast iteration](/collections/concepts/iteration-and-views/#fail-fast-iteration).
+[Fail-fast iteration](/concepts/iteration-and-views/#fail-fast-iteration).
 
 ## Typing collections
 

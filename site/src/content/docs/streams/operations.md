@@ -6,7 +6,7 @@ sidebar:
 ---
 
 Every operation on `Stream<T>`. Laziness, short-circuiting and the single-use rule are explained in the
-[overview](/collections/streams/overview/); number streams add their own operations, see [number streams](/collections/streams/number-streams/).
+[overview](/streams/overview/); number streams add their own operations, see [number streams](/streams/number-streams/).
 
 ## Intermediate operations
 
@@ -19,16 +19,16 @@ Every operation on `Stream<T>`. Laziness, short-circuiting and the single-use ru
 | `flatMapToInt/Long/Double(f)` | `flatMap` to a number stream | |
 | `mapMulti(f)`, `mapMultiToInt/Long/Double(f)` | `f(x, emit)` calls `emit` zero or more times | no inner stream, cheaper than `flatMap` for a few values |
 | `peek(action)` | runs `action` on each element as it passes | for debugging only: skipped elements and a `count()` that needs no traversal never reach it |
-| `distinct()` | drops duplicates, keeps the first | `HashSet` [equality](/collections/concepts/equality/): primitives by value, objects with `equals`/`hashCode` by content, plain objects by identity |
+| `distinct()` | drops duplicates, keeps the first | `HashSet` [equality](/concepts/equality/): primitives by value, objects with `equals`/`hashCode` by content, plain objects by identity |
 | `sorted()`, `sorted(cmp)` | stable sort, natural order or `cmp` | barrier; incomparable elements throw `ClassCastException`, `sorted(null)` throws `NullPointerException` |
 | `limit(n)`, `skip(n)` | keeps the first `n` / drops the first `n` | `limit` short-circuits; negative or non-integer `n` throws `IllegalArgumentException` |
 | `takeWhile(p)`, `dropWhile(p)` | keeps / drops the prefix where `p` holds | unlike `filter`, look at a prefix only; `takeWhile` short-circuits |
-| `gather(g)` | applies a [gatherer](/collections/streams/gatherers/) | short-circuits if the gatherer stops |
-| `unordered()`, `parallel()`, `sequential()`, `onClose(h)` | see the [overview](/collections/streams/overview/#order-and-parallel) | |
+| `gather(g)` | applies a [gatherer](/streams/gatherers/) | short-circuits if the gatherer stops |
+| `unordered()`, `parallel()`, `sequential()`, `onClose(h)` | see the [overview](/streams/overview/#order-and-parallel) | |
 
 Natural order compares numbers numerically, strings by code unit and objects through `compareTo`. To build
-comparators, see [Comparator](/collections/utilities/comparator-and-objects/). To de-duplicate by a key, use a gatherer
-such as [`distinctBy`](/collections/streams/gatherers/#writing-your-own).
+comparators, see [Comparator](/utilities/comparator-and-objects/). To de-duplicate by a key, use a gatherer
+such as [`distinctBy`](/streams/gatherers/#writing-your-own).
 
 ```ts
 import { Stream, List, Comparator, Gatherers } from '@ylcnfrht/collections';
@@ -87,14 +87,14 @@ console.log(first, log); // → Optional[10] [ 'closed 1' ]
 | `reduce(identity, op)` | `T`; `identity` when empty | `identity` must be neutral for `op` (`0` for `+`) |
 | `reduce(op)` | `Optional<T>` | empty when the stream is |
 | `reduce(identity, acc, combiner)` | `U`, a different result type | |
-| `collect(collector)` | the collector's result | see [collectors](/collections/streams/collectors/) |
+| `collect(collector)` | the collector's result | see [collectors](/streams/collectors/) |
 | `collect(supplier, acc, combiner)` | the container | `combiner` merges the second container into the first |
 | `toList()` | unmodifiable `List` | accepts `null`, unlike `Collectors.toUnmodifiableList()`; mutators throw `UnsupportedOperationException` |
 | `min(cmp)`, `max(cmp)` | `Optional<T>` | |
 | `count()` | `number` | see the note below |
 | `anyMatch`, `allMatch`, `noneMatch` | `boolean` | short-circuit; on an empty stream `anyMatch` is `false`, the others `true` |
 | `findFirst()`, `findAny()` | `Optional<T>` | short-circuit; `findAny` always returns the first element here |
-| `iterator()`, `spliterator()` | an [`Iterator`](/collections/streams/overview/#iterating-a-stream-from-js) / a [`Spliterator`](/collections/streams/spliterators/) | pull elements on demand |
+| `iterator()`, `spliterator()` | an [`Iterator`](/streams/overview/#iterating-a-stream-from-js) / a [`Spliterator`](/streams/spliterators/) | pull elements on demand |
 
 `findFirst`, `findAny`, `min`, `max` and `reduce(op)` throw `NullPointerException` when the chosen element is
 `null`, because an `Optional` cannot hold it. Accumulators and combiners must be associative: the combiner is never
@@ -172,4 +172,4 @@ console.log(it.next(), it.next(), it.next()); // → 1 3 9
 | `IndexOutOfBoundsException` | `toArray(generator)` returned a too-short array for an unsized stream |
 
 Exceptions thrown by callbacks propagate unchanged out of the terminal operation, except in
-`Gatherers.mapConcurrent` (see [gatherers](/collections/streams/gatherers/#built-in-gatherers)).
+`Gatherers.mapConcurrent` (see [gatherers](/streams/gatherers/#built-in-gatherers)).

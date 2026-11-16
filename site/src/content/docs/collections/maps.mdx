@@ -9,8 +9,8 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 import ClassInfo from '../../../components/ClassInfo.astro';
 
 A map associates each key with at most one value. Keys are looked up with `equals()`/`hashCode()` (a comparator for
-`TreeMap`), not by reference; see [equality](/collections/concepts/equality/). `WeakHashMap`, `EnumMap`, `Hashtable` and
-concurrent maps are [not included](/collections/reference/compatibility/).
+`TreeMap`), not by reference; see [equality](/concepts/equality/). `WeakHashMap`, `EnumMap`, `Hashtable` and
+concurrent maps are [not included](/reference/compatibility/).
 
 | Class | Iteration order | `get` / `put` / `remove` | Use it for |
 | --- | --- | --- | --- |
@@ -23,7 +23,7 @@ Rules every map follows:
 
 - `put(k, v)` returns the value it replaced, or `null` if the key was new.
 - `get(k)` returns `null` for a missing key, never `undefined`. Use `containsKey` to tell "absent" from "mapped to
-  `null`" ([null handling](/collections/concepts/null-and-errors/)).
+  `null`" ([null handling](/concepts/null-and-errors/)).
 - Two maps are equal when they have the same key-value pairs, whatever their class or order.
 - Every map is iterable as `[key, value]` pairs, like a native `Map`.
 
@@ -151,7 +151,7 @@ console.log(c.toString(), c.evicted); // → {b=2, c=3} [ 'a' ]
 
 <ClassInfo name="TreeMap" />
 
-A red-black tree keyed by [natural ordering](/collections/concepts/ordering/) or a comparator. `get`, `put`, `remove` and
+A red-black tree keyed by [natural ordering](/concepts/ordering/) or a comparator. `get`, `put`, `remove` and
 every navigation method are O(log n), and iteration is in key order. As with `TreeSet`, the comparator decides which
 keys are equal: keys that compare as 0 are one key, whatever `equals()` says. `null` keys are rejected under natural
 ordering.
@@ -220,7 +220,7 @@ Each method finds the nearest key to a probe, which need not be in the map. `…
 
 Entries returned by navigation methods are immutable snapshots (`setValue` throws `UnsupportedOperationException`);
 entries reached by iterating `entrySet()` are live. Range views follow the rules of
-[`TreeSet` range views](/collections/collections/sets/#range-views): writes go through, and putting a key outside the range throws
+[`TreeSet` range views](/collections/sets/#range-views): writes go through, and putting a key outside the range throws
 `IllegalArgumentException`.
 
 ```ts
@@ -433,7 +433,7 @@ console.log(entries.toString()); // → [bob=30, cid=21, ann=12]
 
 ## Views and iteration
 
-`keySet()`, `values()` and `entrySet()` are [live views](/collections/concepts/iteration-and-views/), created in O(1).
+`keySet()`, `values()` and `entrySet()` are [live views](/concepts/iteration-and-views/), created in O(1).
 Removal through them writes through (`remove`, `removeIf`, `retainAll`, `clear`, `iterator().remove()`), and so does
 `entry.setValue(v)` on an iterated entry. Adding throws `UnsupportedOperationException`: a view cannot supply the
 missing half of a mapping. Iteration and views are fail-fast.
@@ -469,8 +469,8 @@ console.log(back.toString());              // → {x=9}
 ## Pitfalls
 
 - **Do not mutate a key's `equals`/`hashCode` fields while it is in a hash map.** See the
-  [set pitfall](/collections/collections/sets/#pitfalls); `IdentityHashMap` is not affected.
+  [set pitfall](/collections/sets/#pitfalls); `IdentityHashMap` is not affected.
 - **The package's `Map` shadows the native `Map`.** Use `globalThis.Map` or an import alias in that module, as the
   iteration example does.
 
-For grouping and counting with streams, see [Collectors](/collections/streams/collectors/).
+For grouping and counting with streams, see [Collectors](/streams/collectors/).

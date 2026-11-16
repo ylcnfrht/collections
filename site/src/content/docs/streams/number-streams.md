@@ -7,7 +7,7 @@ sidebar:
 
 `IntStream`, `LongStream` and `DoubleStream` are streams of JS `number`s with aggregates (`sum`, `average`, `min`,
 `max`, `summaryStatistics`) that return plain numbers or number optionals. They follow the same rules as `Stream`
-(see the [overview](/collections/streams/overview/)) and share most of its [operations](/collections/streams/operations/).
+(see the [overview](/streams/overview/)) and share most of its [operations](/streams/operations/).
 
 ## Creating
 
@@ -44,7 +44,7 @@ console.log(DoubleStream.iterate(1, (x) => x / 2).limit(4).toArray()); // → [ 
 statistics report min and max as the identity values (`2147483647`/`-2147483648` for int, `Infinity`/`-Infinity`
 for double). `new IntSummaryStatistics(count, min, max, sum)` rebuilds stored statistics and throws
 `IllegalArgumentException` when `count < 0` or `min > max`. The number optionals are covered in
-[Optional](/collections/streams/optional/#number-optionals).
+[Optional](/streams/optional/#number-optionals).
 
 ```ts
 import { IntStream, IntSummaryStatistics } from '@ylcnfrht/collections';

@@ -9,8 +9,8 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 A stream is a lazy pipeline over a source: zero or more intermediate operations (`filter`, `map`, `sorted`, …) and
 one terminal operation (`toList`, `reduce`, `collect`, `count`, …) that runs it. The other pages in this section
-cover [operations](/collections/streams/operations/), [number streams](/collections/streams/number-streams/), [collectors](/collections/streams/collectors/),
-[gatherers](/collections/streams/gatherers/), [Optional](/collections/streams/optional/) and [spliterators](/collections/streams/spliterators/).
+cover [operations](/streams/operations/), [number streams](/streams/number-streams/), [collectors](/streams/collectors/),
+[gatherers](/streams/gatherers/), [Optional](/streams/optional/) and [spliterators](/streams/spliterators/).
 
 <Tabs syncKey="level">
 <TabItem label="Basic">
@@ -75,9 +75,9 @@ console.log(top3); // → [pen=8, pad=4, ink=2]
 | `Stream.builder()` | `add(…)` elements, then `build()` |
 | `Stream.from(iterable)` | any JS iterable; a generator stopped early (`findFirst`, `limit`, a throw, `break`, `close()`) is closed, so its `finally` runs |
 | `Stream.ofArray(array)` | the array without copying: the range is fixed at creation, elements are read when the terminal runs |
-| `IntStream.range(a, b)`, `rangeClosed(a, b)` | `a … b-1` / `a … b`; see [number streams](/collections/streams/number-streams/) |
+| `IntStream.range(a, b)`, `rangeClosed(a, b)` | `a … b-1` / `a … b`; see [number streams](/streams/number-streams/) |
 | `optional.stream()` | zero or one element |
-| `StreamSupport.stream(spliterator, parallel)` | a custom source; see [spliterators](/collections/streams/spliterators/) |
+| `StreamSupport.stream(spliterator, parallel)` | a custom source; see [spliterators](/streams/spliterators/) |
 
 ```ts
 import { Stream, IntStream, List } from '@ylcnfrht/collections';
@@ -269,4 +269,4 @@ console.log(out); // → [ 'x', 'y' ]
 
 Use array methods for short transformations of small arrays, iterator helpers for simple lazy chains, and streams
 for this library's collections, grouping, statistics, sorting, windows, `Optional` results or large and infinite
-sources. Measurements are on the [benchmarks](/collections/benchmarks/) page.
+sources. Measurements are on the [benchmarks](/benchmarks/) page.

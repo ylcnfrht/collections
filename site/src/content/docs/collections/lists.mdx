@@ -19,9 +19,9 @@ allowed. Two lists are equal when they hold equal elements in the same order, wh
 | `Vector` | `ArrayList` subclass | porting code that uses `elementAt`, `capacity()` or `Enumeration` |
 | `Stack` | `Vector` subclass | porting code that uses `Stack`; new code uses `ArrayDeque` |
 
-For a queue or stack without the list API, use [`ArrayDeque`](/collections/collections/queues-and-deques/#arraydeque). For fixed contents,
-use `List.of(...)` ([immutable collections](/collections/collections/immutable-and-wrappers/)). Concurrent lists such as
-`CopyOnWriteArrayList` are [not included](/collections/reference/compatibility/).
+For a queue or stack without the list API, use [`ArrayDeque`](/collections/queues-and-deques/#arraydeque). For fixed contents,
+use `List.of(...)` ([immutable collections](/collections/immutable-and-wrappers/)). Concurrent lists such as
+`CopyOnWriteArrayList` are [not included](/reference/compatibility/).
 
 ## ArrayList
 
@@ -121,7 +121,7 @@ console.log(log.get(2));            // → retry scheduled
 </TabItem>
 </Tabs>
 
-Queue usage is covered in [LinkedList as a queue](/collections/collections/queues-and-deques/#linkedlist-as-a-queue).
+Queue usage is covered in [LinkedList as a queue](/collections/queues-and-deques/#linkedlist-as-a-queue).
 
 ## Vector
 
@@ -173,7 +173,7 @@ console.log(upperAll(Collections.enumeration(TreeSet.of('b', 'a'))).toString());
 <ClassInfo name="Stack" />
 
 A last-in-first-out stack built on `Vector`. The top is the end of the vector, so `push`, `pop` and `peek` are O(1).
-New code should use [`ArrayDeque`](/collections/collections/queues-and-deques/#using-a-deque-as-a-stack), whose `push`, `pop` and `peek`
+New code should use [`ArrayDeque`](/collections/queues-and-deques/#using-a-deque-as-a-stack), whose `push`, `pop` and `peek`
 work the same way.
 
 <Tabs syncKey="level">
@@ -262,14 +262,14 @@ Besides the full `Collection` API (`contains`, `addAll`, `removeIf`, `stream()`,
 | `indexOf(o)` / `lastIndexOf(o)` | `number` | index of the first / last element equal to `o`, or `-1` (linear scan) |
 | `getFirst()` / `getLast()`, `removeFirst()` / `removeLast()` | `E` | the ends; throw `NoSuchElementException` when empty |
 | `addFirst(e)` / `addLast(e)` | `void` | add at an end (O(n) at the front of an `ArrayList`) |
-| `sort(comparator)` | `void` | stable, in place; `null` means [natural ordering](/collections/concepts/ordering/) |
+| `sort(comparator)` | `void` | stable, in place; `null` means [natural ordering](/concepts/ordering/) |
 | `replaceAll(fn)` | `void` | replace every element with `fn(element)` |
 | `subList(from, to)` / `reversed()` | `List<E>` | live views, see [below](#views) |
 | `listIterator(index?)` | `ListIterator<E>` | bidirectional cursor, see [below](#listiterator) |
 
 An index outside the valid range throws `IndexOutOfBoundsException`, never returns `undefined`. For `add(i, e)` the
 range is `0..size()` (inserting at `size()` appends); for the others it is `0..size()-1`. Searching uses
-`equals()`, see [equality](/collections/concepts/equality/).
+`equals()`, see [equality](/concepts/equality/).
 
 `remove(int)` and `remove(Object)` are overloads in the JDK, but TypeScript cannot tell them apart on a
 `List<number>`, so the index form is named `removeAt`:
@@ -302,7 +302,7 @@ O(n) and a predicate that throws removes nothing.
 
 ## Views
 
-`subList(from, to)` and `reversed()` return [live views](/collections/concepts/iteration-and-views/) that read and write the
+`subList(from, to)` and `reversed()` return [live views](/concepts/iteration-and-views/) that read and write the
 list's storage, created in O(1). For a copy, wrap the view: `new ArrayList(list.subList(1, 3))`.
 
 `subList(from, to)` covers the half-open range `[from, to)`. Range operations are written as operations on it:
@@ -363,7 +363,7 @@ while (back.hasPrevious()) out.push(back.previous());
 console.log(out);                  // → [ 'd', 'C', 'b', 'a' ]
 ```
 
-List iterators are [fail-fast](/collections/concepts/iteration-and-views/): calling `list.remove(...)` inside a `for...of`
+List iterators are [fail-fast](/concepts/iteration-and-views/): calling `list.remove(...)` inside a `for...of`
 over the same list throws `ConcurrentModificationException`. On `ArrayList` and `Vector`, `sort` and `replaceAll`
 count as structural changes; `set` never does. To remove while iterating, use `removeIf` (one pass), or
 `iterator().remove()` (shifts the tail on every removal of an `ArrayList`, O(n²) worst case).
@@ -455,7 +455,7 @@ console.log(new ArrayList(new LinkedHashSet(withDupes)).toString()); // → [b, 
 
 Binary search a sorted list with `Collections.binarySearch(list, key, comparator?)`: O(log n) on a `RandomAccess`
 list. It returns the index, or `-(insertionPoint) - 1` when the key is absent. The list must be sorted by the ordering
-you search with. If you insert and search constantly, a [`TreeSet`](/collections/collections/sets/#treeset) keeps the order for you.
+you search with. If you insert and search constantly, a [`TreeSet`](/collections/sets/#treeset) keeps the order for you.
 
 ```ts
 import { ArrayList, Collections } from '@ylcnfrht/collections';

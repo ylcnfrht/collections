@@ -12,7 +12,7 @@ Framework.**
 Lists, queues, sets, maps and lazy streams with one consistent API: `ArrayList`, `LinkedList`, `HashMap`, `TreeMap`,
 `PriorityQueue`, `Stream`, `Collectors` and the rest, following the same interfaces and documented behaviour.
 
-**Documentation: [ylcnfrht.github.io/collections](https://ylcnfrht.github.io/collections/)**
+**Documentation: [collections.ferhatyalcin.dev](https://collections.ferhatyalcin.dev/)**
 
 ## Why
 
@@ -91,11 +91,11 @@ console.log(byLength.toString()); // → {3=[fig], 4=[pear], 5=[apple]}
 - **Tested:** over 10,000 tests at about 99% line coverage. Every example in the documentation runs as a test.
 - **Verified against the JDK:** the same random operation scripts run on a real JDK and on this library. The latest
   run compared 1.69 million operations across every comparable public method and found
-  [0 library differences](https://ylcnfrht.github.io/collections/reference/compatibility/); the remaining ones are documented design choices or places
+  [0 library differences](https://collections.ferhatyalcin.dev/reference/compatibility/); the remaining ones are documented design choices or places
   where the JDK breaks its own specification.
 - **Fast:** benchmarked against native `Map`/`Set`/`Array`. `HashMap` with small integer keys
   (ids, indices) is several times faster than a native `Map`, and stream pipelines beat native array chains.
-  See [Performance](https://ylcnfrht.github.io/collections/benchmarks/).
+  See [Performance](https://collections.ferhatyalcin.dev/benchmarks/).
 
 ## Coming from Java
 
@@ -105,14 +105,14 @@ The API follows the Java Collections Framework closely, with a few adaptations f
 - Comparators are plain functions `(a, b) => number`; helpers live on the `Comparator` object.
 - Absent results are `null`, never `undefined`.
 
-The full list is in [Differences from the Java API](https://ylcnfrht.github.io/collections/reference/compatibility/).
+The full list is in [Differences from the Java API](https://collections.ferhatyalcin.dev/reference/compatibility/).
 
 ## Documentation
 
-- [Getting started](https://ylcnfrht.github.io/collections/start/quick-start/)
-- [Choosing a collection](https://ylcnfrht.github.io/collections/start/choosing-a-collection/)
-- [Coming from JS](https://ylcnfrht.github.io/collections/start/coming-from-js/): `Array`/`Map`/`Set` side by side
-- [All documentation](https://ylcnfrht.github.io/collections/) and the [API reference](https://ylcnfrht.github.io/collections/api/overview/)
+- [Getting started](https://collections.ferhatyalcin.dev/start/quick-start/)
+- [Choosing a collection](https://collections.ferhatyalcin.dev/start/choosing-a-collection/)
+- [Coming from JS](https://collections.ferhatyalcin.dev/start/coming-from-js/): `Array`/`Map`/`Set` side by side
+- [All documentation](https://collections.ferhatyalcin.dev/) and the [API reference](https://collections.ferhatyalcin.dev/api/overview/)
 
 ## Contributing
 

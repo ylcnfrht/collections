@@ -6,7 +6,7 @@ sidebar:
 ---
 
 The library follows the Java Collections Framework and Stream API: the same method names, results, exceptions and edge
-cases. This page lists every deliberate difference. The generated [compatibility report](/collections/reference/compatibility-report/) has
+cases. This page lists every deliberate difference. The generated [compatibility report](/reference/compatibility-report/) has
 the raw results of the differential tests.
 
 ## TypeScript adaptations
@@ -134,7 +134,7 @@ console.log(squares.get(3), squares.get(3), calls); // → 9 9 1
 | `Serializable` | JS has no binary object serialization | `toArray()` or `[...map]`, then `JSON.stringify` |
 
 The `synchronized*` wrappers exist so ported code compiles; they add no locking. See
-[Wrappers](/collections/collections/immutable-and-wrappers/#wrappers).
+[Wrappers](/collections/immutable-and-wrappers/#wrappers).
 
 ## How it is verified
 
@@ -155,7 +155,7 @@ utility classes. A JDK runner and a TypeScript runner print each result, thrown 
 state after every operation. Documented normalisations cover legitimate differences (one JS number type, `-0`, hash
 iteration order). Each divergence is shrunk to a minimal script and must be classified as intentional or a JDK quirk; an
 unclassified one fails the run. The latest proof run compared 1,692,438 operations from 200,000 scripts, covered every
-comparable public API member, and found no library bug. See the [report](/collections/reference/compatibility-report/) for the numbers and
+comparable public API member, and found no library bug. See the [report](/reference/compatibility-report/) for the numbers and
 each divergence.
 
 **Coverage.** About 99% of lines; CI fails below 95% statements, lines and functions or 90% branches.

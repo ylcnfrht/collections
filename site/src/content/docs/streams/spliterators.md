@@ -7,7 +7,7 @@ sidebar:
 
 A spliterator is how every stream reads its source. You need it to build a stream over a custom source, or to see
 why an operation is fast on one collection and slower on another. For JS iterables, `Stream.from(iterable)` is
-usually enough (see [sources](/collections/streams/overview/#sources)).
+usually enough (see [sources](/streams/overview/#sources)).
 
 ## The protocol
 

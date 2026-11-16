@@ -133,4 +133,4 @@ console.log(middle(LinkedList.of('a', 'b', 'c'))); // → b
 ```
 
 To mark your own list, add `readonly [RANDOM_ACCESS] = true as const` (see
-[Custom collections](/collections/guides/custom-collections/)).
+[Custom collections](/guides/custom-collections/)).

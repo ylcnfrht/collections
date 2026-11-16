@@ -80,8 +80,8 @@ well-distributed `hashCode()` values.
 
 JS runs application code on one thread, so there is no thread-safe variant to choose. The
 `Collections.synchronized*` wrappers exist for API compatibility and only delegate; `parallelStream()` runs
-sequentially (see [Compatibility](/collections/reference/compatibility/)). Measured numbers are in
-[Benchmarks](/collections/benchmarks/).
+sequentially (see [Compatibility](/reference/compatibility/)). Measured numbers are in
+[Benchmarks](/benchmarks/).
 
 ## Common picks in code
 
@@ -124,6 +124,6 @@ const unique = new LinkedHashSet<string>();
 console.log(unique.toString()); // → [b, a, c]
 ```
 
-Full APIs: [Lists](/collections/collections/lists/), [Queues and deques](/collections/collections/queues-and-deques/),
-[Sets](/collections/collections/sets/), [Maps](/collections/collections/maps/),
-[Immutable collections and wrappers](/collections/collections/immutable-and-wrappers/).
+Full APIs: [Lists](/collections/lists/), [Queues and deques](/collections/queues-and-deques/),
+[Sets](/collections/sets/), [Maps](/collections/maps/),
+[Immutable collections and wrappers](/collections/immutable-and-wrappers/).

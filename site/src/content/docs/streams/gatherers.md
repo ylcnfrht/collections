@@ -6,7 +6,7 @@ sidebar:
 ---
 
 A gatherer is a custom intermediate operation, applied with `stream.gather(gatherer)`. Unlike a
-[collector](/collections/streams/collectors/), which reduces the stream at the end, a gatherer transforms it while it flows: one
+[collector](/streams/collectors/), which reduces the stream at the end, a gatherer transforms it while it flows: one
 element to many or many to one, with state, extra elements at the end, and an early stop. Number streams have no
 `gather`.
 

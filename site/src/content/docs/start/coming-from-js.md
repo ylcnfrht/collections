@@ -132,7 +132,7 @@ console.log(IntStream.range(0, 4).mapToObj((i) => i * i).collect(Collectors.toLi
 console.log(nums.stream().map(String).collect(Collectors.joining('-'))); // → 5-3-8-1-9-2
 ```
 
-See [Stream operations](/collections/streams/operations/) and [Collectors](/collections/streams/collectors/).
+See [Stream operations](/streams/operations/) and [Collectors](/streams/collectors/).
 
 ## Object and array keys
 
@@ -152,7 +152,7 @@ arrays.put([1, 2], 'cell');
 console.log(arrays.get([1, 2])); // → null
 ```
 
-For your own key classes see [Writing equals and hashCode](/collections/concepts/equality/#writing-equals-and-hashcode).
+For your own key classes see [Writing equals and hashCode](/concepts/equality/#writing-equals-and-hashcode).
 
 ## Interop
 
@@ -184,7 +184,7 @@ console.log(Stream.from(new globalThis.Set([3, 4])).map((n) => n * 2).toList().t
 ## Common pitfalls
 
 - **Imported `Set` and `Map` shadow the built-ins.** Alias them; see
-  [Name clashes with built-ins](/collections/start/installation/#name-clashes-with-built-ins).
+  [Name clashes with built-ins](/start/installation/#name-clashes-with-built-ins).
 - **`remove(x)` removes by value; `removeAt(i)` removes by index.** On a `List<number>`, `remove(1)` removes the
   value `1`.
 - **`get` returns `null`, not `undefined`.** `?? fallback` still works; `=== undefined` checks do not. Use
@@ -195,7 +195,7 @@ console.log(Stream.from(new globalThis.Set([3, 4])).map((n) => n * 2).toList().t
   `.sorted()` give `1, 9, 10`.
 - **`size()` and `isEmpty()` are methods**, and a map's `forEach` passes `(key, value)`.
 - **`subList`, `keySet` and the other views write through** to the original; see
-  [Live views](/collections/concepts/iteration-and-views/#live-views).
+  [Live views](/concepts/iteration-and-views/#live-views).
 
 ```ts
 import { ArrayList, HashMap } from '@ylcnfrht/collections';

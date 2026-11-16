@@ -118,9 +118,9 @@ console.log(Stream.of(1, 2, 3).map(String).collect(Collectors.joining('-'))); //
 | Collector | Result | Empty stream |
 |---|---|---|
 | `counting()` | `number` | `0` |
-| `summingInt/Long/Double(f)` | `number`; the double variant is [compensated](/collections/streams/number-streams/#compensated-double-sums) | `0` |
+| `summingInt/Long/Double(f)` | `number`; the double variant is [compensated](/streams/number-streams/#compensated-double-sums) | `0` |
 | `averagingInt/Long/Double(f)` | `number` | `0` |
-| `summarizingInt/Long/Double(f)` | [summary statistics](/collections/streams/number-streams/#aggregates) | count 0 |
+| `summarizingInt/Long/Double(f)` | [summary statistics](/streams/number-streams/#aggregates) | count 0 |
 | `minBy(cmp)`, `maxBy(cmp)` | `Optional<T>` | empty |
 | `reducing(op)` | `Optional<T>` | empty |
 | `reducing(identity, op)` | `T` | `identity` |
@@ -334,4 +334,4 @@ const byId = Stream.ofArray(users).collect(Collectors.toMap(
 console.log(byId.keySet(), byId.get(2)!.name); // → [2, 1] two
 ```
 
-The map types are described in [maps](/collections/collections/maps/).
+The map types are described in [maps](/collections/maps/).

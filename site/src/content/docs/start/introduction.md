@@ -33,7 +33,7 @@ fills those gaps with one set of interfaces that every implementation honours:
 
 It also follows JavaScript conventions: every collection is iterable, maps iterate as `[key, value]` pairs, and
 comparators are plain functions. Behaviour is verified against a real JDK on over 1.6 million compared operations
-(see [Compatibility](/collections/reference/compatibility/)).
+(see [Compatibility](/reference/compatibility/)).
 
 ## The interface hierarchy
 
@@ -73,6 +73,6 @@ console.log(seq.getFirst(), seq.getLast(), ll.toString()); // → 2 3 [2, 3]
 | Group | Types |
 |---|---|
 | Immutable collections | `List.of`/`copyOf` (a `List`), `Set.of`/`copyOf` (a `Set`), `Map.of`/`copyOf`/`ofEntries` (a `Map`) |
-| Skeletal implementations | `AbstractCollection`, `AbstractList`, `AbstractSequentialList`, `AbstractQueue`, `AbstractSet`, `AbstractMap` (see [Custom collections](/collections/guides/custom-collections/)) |
+| Skeletal implementations | `AbstractCollection`, `AbstractList`, `AbstractSequentialList`, `AbstractQueue`, `AbstractSet`, `AbstractMap` (see [Custom collections](/guides/custom-collections/)) |
 | Iteration | `Iterator`, `ListIterator`, `Enumeration`, `Spliterator`; every collection is also a JS `Iterable` |
 | Streams | `Stream`, `IntStream`, `LongStream`, `DoubleStream` (all `BaseStream`), `Collector`, `Gatherer`, `Optional*` |

@@ -65,7 +65,7 @@ Prefer `orElseGet` when the fallback is expensive: `orElse(compute())` always ca
   `null`, even on an empty optional. `ifPresent` and `orElseGet` check theirs only when they would call it.
 - `orElse(null)` and `orElseGet(() => null)` return `null` when empty (typed `T | null`).
 - Stream terminals that return an `Optional` throw `NullPointerException` if the chosen element is `null`; filter
-  nulls out first. See [null and errors](/collections/concepts/null-and-errors/).
+  nulls out first. See [null and errors](/concepts/null-and-errors/).
 
 ```ts
 import { Optional, Stream } from '@ylcnfrht/collections';
@@ -81,7 +81,7 @@ console.log(Stream.of(null, 'a').filter((x) => x !== null).findFirst()); // → 
 
 ## Number optionals
 
-`OptionalInt`, `OptionalLong` and `OptionalDouble` are returned by [number streams](/collections/streams/number-streams/). They have
+`OptionalInt`, `OptionalLong` and `OptionalDouble` are returned by [number streams](/streams/number-streams/). They have
 `of`, `empty`, `isPresent`, `isEmpty`, `ifPresent`, `ifPresentOrElse`, `orElse`, `orElseGet`, `orElseThrow`,
 `stream()` (a number stream), `equals`, `hashCode`, `toString` and a typed getter (`getAsInt()`, `getAsLong()`,
 `getAsDouble()`). They have no `map`, `filter` or `flatMap`; call `boxed()` on the stream to get an
