@@ -1,6 +1,6 @@
 {
   "name": "@ylcnfrht/collections",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Collections framework for TypeScript and JS, inspired by Java's Collections Framework and Stream API: ArrayList, LinkedList, HashMap, TreeMap, PriorityQueue, Stream and more, with value equality, fail-fast iterators and live views.",
   "keywords": [
     "collections",
