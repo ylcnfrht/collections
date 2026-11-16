@@ -29,6 +29,10 @@
   "bugs": {
     "url": "https://github.com/ylcnfrht/collections/issues"
   },
+  "funding": {
+    "type": "buymeacoffee",
+    "url": "https://buymeacoffee.com/ylcnfrht"
+  },
   "type": "commonjs",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -5,6 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/types-TypeScript-3178c6.svg)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)
 ![Runtimes](https://img.shields.io/badge/runs%20on-Node%2018%2B%20%7C%20Deno%20%7C%20Bun%20%7C%20browsers-555.svg)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/ylcnfrht)
 
 **A production-grade collections framework for TypeScript and JavaScript, inspired by the Java Collections
 Framework.**
@@ -122,6 +123,10 @@ npm run typecheck
 npm test
 npm run test:diff   # compares against a real JDK; needs JDK 23 or later on the PATH
 ```
+
+## Support
+
+If @ylcnfrht/collections saves you time, you can [buy me a coffee](https://buymeacoffee.com/ylcnfrht). Issues, ideas and pull requests are just as welcome.
 
 ## License
 
