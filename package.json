@@ -17,7 +17,10 @@
     "typescript"
   ],
   "license": "MIT",
-  "author": "ylcnfrht",
+  "author": {
+    "name": "ylcnfrht",
+    "url": "https://github.com/ylcnfrht"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ylcnfrht/collections.git"

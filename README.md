@@ -125,5 +125,5 @@ npm run test:diff   # compares against a real JDK; needs JDK 23 or later on the 
 
 ## License
 
-[MIT](LICENSE). This is an independent project, not affiliated with Node.js, Oracle or OpenJDK. Java is a
+[MIT](LICENSE) © [ylcnfrht](https://github.com/ylcnfrht). This is an independent project, not affiliated with Node.js, Oracle or OpenJDK. Java is a
 trademark of Oracle and/or its affiliates.
